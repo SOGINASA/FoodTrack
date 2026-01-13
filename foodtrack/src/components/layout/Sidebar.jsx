@@ -1,5 +1,5 @@
 import React from 'react';
-import { Home, Camera, BookOpen, TrendingUp, Image, Users, Settings, X } from 'lucide-react';
+import { Home, Camera, BookOpen, TrendingUp, Image, Users, Settings, Lightbulb, ChefHat, X } from 'lucide-react';
 import { useNavigate, useLocation } from 'react-router-dom';
 
 const Sidebar = ({ isOpen, onClose }) => {
@@ -11,6 +11,8 @@ const Sidebar = ({ isOpen, onClose }) => {
     { icon: Camera, label: 'Добавить еду', path: '/add-meal' },
     { icon: BookOpen, label: 'Дневник', path: '/diary' },
     { icon: TrendingUp, label: 'Аналитика', path: '/analytics' },
+    { icon: Lightbulb, label: 'Советы', path: '/tips' },
+    { icon: ChefHat, label: 'Рецепты', path: '/recipes' },
     { icon: Image, label: 'Прогресс', path: '/progress' },
     { icon: Users, label: 'Группы', path: '/groups' },
     { icon: Settings, label: 'Настройки', path: '/settings' },
@@ -55,7 +57,7 @@ const Sidebar = ({ isOpen, onClose }) => {
           </button>
         </div>
 
-        <nav className="p-4 space-y-2">
+        <nav className="p-4 space-y-2 overflow-y-auto h-[calc(100vh-80px)]">
           {menuItems.map((item) => {
             const Icon = item.icon;
             const isActive = location.pathname === item.path;
