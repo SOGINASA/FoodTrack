@@ -1,0 +1,26 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  body {
+    @apply font-sans bg-white text-black;
+    margin: 0;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+}
+
+@layer utilities {
+  .text-secondary {
+    @apply text-[#8E8E93];
+  }
+  
+  .text-tertiary {
+    @apply text-[#C7C7CC];
+  }
+  
+  .border-divider {
+    @apply border-[#F2F2F7];
+  }
+}
