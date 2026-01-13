@@ -2,6 +2,7 @@ import requests
 import os
 from typing import Dict, Optional
 from dotenv import load_dotenv
+from food_name_mapper import map_food_name
 
 # Загружаем переменные окружения из .env файла
 load_dotenv('.env')
@@ -15,7 +16,7 @@ def get_nutrition_info(food_name: str) -> Optional[Dict]:
     Получает информацию о калорийности и питательных веществах блюда через Spoonacular API
 
     Args:
-        food_name: Название блюда/продукта
+        food_name: Название блюда/продукта (из модели)
 
     Returns:
         Dict с информацией о калориях и питательных веществах или None в случае ошибки
@@ -24,7 +25,8 @@ def get_nutrition_info(food_name: str) -> Optional[Dict]:
             'protein': float,
             'fat': float,
             'carbs': float,
-            'title': str
+            'title': str,
+            'original_name': str
         }
     """
     if not SPOONACULAR_API_KEY:
@@ -32,12 +34,15 @@ def get_nutrition_info(food_name: str) -> Optional[Dict]:
             'error': 'API ключ Spoonacular не найден. Добавьте SPOONACULAR_API_KEY в .env файл'
         }
 
+    # Преобразуем название из модели в понятное для API
+    mapped_name = map_food_name(food_name)
+
     try:
         # API endpoint для определения питательной ценности
         url = "https://api.spoonacular.com/recipes/guessNutrition"
 
         params = {
-            'title': food_name,
+            'title': mapped_name,
             'apiKey': SPOONACULAR_API_KEY
         }
 
@@ -48,7 +53,8 @@ def get_nutrition_info(food_name: str) -> Optional[Dict]:
 
         # Извлекаем нужную информацию
         result = {
-            'title': data.get('title', food_name),
+            'title': data.get('title', mapped_name),
+            'original_name': food_name,  # Сохраняем оригинальное название из модели
             'calories': data.get('calories', {}).get('value', 0),
             'protein': data.get('protein', {}).get('value', 0),
             'fat': data.get('fat', {}).get('value', 0),
