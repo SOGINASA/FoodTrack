@@ -1,0 +1,27 @@
+version: '3.8'
+
+services:
+  calsnap-api:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: calsnap-api
+    ports:
+      - "8000:8000"
+    volumes:
+      # Монтируем папку модели (чтобы не копировать большой файл в образ каждый раз)
+      - ./model:/app/model
+      # Монтируем папку для временных загрузок
+      - ./temp_uploads:/app/temp_uploads
+    environment:
+      # Переменные окружения из .env файла
+      - SPOONACULAR_API_KEY=${SPOONACULAR_API_KEY}
+    env_file:
+      - .env
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
