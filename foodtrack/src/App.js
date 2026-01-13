@@ -8,6 +8,8 @@ import Dashboard from './pages/Dashboard';
 import AddMeal from './pages/AddMeal';
 import Diary from './pages/Diary';
 import Analytics from './pages/Analytics';
+import Tips from './pages/Tips';
+import Recipes from './pages/Recipes';
 import Progress from './pages/Progress';
 import Groups from './pages/Groups';
 import Settings from './pages/Settings';
@@ -33,6 +35,8 @@ function App() {
                 <Route path="/add-meal" element={<AddMeal />} />
                 <Route path="/diary" element={<Diary />} />
                 <Route path="/analytics" element={<Analytics />} />
+                <Route path="/tips" element={<Tips />} />
+                <Route path="/recipes" element={<Recipes />} />
                 <Route path="/progress" element={<Progress />} />
                 <Route path="/groups" element={<Groups />} />
                 <Route path="/settings" element={<Settings />} />
