@@ -6,6 +6,7 @@ import Toast from '../components/common/Toast';
 import Loader from '../components/common/Loader';
 import { Camera, Upload, X, Check, Sparkles, TrendingUp, RotateCw } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
+import { mealsAPI } from '../services/api';
 
 const AddMeal = () => {
   const navigate = useNavigate();
@@ -224,32 +225,47 @@ const AddMeal = () => {
     setAnalyzing(true);
     
     try {
-      await new Promise(resolve => setTimeout(resolve, 2000));
+      // Конвертируем base64 в Blob
+      const byteString = atob(imageData.split(',')[1]);
+      const mimeString = imageData.split(',')[0].match(/:(.*?);/)[1];
+      const ab = new ArrayBuffer(byteString.length);
+      const ia = new Uint8Array(ab);
+      for (let i = 0; i < byteString.length; i++) {
+        ia[i] = byteString.charCodeAt(i);
+      }
+      const blob = new Blob([ab], { type: mimeString });
       
+      // Создаём File из Blob
+      const file = new File([blob], 'photo.jpg', { type: 'image/jpeg' });
+      
+      // Отправляем на API анализа
+      const response = await mealsAPI.analyzePhoto(file);
+      
+      const result = response.data;
+      
+      // Преобразуем результат в нужный формат
       const mockResult = {
-        dishName: 'Куриная грудка с овощами гриль',
-        confidence: 92,
-        calories: 420,
-        protein: 45,
-        carbs: 28,
-        fats: 12,
-        portion: '250г',
-        ingredients: [
-          { name: 'Куриная грудка', amount: '150г', calories: 248 },
-          { name: 'Брокколи', amount: '80г', calories: 27 },
-          { name: 'Морковь', amount: '50г', calories: 21 },
-          { name: 'Оливковое масло', amount: '10мл', calories: 90 },
-          { name: 'Специи', amount: '5г', calories: 14 },
-        ],
-        aiAdvice: 'Отличный выбор! Это блюдо богато белком и содержит достаточно овощей. Рекомендую добавить сложные углеводы (например, бурый рис или киноа) для более сбалансированного приёма пищи.',
-        healthScore: 85,
-        tags: ['Высокобелковое', 'Низкоуглеводное', 'ПП', 'Обед'],
+        dishName: result.top_prediction || 'Unknown',
+        confidence: Math.round(result.confidence) || 0,
+        calories: result.nutrition?.calories || 0,
+        protein: result.nutrition?.protein || 0,
+        carbs: result.nutrition?.carbs || 0,
+        fats: result.nutrition?.fat || 0,
+        portion: '100г',
+        ingredients: [],
+        aiAdvice: `Блюдо определено с уверенностью ${Math.round(result.confidence)}%. Нажмите на ингредиенты для редактирования.`,
+        healthScore: 75,
+        tags: ['Из фото'],
       };
 
       setAnalysisResult(mockResult);
       setShowResultModal(true);
     } catch (error) {
-      setShowToast({ type: 'error', message: 'Ошибка анализа изображения' });
+      console.error('Ошибка анализа:', error);
+      setShowToast({ 
+        type: 'error', 
+        message: error.response?.data?.detail || 'Ошибка анализа. Убедитесь, что сервис на порту 8000 запущен' 
+      });
     } finally {
       setAnalyzing(false);
     }

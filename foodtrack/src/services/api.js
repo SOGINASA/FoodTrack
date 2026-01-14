@@ -94,6 +94,15 @@ export const mealsAPI = {
 
   // Копировать приём пищи
   copy: (id, data = {}) => api.post(`/meals/${id}/copy`, data),
+
+  // Анализировать фото продукта (напрямую к predicts API)
+  analyzePhoto: (file) => {
+    const formData = new FormData();
+    formData.append('file', file);
+    return axios.post('https://korolevst.supertest.beast-inside.kz/food_predict/predict/with-nutrition', formData, {
+      headers: { 'Content-Type': 'multipart/form-data' },
+    });
+  },
 };
 
 // === GOALS API ===
