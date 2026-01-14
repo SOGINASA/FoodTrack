@@ -19,23 +19,23 @@ import Login from './pages/Login';
 import Register from './pages/Register';
 
 // Защищённый роут — редирект на логин если не авторизован
-const ProtectedRoute = ({ children }) => {
-  const { isAuthenticated, loading } = useAuth();
+// const ProtectedRoute = ({ children }) => {
+//   const { isAuthenticated, loading } = useAuth();
 
-  if (loading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center">
-        <Loader size="lg" />
-      </div>
-    );
-  }
+//   if (loading) {
+//     return (
+//       <div className="min-h-screen flex items-center justify-center">
+//         <Loader size="lg" />
+//       </div>
+//     );
+//   }
 
-  if (!isAuthenticated) {
-    return <Navigate to="/login" replace />;
-  }
+//   if (!isAuthenticated) {
+//     return <Navigate to="/login" replace />;
+//   }
 
-  return children;
-};
+//   return children;
+// };
 
 // Публичный роут — редирект на главную если уже авторизован
 const PublicRoute = ({ children }) => {
@@ -119,9 +119,9 @@ function App() {
           <Route
             path="/*"
             element={
-              <ProtectedRoute>
+              // <ProtectedRoute>
                 <AppLayout />
-              </ProtectedRoute>
+              // </ProtectedRoute>
             }
           />
         </Routes>

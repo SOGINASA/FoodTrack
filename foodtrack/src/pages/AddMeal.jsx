@@ -4,7 +4,7 @@ import Card from '../components/common/Card';
 import Modal from '../components/common/Modal';
 import Toast from '../components/common/Toast';
 import Loader from '../components/common/Loader';
-import { Camera, Upload, X, Check, Sparkles, TrendingUp } from 'lucide-react';
+import { Camera, Upload, X, Check, Sparkles, TrendingUp, RotateCw } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 
 const AddMeal = () => {
@@ -16,8 +16,12 @@ const AddMeal = () => {
   const [analyzing, setAnalyzing] = useState(false);
   const [analysisResult, setAnalysisResult] = useState(null);
   const [showResultModal, setShowResultModal] = useState(false);
+  const [cameraError, setCameraError] = useState(null);
+  const [cameraReady, setCameraReady] = useState(false);
+  const [facingMode, setFacingMode] = useState('environment');
   
   const videoRef = useRef(null);
+  const canvasRef = useRef(null);
   const streamRef = useRef(null);
   const fileInputRef = useRef(null);
 
@@ -39,19 +43,129 @@ const AddMeal = () => {
     };
   }, []);
 
-  const startCamera = async () => {
-    try {
-      const stream = await navigator.mediaDevices.getUserMedia({
-        video: { facingMode: 'environment' }
-      });
-      if (videoRef.current) {
-        videoRef.current.srcObject = stream;
-        streamRef.current = stream;
-      }
-      setActiveMode('camera');
-    } catch (error) {
-      setShowToast({ type: 'error', message: 'Не удалось получить доступ к камере' });
+  // Автозапуск видео когда видео элемент появляется
+  useEffect(() => {
+    if (activeMode === 'camera' && videoRef.current && streamRef.current) {
+      console.log('useEffect: trying to start video playback');
+      
+      const video = videoRef.current;
+      
+      const tryPlay = async () => {
+        try {
+          await video.play();
+          console.log('Video playing from useEffect');
+          setCameraReady(true);
+        } catch (err) {
+          console.error('Play error in useEffect:', err);
+        }
+      };
+
+      // Пробуем несколько раз
+      const interval = setInterval(() => {
+        if (video.readyState >= 2 && video.paused) {
+          tryPlay();
+        }
+        if (!video.paused) {
+          clearInterval(interval);
+        }
+      }, 200);
+
+      // Очистка через 3 секунды
+      setTimeout(() => clearInterval(interval), 3000);
+
+      return () => clearInterval(interval);
     }
+  }, [activeMode]);
+
+  const startCamera = async () => {
+    setCameraError(null);
+    setCameraReady(false);
+    setActiveMode('camera'); // Сразу переключаем режим
+    
+    try {
+      // Сначала останавливаем предыдущий стрим если есть
+      if (streamRef.current) {
+        streamRef.current.getTracks().forEach(track => track.stop());
+      }
+
+      const constraints = {
+        video: {
+          facingMode: facingMode,
+          width: { ideal: 1920 },
+          height: { ideal: 1080 }
+        },
+        audio: false
+      };
+
+      console.log('Requesting camera with constraints:', constraints);
+      const stream = await navigator.mediaDevices.getUserMedia(constraints);
+      console.log('Camera stream obtained:', stream.getVideoTracks()[0].getSettings());
+      
+      streamRef.current = stream;
+      
+      // Ждём следующий фрейм для рендеринга
+      await new Promise(resolve => requestAnimationFrame(resolve));
+      
+      if (videoRef.current) {
+        console.log('Setting srcObject to video element');
+        videoRef.current.srcObject = stream;
+        
+        // Принудительный запуск через небольшую задержку
+        setTimeout(async () => {
+          if (videoRef.current) {
+            try {
+              await videoRef.current.play();
+              console.log('Video started playing');
+              setCameraReady(true);
+            } catch (err) {
+              console.error('Play error:', err);
+            }
+          }
+        }, 100);
+        
+        // Дополнительная проверка через 1 секунду
+        setTimeout(() => {
+          if (videoRef.current) {
+            console.log('Video check:', {
+              readyState: videoRef.current.readyState,
+              videoWidth: videoRef.current.videoWidth,
+              videoHeight: videoRef.current.videoHeight,
+              paused: videoRef.current.paused
+            });
+            
+            if (videoRef.current.readyState >= 2) {
+              setCameraReady(true);
+            }
+          }
+        }, 1000);
+      }
+    } catch (error) {
+      console.error('Camera error:', error);
+      setActiveMode(null);
+      let errorMessage = 'Не удалось получить доступ к камере';
+      
+      if (error.name === 'NotAllowedError' || error.name === 'PermissionDeniedError') {
+        errorMessage = 'Доступ к камере запрещён. Разрешите доступ в настройках браузера.';
+      } else if (error.name === 'NotFoundError' || error.name === 'DevicesNotFoundError') {
+        errorMessage = 'Камера не найдена на устройстве';
+      } else if (error.name === 'NotReadableError' || error.name === 'TrackStartError') {
+        errorMessage = 'Камера используется другим приложением';
+      } else if (error.name === 'OverconstrainedError') {
+        errorMessage = 'Камера не поддерживает запрошенные параметры';
+      } else if (error.name === 'TypeError') {
+        errorMessage = 'Камера недоступна. Используйте HTTPS или localhost.';
+      }
+      
+      setCameraError(errorMessage);
+      setShowToast({ type: 'error', message: errorMessage });
+    }
+  };
+
+  const switchCamera = async () => {
+    const newFacingMode = facingMode === 'environment' ? 'user' : 'environment';
+    setFacingMode(newFacingMode);
+    stopCamera();
+    setTimeout(() => startCamera(), 100);
   };
 
   const stopCamera = () => {
@@ -59,17 +173,36 @@ const AddMeal = () => {
       streamRef.current.getTracks().forEach(track => track.stop());
       streamRef.current = null;
     }
+    if (videoRef.current) {
+      videoRef.current.srcObject = null;
+    }
     setActiveMode(null);
+    setCameraError(null);
+    setCameraReady(false);
   };
 
   const capturePhoto = () => {
     const video = videoRef.current;
-    const canvas = document.createElement('canvas');
+    if (!video || video.readyState !== 4) {
+      setShowToast({ type: 'error', message: 'Камера ещё не готова, подождите...' });
+      return;
+    }
+
+    const canvas = canvasRef.current || document.createElement('canvas');
     canvas.width = video.videoWidth;
     canvas.height = video.videoHeight;
+    
+    if (canvas.width === 0 || canvas.height === 0) {
+      setShowToast({ type: 'error', message: 'Не удалось захватить изображение' });
+      return;
+    }
+    
     const ctx = canvas.getContext('2d');
-    ctx.drawImage(video, 0, 0);
-    const imageData = canvas.toDataURL('image/jpeg');
+    ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+    
+    const imageData = canvas.toDataURL('image/jpeg', 0.9);
+    console.log('Image captured, data length:', imageData.length);
+    
     setCapturedImage(imageData);
     stopCamera();
     analyzeImage(imageData);
@@ -133,6 +266,12 @@ const AddMeal = () => {
     setShowResultModal(false);
   };
 
+  const handleCloseResult = () => {
+    setCapturedImage(null);
+    setAnalysisResult(null);
+    setShowResultModal(false);
+  };
+
   if (analyzing) {
     return (
       <div className="flex flex-col items-center justify-center min-h-[60vh]">
@@ -148,33 +287,84 @@ const AddMeal = () => {
   if (activeMode === 'camera') {
     return (
       <div className="fixed inset-0 bg-black z-50">
-        <video
-          ref={videoRef}
-          autoPlay
-          playsInline
-          className="w-full h-full object-cover"
-        />
-        
-        <div className="absolute top-4 left-4 right-4 flex justify-between items-center">
-          <button
-            onClick={stopCamera}
-            className="p-3 bg-black/60 backdrop-blur-sm text-white rounded-full hover:bg-black/80 transition-colors"
-          >
-            <X className="w-6 h-6" />
-          </button>
-          <div className="bg-black/60 backdrop-blur-sm text-white px-4 py-2 rounded-full font-semibold">
-            Наведите на еду
+        {cameraError ? (
+          <div className="flex items-center justify-center h-full p-4">
+            <div className="text-center text-white max-w-md">
+              <X className="w-16 h-16 mx-auto mb-4 text-red-500" />
+              <p className="text-lg mb-4">{cameraError}</p>
+              <Button variant="primary" onClick={stopCamera}>
+                Закрыть
+              </Button>
+            </div>
           </div>
-        </div>
+        ) : (
+          <>
+            <video
+              ref={videoRef}
+              autoPlay
+              playsInline
+              muted
+              className="w-full h-full object-cover"
+              style={{ backgroundColor: '#000' }}
+              onLoadedMetadata={(e) => {
+                console.log('onLoadedMetadata event', {
+                  videoWidth: e.target.videoWidth,
+                  videoHeight: e.target.videoHeight
+                });
+                setCameraReady(true);
+              }}
+              onCanPlay={(e) => {
+                console.log('onCanPlay event');
+                setCameraReady(true);
+              }}
+              onPlaying={(e) => {
+                console.log('onPlaying event');
+                setCameraReady(true);
+              }}
+            />
+            
+            <canvas ref={canvasRef} className="hidden" />
+            
+            {!cameraReady && (
+              <div className="absolute inset-0 flex items-center justify-center bg-black/50">
+                <div className="text-white text-center">
+                  <Loader size="lg" />
+                  <p className="mt-4">Запуск камеры...</p>
+                </div>
+              </div>
+            )}
+            
+            <div className="absolute top-4 left-4 right-4 flex justify-between items-center z-10">
+              <button
+                onClick={stopCamera}
+                className="p-3 bg-black/60 backdrop-blur-sm text-white rounded-full hover:bg-black/80 transition-colors"
+              >
+                <X className="w-6 h-6" />
+              </button>
+              <div className="bg-black/60 backdrop-blur-sm text-white px-4 py-2 rounded-full font-semibold text-sm">
+                {cameraReady ? 'Наведите на еду' : 'Загрузка...'}
+              </div>
+              <button
+                onClick={switchCamera}
+                className="p-3 bg-black/60 backdrop-blur-sm text-white rounded-full hover:bg-black/80 transition-colors"
+              >
+                <RotateCw className="w-6 h-6" />
+              </button>
+            </div>
 
-        <div className="absolute bottom-8 left-0 right-0 flex justify-center">
-          <button
-            onClick={capturePhoto}
-            className="w-20 h-20 bg-white rounded-full border-4 border-gray-300 shadow-2xl flex items-center justify-center hover:scale-110 active:scale-95 transition-transform"
-          >
-            <div className="w-16 h-16 bg-white rounded-full"></div>
-          </button>
-        </div>
+            <div className="absolute bottom-8 left-0 right-0 flex justify-center z-10">
+              <button
+                onClick={capturePhoto}
+                disabled={!cameraReady}
+                className={`w-20 h-20 bg-white rounded-full border-4 border-gray-300 shadow-2xl flex items-center justify-center transition-all ${
+                  cameraReady ? 'hover:scale-110 active:scale-95' : 'opacity-50'
+                }`}
+              >
+                <div className="w-16 h-16 bg-white rounded-full"></div>
+              </button>
+            </div>
+          </>
+        )}
       </div>
     );
   }
@@ -270,9 +460,9 @@ const AddMeal = () => {
 
       <Modal
         isOpen={showResultModal}
-        onClose={() => setShowResultModal(false)}
+        onClose={handleCloseResult}
         size="lg"
-        showCloseButton={false}
+        showCloseButton={true}
       >
         {analysisResult && (
           <div className="space-y-6">
@@ -325,9 +515,9 @@ const AddMeal = () => {
               <div className="flex items-start gap-3">
                 <TrendingUp className="w-6 h-6 text-green-600 flex-shrink-0 mt-1" />
                 <div>
-                  <div className="font-bold text-lg mb-2 flex items-center gap-2">
+                  <div className="font-bold text-lg mb-2 flex items-center gap-2 flex-wrap">
                     Оценка здоровья: {analysisResult.healthScore}/100
-                    <div className="h-2 flex-1 bg-gray-200 rounded-full overflow-hidden max-w-[120px]">
+                    <div className="h-2 flex-1 bg-gray-200 rounded-full overflow-hidden min-w-[120px] max-w-[200px]">
                       <div 
                         className="h-full bg-green-600 rounded-full"
                         style={{ width: `${analysisResult.healthScore}%` }}
