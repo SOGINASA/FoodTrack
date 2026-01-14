@@ -1,10 +1,392 @@
-import React from 'react';
+import React, { useState, useRef, useEffect } from 'react';
+import Button from '../components/common/Button';
+import Card from '../components/common/Card';
+import Modal from '../components/common/Modal';
+import Toast from '../components/common/Toast';
+import Loader from '../components/common/Loader';
+import { Camera, Upload, X, Check, Sparkles, TrendingUp } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
 
 const AddMeal = () => {
+  const navigate = useNavigate();
+  const [showToast, setShowToast] = useState(null);
+  const [isMobile, setIsMobile] = useState(false);
+  const [activeMode, setActiveMode] = useState(null);
+  const [capturedImage, setCapturedImage] = useState(null);
+  const [analyzing, setAnalyzing] = useState(false);
+  const [analysisResult, setAnalysisResult] = useState(null);
+  const [showResultModal, setShowResultModal] = useState(false);
+  
+  const videoRef = useRef(null);
+  const streamRef = useRef(null);
+  const fileInputRef = useRef(null);
+
+  useEffect(() => {
+    const checkMobile = () => {
+      const mobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+      setIsMobile(mobile);
+    };
+    checkMobile();
+    window.addEventListener('resize', checkMobile);
+    return () => window.removeEventListener('resize', checkMobile);
+  }, []);
+
+  useEffect(() => {
+    return () => {
+      if (streamRef.current) {
+        streamRef.current.getTracks().forEach(track => track.stop());
+      }
+    };
+  }, []);
+
+  const startCamera = async () => {
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({
+        video: { facingMode: 'environment' }
+      });
+      if (videoRef.current) {
+        videoRef.current.srcObject = stream;
+        streamRef.current = stream;
+      }
+      setActiveMode('camera');
+    } catch (error) {
+      setShowToast({ type: 'error', message: 'Не удалось получить доступ к камере' });
+    }
+  };
+
+  const stopCamera = () => {
+    if (streamRef.current) {
+      streamRef.current.getTracks().forEach(track => track.stop());
+      streamRef.current = null;
+    }
+    setActiveMode(null);
+  };
+
+  const capturePhoto = () => {
+    const video = videoRef.current;
+    const canvas = document.createElement('canvas');
+    canvas.width = video.videoWidth;
+    canvas.height = video.videoHeight;
+    const ctx = canvas.getContext('2d');
+    ctx.drawImage(video, 0, 0);
+    const imageData = canvas.toDataURL('image/jpeg');
+    setCapturedImage(imageData);
+    stopCamera();
+    analyzeImage(imageData);
+  };
+
+  const handleFileUpload = (e) => {
+    const file = e.target.files[0];
+    if (file) {
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setCapturedImage(reader.result);
+        analyzeImage(reader.result);
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
+  const analyzeImage = async (imageData) => {
+    setAnalyzing(true);
+    
+    try {
+      await new Promise(resolve => setTimeout(resolve, 2000));
+      
+      const mockResult = {
+        dishName: 'Куриная грудка с овощами гриль',
+        confidence: 92,
+        calories: 420,
+        protein: 45,
+        carbs: 28,
+        fats: 12,
+        portion: '250г',
+        ingredients: [
+          { name: 'Куриная грудка', amount: '150г', calories: 248 },
+          { name: 'Брокколи', amount: '80г', calories: 27 },
+          { name: 'Морковь', amount: '50г', calories: 21 },
+          { name: 'Оливковое масло', amount: '10мл', calories: 90 },
+          { name: 'Специи', amount: '5г', calories: 14 },
+        ],
+        aiAdvice: 'Отличный выбор! Это блюдо богато белком и содержит достаточно овощей. Рекомендую добавить сложные углеводы (например, бурый рис или киноа) для более сбалансированного приёма пищи.',
+        healthScore: 85,
+        tags: ['Высокобелковое', 'Низкоуглеводное', 'ПП', 'Обед'],
+      };
+
+      setAnalysisResult(mockResult);
+      setShowResultModal(true);
+    } catch (error) {
+      setShowToast({ type: 'error', message: 'Ошибка анализа изображения' });
+    } finally {
+      setAnalyzing(false);
+    }
+  };
+
+  const handleSaveMeal = () => {
+    setShowToast({ type: 'success', message: 'Приём пищи сохранён!' });
+    setTimeout(() => navigate('/diary'), 1000);
+  };
+
+  const handleRetake = () => {
+    setCapturedImage(null);
+    setAnalysisResult(null);
+    setShowResultModal(false);
+  };
+
+  if (analyzing) {
+    return (
+      <div className="flex flex-col items-center justify-center min-h-[60vh]">
+        <Loader size="lg" />
+        <div className="mt-6 text-center">
+          <h3 className="text-2xl font-bold mb-2">Анализируем блюдо...</h3>
+          <p className="text-secondary">AI определяет состав и калорийность</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (activeMode === 'camera') {
+    return (
+      <div className="fixed inset-0 bg-black z-50">
+        <video
+          ref={videoRef}
+          autoPlay
+          playsInline
+          className="w-full h-full object-cover"
+        />
+        
+        <div className="absolute top-4 left-4 right-4 flex justify-between items-center">
+          <button
+            onClick={stopCamera}
+            className="p-3 bg-black/60 backdrop-blur-sm text-white rounded-full hover:bg-black/80 transition-colors"
+          >
+            <X className="w-6 h-6" />
+          </button>
+          <div className="bg-black/60 backdrop-blur-sm text-white px-4 py-2 rounded-full font-semibold">
+            Наведите на еду
+          </div>
+        </div>
+
+        <div className="absolute bottom-8 left-0 right-0 flex justify-center">
+          <button
+            onClick={capturePhoto}
+            className="w-20 h-20 bg-white rounded-full border-4 border-gray-300 shadow-2xl flex items-center justify-center hover:scale-110 active:scale-95 transition-transform"
+          >
+            <div className="w-16 h-16 bg-white rounded-full"></div>
+          </button>
+        </div>
+      </div>
+    );
+  }
+
   return (
-    <div>
-      <h2 className="text-2xl font-bold mb-4">Add Meal</h2>
-      <p className="text-secondary">Здесь будет загрузка фото еды</p>
+    <div className="space-y-6 pb-6">
+      <div className="flex items-center gap-3">
+        <Camera className="w-8 h-8" />
+        <h1 className="text-3xl lg:text-4xl font-bold">Добавить еду</h1>
+      </div>
+
+      <Card padding="lg" className="bg-gradient-to-r from-purple-50 to-pink-50">
+        <div className="flex items-start gap-4">
+          <Sparkles className="w-6 h-6 text-purple-600 flex-shrink-0 mt-1" />
+          <div>
+            <h3 className="font-bold text-lg mb-2">AI распознавание еды</h3>
+            <p className="text-secondary text-sm">
+              Сфотографируйте блюдо или загрузите фото, и AI автоматически определит калории, БЖУ и состав
+            </p>
+          </div>
+        </div>
+      </Card>
+
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+        {isMobile && (
+          <Card 
+            hoverable 
+            padding="lg" 
+            onClick={startCamera}
+            className="cursor-pointer text-center"
+          >
+            <Camera className="w-12 h-12 mx-auto mb-3 text-purple-600" />
+            <h3 className="font-bold text-lg mb-2">Сфотографировать</h3>
+            <p className="text-secondary text-sm">
+              Откройте камеру и сделайте фото еды
+            </p>
+          </Card>
+        )}
+
+        <Card 
+          hoverable 
+          padding="lg"
+          onClick={() => fileInputRef.current?.click()}
+          className="cursor-pointer text-center"
+        >
+          <Upload className="w-12 h-12 mx-auto mb-3 text-blue-600" />
+          <h3 className="font-bold text-lg mb-2">Загрузить фото</h3>
+          <p className="text-secondary text-sm">
+            Выберите готовое фото из галереи
+          </p>
+          <input
+            ref={fileInputRef}
+            type="file"
+            accept="image/*"
+            onChange={handleFileUpload}
+            className="hidden"
+          />
+        </Card>
+      </div>
+
+      <Card padding="lg">
+        <h3 className="font-bold text-lg mb-3">Как это работает?</h3>
+        <div className="space-y-3">
+          <div className="flex gap-3">
+            <div className="w-8 h-8 bg-black text-white rounded-full flex items-center justify-center font-bold flex-shrink-0">
+              1
+            </div>
+            <div>
+              <div className="font-semibold">Сделайте фото</div>
+              <div className="text-sm text-secondary">Сфотографируйте или загрузите изображение блюда</div>
+            </div>
+          </div>
+          <div className="flex gap-3">
+            <div className="w-8 h-8 bg-black text-white rounded-full flex items-center justify-center font-bold flex-shrink-0">
+              2
+            </div>
+            <div>
+              <div className="font-semibold">AI анализ</div>
+              <div className="text-sm text-secondary">Нейросеть определит блюдо, калории и БЖУ</div>
+            </div>
+          </div>
+          <div className="flex gap-3">
+            <div className="w-8 h-8 bg-black text-white rounded-full flex items-center justify-center font-bold flex-shrink-0">
+              3
+            </div>
+            <div>
+              <div className="font-semibold">Проверьте и сохраните</div>
+              <div className="text-sm text-secondary">Отредактируйте при необходимости и добавьте в дневник</div>
+            </div>
+          </div>
+        </div>
+      </Card>
+
+      <Modal
+        isOpen={showResultModal}
+        onClose={() => setShowResultModal(false)}
+        size="lg"
+        showCloseButton={false}
+      >
+        {analysisResult && (
+          <div className="space-y-6">
+            <div className="relative rounded-2xl overflow-hidden">
+              <img 
+                src={capturedImage} 
+                alt="Food" 
+                className="w-full aspect-video object-cover"
+              />
+              <div className="absolute top-4 right-4 bg-green-500 text-white px-3 py-1 rounded-full text-sm font-semibold flex items-center gap-1">
+                <Check className="w-4 h-4" />
+                {analysisResult.confidence}% уверенность
+              </div>
+            </div>
+
+            <div>
+              <h2 className="text-3xl font-bold mb-2">{analysisResult.dishName}</h2>
+              <div className="flex flex-wrap gap-2">
+                {analysisResult.tags.map((tag, index) => (
+                  <span 
+                    key={index}
+                    className="text-xs bg-gray-100 text-gray-700 px-3 py-1 rounded-full"
+                  >
+                    {tag}
+                  </span>
+                ))}
+              </div>
+            </div>
+
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+              <Card padding="default" className="text-center">
+                <div className="text-3xl font-bold text-black">{analysisResult.calories}</div>
+                <div className="text-sm text-secondary mt-1">Калорий</div>
+              </Card>
+              <Card padding="default" className="text-center">
+                <div className="text-3xl font-bold text-[#FF6B6B]">{analysisResult.protein}г</div>
+                <div className="text-sm text-secondary mt-1">Белки</div>
+              </Card>
+              <Card padding="default" className="text-center">
+                <div className="text-3xl font-bold text-[#FFB84D]">{analysisResult.carbs}г</div>
+                <div className="text-sm text-secondary mt-1">Углеводы</div>
+              </Card>
+              <Card padding="default" className="text-center">
+                <div className="text-3xl font-bold text-[#4D9FFF]">{analysisResult.fats}г</div>
+                <div className="text-sm text-secondary mt-1">Жиры</div>
+              </Card>
+            </div>
+
+            <Card padding="lg" className="bg-gradient-to-r from-green-50 to-emerald-50">
+              <div className="flex items-start gap-3">
+                <TrendingUp className="w-6 h-6 text-green-600 flex-shrink-0 mt-1" />
+                <div>
+                  <div className="font-bold text-lg mb-2 flex items-center gap-2">
+                    Оценка здоровья: {analysisResult.healthScore}/100
+                    <div className="h-2 flex-1 bg-gray-200 rounded-full overflow-hidden max-w-[120px]">
+                      <div 
+                        className="h-full bg-green-600 rounded-full"
+                        style={{ width: `${analysisResult.healthScore}%` }}
+                      />
+                    </div>
+                  </div>
+                  <p className="text-sm text-gray-700">{analysisResult.aiAdvice}</p>
+                </div>
+              </div>
+            </Card>
+
+            <Card padding="lg">
+              <h3 className="font-bold text-lg mb-3">Ингредиенты</h3>
+              <div className="space-y-2">
+                {analysisResult.ingredients.map((ingredient, index) => (
+                  <div 
+                    key={index}
+                    className="flex items-center justify-between py-2 border-b border-divider last:border-0"
+                  >
+                    <div className="flex-1">
+                      <div className="font-semibold">{ingredient.name}</div>
+                      <div className="text-sm text-secondary">{ingredient.amount}</div>
+                    </div>
+                    <div className="text-right">
+                      <div className="font-semibold">{ingredient.calories}</div>
+                      <div className="text-xs text-secondary">ккал</div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </Card>
+
+            <div className="flex gap-3">
+              <Button
+                variant="secondary"
+                className="flex-1"
+                onClick={handleRetake}
+              >
+                Переснять
+              </Button>
+              <Button
+                variant="primary"
+                className="flex-1"
+                onClick={handleSaveMeal}
+              >
+                Сохранить в дневник
+              </Button>
+            </div>
+          </div>
+        )}
+      </Modal>
+
+      {showToast && (
+        <Toast
+          type={showToast.type}
+          message={showToast.message}
+          onClose={() => setShowToast(null)}
+        />
+      )}
     </div>
   );
 };
