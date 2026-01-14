@@ -1,6 +1,6 @@
 from flask import Blueprint, request, jsonify
 from flask_jwt_extended import create_access_token, create_refresh_token, jwt_required, get_jwt_identity
-from models import db, User
+from models import db, User, UserGoals
 from datetime import datetime, timedelta
 import re
 
@@ -32,23 +32,23 @@ def register():
         return jsonify({'error': 'Данные не предоставлены'}), 400
 
     # Обязательные поля
-    required_fields = ['email', 'password']
-    missing = [f for f in required_fields if not data.get(f)]
-    if missing:
-        return jsonify({'error': f"Отсутствуют обязательные поля: {', '.join(missing)}"}), 400
+    email = data.get('email', '').strip().lower() if data.get('email') else ''
+    password = data.get('password', '')
+    full_name = data.get('full_name', '').strip() if data.get('full_name') else ''
 
-    email = data['email'].strip().lower()
-    user_type = data.get('user_type', 'user').lower()  # Допустимые значения: user, expert, emergency, admin
+    # Валидация обязательных полей
+    if not email or not password or not full_name:
+        return jsonify({'error': 'Заполните все обязательные поля'}), 400
 
-    # Валидация типа пользователя
-    allowed_types = ['user', 'admin']
-    if user_type not in allowed_types:
-        return jsonify({'error': f'Неверный тип пользователя. Допустимые значения: {", ".join(allowed_types)}'}), 400
-
+    # Валидация email
     if not validate_email(email):
         return jsonify({'error': 'Неверный формат email'}), 400
-    if len(data['password']) < 6:
+    
+    # Валидация пароля
+    if len(password) < 6:
         return jsonify({'error': 'Пароль должен содержать минимум 6 символов'}), 400
+    
+    # Проверка уникальности email
     if User.query.filter_by(email=email).first():
         return jsonify({'error': 'Пользователь с таким email уже существует'}), 400
 
@@ -56,13 +56,19 @@ def register():
         # === СОЗДАЁМ пользователя ===
         user = User(
             email=email,
-            user_type=user_type,
-            full_name=data.get('full_name'),
+            full_name=full_name,
+            user_type='user',
+            is_active=True,
+            is_verified=False,
             last_login=datetime.utcnow()
         )
-        user.set_password(data['password'])
+        user.set_password(password)
         db.session.add(user)
         db.session.flush()  # чтобы получить user.id
+        
+        # === Создаём цели по умолчанию ===
+        goals = UserGoals(user_id=user.id)
+        db.session.add(goals)
      
         # === Токены ===
         access_token = create_access_token(
@@ -82,7 +88,6 @@ def register():
         user_data = user.to_dict(include_sensitive=True)
 
         return jsonify({
-            'message': f'Регистрация успешна',
             'user': user_data,
             'access_token': access_token,
             'refresh_token': refresh_token
@@ -101,36 +106,43 @@ def login():
     data = request.get_json()
     
     if not data or not data.get('email') or not data.get('password'):
-        return jsonify({'error': 'Email и пароль обязательны'}), 400
+        return jsonify({'error': 'Заполните все поля'}), 400
     
-    user = User.query.filter_by(email=data['email'].lower(), is_active=True).first()
+    email = data.get('email', '').strip().lower()
+    password = data.get('password', '')
     
-    if not user or not user.check_password(data['password']):
-        return jsonify({'error': 'Неверные учетные данные'}), 401
+    user = User.query.filter_by(email=email, is_active=True).first()
     
-    # Обновляем время последнего входа
-    user.last_login = datetime.utcnow()
-    db.session.commit()
+    if not user or not user.check_password(password):
+        return jsonify({'error': 'Неверный email или пароль'}), 401
     
-    # Создаем токены
-    access_token = create_access_token(
-        identity=str(user.id),
-        expires_delta=timedelta(hours=24),
-        additional_claims={
-            'user_type': user.user_type,
-            'email': user.email,
-            'full_name': user.full_name
-        }
-    )
-    
-    refresh_token = create_refresh_token(identity=str(user.id))
-    
-    return jsonify({
-        'message': 'Вход выполнен успешно',
-        'user': user.to_dict(include_sensitive=True),
-        'access_token': access_token,
-        'refresh_token': refresh_token
-    })
+    try:
+        # Обновляем время последнего входа
+        user.last_login = datetime.utcnow()
+        db.session.commit()
+        
+        # Создаем токены
+        access_token = create_access_token(
+            identity=str(user.id),
+            expires_delta=timedelta(hours=24),
+            additional_claims={
+                'user_type': user.user_type,
+                'email': user.email,
+                'full_name': user.full_name
+            }
+        )
+        
+        refresh_token = create_refresh_token(identity=str(user.id))
+        
+        return jsonify({
+            'user': user.to_dict(include_sensitive=True),
+            'access_token': access_token,
+            'refresh_token': refresh_token
+        })
+    except Exception as e:
+        db.session.rollback()
+        print(f"Ошибка входа: {e}")
+        return jsonify({'error': 'Ошибка при входе'}), 500
 
 @auth_bp.route('/refresh', methods=['POST'])
 @jwt_required(refresh=True)
@@ -174,7 +186,9 @@ def get_current_user():
             return jsonify({'error': 'Пользователь не найден'}), 404
         
         return jsonify({
-            'user': user.to_dict(include_sensitive=True)
+            'data': {
+                'user': user.to_dict(include_sensitive=True)
+            }
         })
     
     except Exception as e:
@@ -197,14 +211,15 @@ def update_profile():
             return jsonify({'error': 'Данные не предоставлены'}), 400
 
         # Обновляем допустимые поля профиля
-        if 'full_name' in data:
-            user.full_name = data['full_name']
+        if 'full_name' in data and data['full_name']:
+            user.full_name = data['full_name'].strip()
 
         db.session.commit()
         
         return jsonify({
-            'message': 'Профиль обновлен',
-            'user': user.to_dict(include_sensitive=True)
+            'data': {
+                'user': user.to_dict(include_sensitive=True)
+            }
         })
     
     except Exception as e:

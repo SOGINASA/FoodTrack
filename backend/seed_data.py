@@ -11,7 +11,7 @@ def seed_all():
     # === Пользователи ===
     users_data = [
         {
-            'email': 'user@eexample.com',
+            'email': 'user@example.com',
             'password': 'user123',
             'full_name': 'Демо Пользователь',
             'user_type': 'user'

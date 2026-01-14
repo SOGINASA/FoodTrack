@@ -6,17 +6,17 @@ BACKEND_DIR = os.path.dirname(os.path.abspath(__file__))
 DATABASE_DIR = os.path.join(BACKEND_DIR, 'database')
 
 class Config:
-    SECRET_KEY = os.urandom(32).hex()
+    SECRET_KEY = os.environ.get('SECRET_KEY', 'dev-secret-key-change-in-production')
     
     # Настройки базы данных (абсолютный путь)
     SQLALCHEMY_DATABASE_URI = os.environ.get('DATABASE_URL') or f'sqlite:///{os.path.join(DATABASE_DIR, "database.db")}'
     SQLALCHEMY_TRACK_MODIFICATIONS = False
 
     # Настройки CORS
-    CORS_ORIGINS = ["http://localhost:3000", "http://127.0.0.1:3000", "https://####.vercel.app/"] # подставьте сюда ссылку на фронтенда
+    CORS_ORIGINS = ["http://localhost:3000", "http://localhost:3001", "http://127.0.0.1:3000", "https://foodtrack.vercel.app"]
     
     # Настройки JWT
-    JWT_SECRET_KEY = os.urandom(32).hex()
+    JWT_SECRET_KEY = os.environ.get('JWT_SECRET_KEY', 'dev-jwt-secret-key-change-in-production')
     JWT_ACCESS_TOKEN_EXPIRES = timedelta(hours=24)
     JWT_REFRESH_TOKEN_EXPIRES = timedelta(days=30)
     
