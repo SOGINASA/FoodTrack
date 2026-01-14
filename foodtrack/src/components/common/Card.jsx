@@ -8,7 +8,7 @@ const Card = ({
   padding = 'default',
   ...props 
 }) => {
-  const baseStyles = 'bg-white rounded-2xl shadow-sm';
+  const baseStyles = 'bg-white rounded-2xl shadow-sm overflow-hidden';
   
   const paddingStyles = {
     none: '',

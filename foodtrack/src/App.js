@@ -19,17 +19,17 @@ function App() {
 
   return (
     <Router>
-      <div className="min-h-screen bg-white flex">
+      <div className="min-h-screen bg-white flex overflow-x-hidden">
         <Sidebar 
           isOpen={isSidebarOpen} 
           onClose={() => setIsSidebarOpen(false)} 
         />
 
-        <div className="flex-1 flex flex-col lg:ml-64">
+        <div className="flex-1 flex flex-col lg:ml-64 overflow-x-hidden">
           <Header />
 
-          <main className="flex-1 pb-20 lg:pb-8">
-            <div className="w-full px-4 py-6 lg:px-8 lg:py-8 lg:max-w-7xl lg:mx-auto">
+          <main className="flex-1 pb-20 lg:pb-8 overflow-x-hidden">
+            <div className="w-full px-4 py-6 lg:px-8 lg:py-8 lg:max-w-7xl lg:mx-auto overflow-x-hidden">
               <Routes>
                 <Route path="/" element={<Dashboard />} />
                 <Route path="/add-meal" element={<AddMeal />} />
