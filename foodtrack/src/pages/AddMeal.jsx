@@ -221,32 +221,71 @@ const AddMeal = () => {
     }
   };
 
+  // Сжатие изображения для уменьшения размера файла
+  const compressImage = (imageData, maxWidth = 1280, quality = 0.7) => {
+    return new Promise((resolve) => {
+      const img = new Image();
+      img.onload = () => {
+        const canvas = document.createElement('canvas');
+        let { width, height } = img;
+
+        // Уменьшаем размер если больше maxWidth
+        if (width > maxWidth) {
+          height = (height * maxWidth) / width;
+          width = maxWidth;
+        }
+
+        canvas.width = width;
+        canvas.height = height;
+
+        const ctx = canvas.getContext('2d');
+        ctx.drawImage(img, 0, 0, width, height);
+
+        resolve(canvas.toDataURL('image/jpeg', quality));
+      };
+      img.src = imageData;
+    });
+  };
+
   const analyzeImage = async (imageData) => {
     setAnalyzing(true);
-    
+
     try {
+      // Сжимаем изображение перед отправкой
+      const compressedImage = await compressImage(imageData);
+
       // Конвертируем base64 в Blob
-      const byteString = atob(imageData.split(',')[1]);
-      const mimeString = imageData.split(',')[0].match(/:(.*?);/)[1];
+      const byteString = atob(compressedImage.split(',')[1]);
+      const mimeString = compressedImage.split(',')[0].match(/:(.*?);/)[1];
       const ab = new ArrayBuffer(byteString.length);
       const ia = new Uint8Array(ab);
       for (let i = 0; i < byteString.length; i++) {
         ia[i] = byteString.charCodeAt(i);
       }
       const blob = new Blob([ab], { type: mimeString });
-      
+
       // Создаём File из Blob
       const file = new File([blob], 'photo.jpg', { type: 'image/jpeg' });
       
       // Отправляем на API анализа
       const response = await mealsAPI.analyzePhoto(file);
-      
+
       const result = response.data;
-      
+
+      // Проверяем, что модель что-то нашла
+      if (!result.top_prediction || result.confidence === 0) {
+        setShowToast({
+          type: 'warning',
+          message: 'Не удалось распознать еду на фото. Попробуйте сделать более чёткое фото блюда.'
+        });
+        setCapturedImage(null);
+        return;
+      }
+
       // Преобразуем результат в нужный формат
       const mockResult = {
-        dishName: result.top_prediction || 'Unknown',
-        confidence: Math.round(result.confidence) || 0,
+        dishName: result.top_prediction,
+        confidence: Math.round(result.confidence),
         calories: result.nutrition?.calories || 0,
         protein: result.nutrition?.protein || 0,
         carbs: result.nutrition?.carbs || 0,
@@ -262,10 +301,19 @@ const AddMeal = () => {
       setShowResultModal(true);
     } catch (error) {
       console.error('Ошибка анализа:', error);
-      setShowToast({ 
-        type: 'error', 
-        message: error.response?.data?.detail || 'Ошибка анализа. Убедитесь, что сервис на порту 8000 запущен' 
-      });
+
+      let errorMessage = 'Ошибка анализа. Попробуйте ещё раз.';
+
+      if (error.response?.status === 413) {
+        errorMessage = 'Файл слишком большой. Попробуйте фото меньшего размера.';
+      } else if (error.response?.data?.detail) {
+        errorMessage = error.response.data.detail;
+      } else if (!navigator.onLine) {
+        errorMessage = 'Нет подключения к интернету';
+      }
+
+      setShowToast({ type: 'error', message: errorMessage });
+      setCapturedImage(null);
     } finally {
       setAnalyzing(false);
     }

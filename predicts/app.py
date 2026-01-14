@@ -54,9 +54,9 @@ class NutritionResponse(BaseModel):
 
 
 class PredictionWithNutritionResponse(BaseModel):
-    top_prediction: str
-    confidence: float
-    top_predictions: List[Tuple[str, float]]
+    top_prediction: Optional[str] = None
+    confidence: float = 0.0
+    top_predictions: List[Tuple[str, float]] = []
     nutrition: Optional[Dict] = None
 
 
@@ -209,6 +209,15 @@ async def predict_with_nutrition(file: UploadFile = File(...)):
 
         # Анализируем изображение
         result = detect_food(str(temp_file_path), top_n=5)
+
+        # Проверяем, нашла ли модель что-то
+        if not result['top_prediction']:
+            return PredictionWithNutritionResponse(
+                top_prediction=None,
+                confidence=0.0,
+                top_predictions=[],
+                nutrition=None
+            )
 
         # Получаем информацию о питательности
         nutrition_data = get_nutrition_info(result['top_prediction'])
