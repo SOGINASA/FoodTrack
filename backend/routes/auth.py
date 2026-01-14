@@ -15,48 +15,80 @@ def validate_phone(phone):
     """Валидация номера телефона (Казахстан)"""
     # Убираем все кроме цифр
     clean_phone = re.sub(r'\D', '', phone)
-    
+
     # Казахстанские номера: +7 7XX XXX XXXX или 8 7XX XXX XXXX
     if len(clean_phone) == 11 and clean_phone.startswith('7'):
         return True
     elif len(clean_phone) == 11 and clean_phone.startswith('87'):
         return True
-    
+
     return False
+
+
+def validate_nickname(nickname):
+    """Валидация никнейма: 3-20 символов, буквы, цифры, точки, подчёркивания, дефисы"""
+    pattern = r'^[a-zA-Z0-9._-]{3,20}$'
+    return bool(re.match(pattern, nickname))
+
+
+def is_email(identifier):
+    """Проверяет, является ли identifier email-ом"""
+    return '@' in identifier and '.' in identifier
 
 @auth_bp.route('/register', methods=['POST'])
 def register():
-    """Регистрация пользователя"""
+    """Регистрация пользователя по email или nickname"""
     data = request.get_json()
     if not data:
         return jsonify({'error': 'Данные не предоставлены'}), 400
 
-    # Обязательные поля
-    email = data.get('email', '').strip().lower() if data.get('email') else ''
+    # Поля (email или nickname - хотя бы одно обязательно)
+    email = data.get('email', '').strip().lower() if data.get('email') else None
+    nickname = data.get('nickname', '').strip() if data.get('nickname') else None
     password = data.get('password', '')
     full_name = data.get('full_name', '').strip() if data.get('full_name') else ''
 
-    # Валидация обязательных полей
-    if not email or not password or not full_name:
-        return jsonify({'error': 'Заполните все обязательные поля'}), 400
+    # Поддержка identifier (определяем email это или nickname)
+    identifier = data.get('identifier', '').strip() if data.get('identifier') else None
+    if identifier and not email and not nickname:
+        if is_email(identifier):
+            email = identifier.lower()
+        else:
+            nickname = identifier
 
-    # Валидация email
-    if not validate_email(email):
+    # Валидация - нужен хотя бы email или nickname
+    if not email and not nickname:
+        return jsonify({'error': 'Укажите email или nickname'}), 400
+
+    if not password:
+        return jsonify({'error': 'Пароль обязателен'}), 400
+
+    # Валидация email (если указан)
+    if email and not validate_email(email):
         return jsonify({'error': 'Неверный формат email'}), 400
-    
-    # Валидация пароля
-    if len(password) < 6:
-        return jsonify({'error': 'Пароль должен содержать минимум 6 символов'}), 400
-    
+
+    # Валидация nickname (если указан)
+    if nickname and not validate_nickname(nickname):
+        return jsonify({'error': 'Nickname должен содержать 3-20 символов (буквы, цифры, точки, подчёркивания, дефисы)'}), 400
+
+    # Валидация пароля (минимум 4 символа как на фронте)
+    if len(password) < 4:
+        return jsonify({'error': 'Пароль должен содержать минимум 4 символа'}), 400
+
     # Проверка уникальности email
-    if User.query.filter_by(email=email).first():
+    if email and User.query.filter_by(email=email).first():
         return jsonify({'error': 'Пользователь с таким email уже существует'}), 400
+
+    # Проверка уникальности nickname
+    if nickname and User.query.filter(db.func.lower(User.nickname) == nickname.lower()).first():
+        return jsonify({'error': 'Пользователь с таким nickname уже существует'}), 400
 
     try:
         # === СОЗДАЁМ пользователя ===
         user = User(
             email=email,
-            full_name=full_name,
+            nickname=nickname,
+            full_name=full_name or nickname or email.split('@')[0] if email else nickname,
             user_type='user',
             is_active=True,
             is_verified=False,
@@ -65,11 +97,11 @@ def register():
         user.set_password(password)
         db.session.add(user)
         db.session.flush()  # чтобы получить user.id
-        
+
         # === Создаём цели по умолчанию ===
         goals = UserGoals(user_id=user.id)
         db.session.add(goals)
-     
+
         # === Токены ===
         access_token = create_access_token(
             identity=str(user.id),
@@ -77,6 +109,7 @@ def register():
             additional_claims={
                 'user_type': user.user_type,
                 'email': user.email,
+                'nickname': user.nickname,
                 'full_name': user.full_name
             }
         )
@@ -102,25 +135,50 @@ def register():
 
 @auth_bp.route('/login', methods=['POST'])
 def login():
-    """Вход пользователя"""
+    """Вход пользователя по email, nickname или identifier"""
     data = request.get_json()
-    
-    if not data or not data.get('email') or not data.get('password'):
+
+    if not data or not data.get('password'):
         return jsonify({'error': 'Заполните все поля'}), 400
-    
-    email = data.get('email', '').strip().lower()
+
     password = data.get('password', '')
-    
-    user = User.query.filter_by(email=email, is_active=True).first()
-    
+
+    # Поддержка identifier (email или nickname) или отдельных полей
+    identifier = data.get('identifier', '').strip().lower() if data.get('identifier') else ''
+    email = data.get('email', '').strip().lower() if data.get('email') else ''
+    nickname = data.get('nickname', '').strip().lower() if data.get('nickname') else ''
+
+    user = None
+
+    # Если передан identifier - определяем, это email или nickname
+    if identifier:
+        if is_email(identifier):
+            user = User.query.filter_by(email=identifier, is_active=True).first()
+        else:
+            user = User.query.filter(
+                db.func.lower(User.nickname) == identifier,
+                User.is_active == True
+            ).first()
+    # Если передан email напрямую
+    elif email:
+        user = User.query.filter_by(email=email, is_active=True).first()
+    # Если передан nickname напрямую
+    elif nickname:
+        user = User.query.filter(
+            db.func.lower(User.nickname) == nickname,
+            User.is_active == True
+        ).first()
+    else:
+        return jsonify({'error': 'Укажите email, nickname или identifier'}), 400
+
     if not user or not user.check_password(password):
-        return jsonify({'error': 'Неверный email или пароль'}), 401
-    
+        return jsonify({'error': 'Неверные данные для входа'}), 401
+
     try:
         # Обновляем время последнего входа
         user.last_login = datetime.utcnow()
         db.session.commit()
-        
+
         # Создаем токены
         access_token = create_access_token(
             identity=str(user.id),
@@ -128,12 +186,13 @@ def login():
             additional_claims={
                 'user_type': user.user_type,
                 'email': user.email,
+                'nickname': user.nickname,
                 'full_name': user.full_name
             }
         )
-        
+
         refresh_token = create_refresh_token(identity=str(user.id))
-        
+
         return jsonify({
             'user': user.to_dict(include_sensitive=True),
             'access_token': access_token,
@@ -161,6 +220,7 @@ def refresh():
             additional_claims={
                 'user_type': user.user_type,
                 'email': user.email,
+                'nickname': user.nickname,
                 'full_name': user.full_name
             }
         )
@@ -213,6 +273,19 @@ def update_profile():
         # Обновляем допустимые поля профиля
         if 'full_name' in data and data['full_name']:
             user.full_name = data['full_name'].strip()
+
+        if 'nickname' in data and data['nickname']:
+            new_nickname = data['nickname'].strip()
+            if not validate_nickname(new_nickname):
+                return jsonify({'error': 'Nickname должен содержать 3-20 символов (буквы, цифры, точки, подчёркивания, дефисы)'}), 400
+            # Проверка уникальности (исключая текущего пользователя)
+            existing = User.query.filter(
+                db.func.lower(User.nickname) == new_nickname.lower(),
+                User.id != user.id
+            ).first()
+            if existing:
+                return jsonify({'error': 'Этот nickname уже занят'}), 400
+            user.nickname = new_nickname
 
         db.session.commit()
         

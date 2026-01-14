@@ -39,11 +39,12 @@ export default function Auth() {
 
   const [touched, setTouched] = useState({ identifier: false, password: false });
   const [error, setError] = useState('');
+  const [isLoading, setIsLoading] = useState(false);
 
   const idValidation = useMemo(() => validateNicknameOrEmail(identifier), [identifier]);
   const pwdValidation = useMemo(() => validatePassword(password), [password]);
 
-  const goNext = () => {
+  const goNext = async () => {
     setError('');
 
     if (step === 0) {
@@ -60,13 +61,18 @@ export default function Auth() {
     setTouched((t) => ({ ...t, password: true }));
     if (!pwdValidation.ok) return;
 
-    const res = finishAuth(password);
-    if (!res.ok) {
-      setError('Не удалось войти. Проверьте данные.');
-      return;
-    }
+    setIsLoading(true);
+    try {
+      const res = await finishAuth(password);
+      if (!res.ok) {
+        setError(res.error || 'Не удалось войти. Проверьте данные.');
+        return;
+      }
 
-    navigate('/onboarding', { replace: true });
+      navigate('/onboarding', { replace: true });
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   const goBack = () => {
@@ -191,9 +197,10 @@ export default function Auth() {
           <button
             type="button"
             onClick={goNext}
-            className="w-full rounded-full bg-black text-white py-3 text-base font-semibold hover:opacity-90 transition"
+            disabled={isLoading}
+            className="w-full rounded-full bg-black text-white py-3 text-base font-semibold hover:opacity-90 transition disabled:opacity-50 disabled:cursor-not-allowed"
           >
-            Продолжить
+            {isLoading ? 'Загрузка...' : 'Продолжить'}
           </button>
         </div>
 

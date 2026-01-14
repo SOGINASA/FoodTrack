@@ -7,7 +7,7 @@ const ProfileSettings = ({ profile, onSave, onChangePassword }) => {
   const [formData, setFormData] = useState({
     name: profile.name || '',
     email: profile.email || '',
-    phone: profile.phone || '',
+    nickname: profile.nickname || '',
     avatar: profile.avatar || null,
   });
 
@@ -110,8 +110,13 @@ const ProfileSettings = ({ profile, onSave, onChangePassword }) => {
               </label>
             </div>
             <div>
-              <h4 className="font-bold text-lg">{formData.name || 'Ваше имя'}</h4>
-              <p className="text-sm text-secondary">{formData.email || 'email@example.com'}</p>
+              <h4 className="font-bold text-lg">{formData.name || formData.nickname || 'Ваше имя'}</h4>
+              <p className="text-sm text-secondary">
+                {formData.nickname && <span>@{formData.nickname}</span>}
+                {formData.nickname && formData.email && <span> · </span>}
+                {formData.email && <span>{formData.email}</span>}
+                {!formData.nickname && !formData.email && <span>Заполните профиль</span>}
+              </p>
             </div>
           </div>
 
@@ -127,6 +132,18 @@ const ProfileSettings = ({ profile, onSave, onChangePassword }) => {
           </div>
 
           <div>
+            <label className="block text-sm font-semibold mb-2">Никнейм</label>
+            <input
+              type="text"
+              value={formData.nickname}
+              onChange={(e) => handleChange('nickname', e.target.value)}
+              placeholder="Ваш никнейм"
+              className="w-full px-4 py-3 bg-gray-50 border-none rounded-xl text-base focus:ring-2 focus:ring-black outline-none"
+            />
+            <p className="text-xs text-secondary mt-1">3-20 символов: буквы, цифры, точки, подчёркивания</p>
+          </div>
+
+          <div>
             <label className="block text-sm font-semibold mb-2">Email</label>
             <input
               type="email"
@@ -135,17 +152,6 @@ const ProfileSettings = ({ profile, onSave, onChangePassword }) => {
               className="w-full px-4 py-3 bg-gray-100 border-none rounded-xl text-base text-gray-500 cursor-not-allowed"
             />
             <p className="text-xs text-secondary mt-1">Email нельзя изменить</p>
-          </div>
-
-          <div>
-            <label className="block text-sm font-semibold mb-2">Телефон</label>
-            <input
-              type="tel"
-              value={formData.phone}
-              onChange={(e) => handleChange('phone', e.target.value)}
-              placeholder="+7 (999) 999-99-99"
-              className="w-full px-4 py-3 bg-gray-50 border-none rounded-xl text-base focus:ring-2 focus:ring-black outline-none"
-            />
           </div>
 
           {hasChanges && (

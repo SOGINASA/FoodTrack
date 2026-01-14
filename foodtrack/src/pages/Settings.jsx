@@ -86,7 +86,11 @@ const Settings = () => {
 
   // Сохранение профиля
   const handleSaveProfile = async (data) => {
-    const result = await updateProfile({ full_name: data.name });
+    const updateData = {};
+    if (data.name) updateData.full_name = data.name;
+    if (data.nickname) updateData.nickname = data.nickname;
+
+    const result = await updateProfile(updateData);
     if (result.success) {
       setShowToast({ type: 'success', message: 'Профиль обновлён' });
     } else {
@@ -164,7 +168,7 @@ const Settings = () => {
   const profile = {
     name: user?.full_name || '',
     email: user?.email || '',
-    phone: '',
+    nickname: user?.nickname || '',
     avatar: null,
   };
 

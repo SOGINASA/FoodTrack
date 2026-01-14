@@ -1,4 +1,5 @@
 import React, { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react';
+import { authAPI } from '../services/api';
 
 const AuthContext = createContext(null);
 
@@ -23,20 +24,39 @@ export const AuthProvider = ({ children }) => {
   const [tempIdentifier, setTempIdentifier] = useState('');
 
   useEffect(() => {
-    const authed = readBool(LS_KEYS.AUTH);
-    const onboarded = readBool(LS_KEYS.ONBOARDING_DONE);
-    const identifier = localStorage.getItem(LS_KEYS.USER_IDENTIFIER) || '';
+    const initAuth = async () => {
+      const authed = readBool(LS_KEYS.AUTH);
+      const onboarded = readBool(LS_KEYS.ONBOARDING_DONE);
+      const token = localStorage.getItem('access_token');
 
-    setIsAuthenticated(authed);
-    setOnboardingCompleted(onboarded);
+      setIsAuthenticated(authed);
+      setOnboardingCompleted(onboarded);
 
-    if (authed) {
-      setUser({ identifier });
-    } else {
-      setUser(null);
-    }
+      // Если есть токен - загружаем данные пользователя с сервера
+      if (authed && token) {
+        try {
+          const response = await authAPI.getMe();
+          const userData = response.data?.data?.user || response.data?.user;
+          if (userData) {
+            setUser(userData);
+          }
+        } catch (err) {
+          // Токен невалидный - разлогиниваем
+          console.error('Failed to fetch user:', err);
+          writeBool(LS_KEYS.AUTH, false);
+          localStorage.removeItem('access_token');
+          localStorage.removeItem('refresh_token');
+          setIsAuthenticated(false);
+          setUser(null);
+        }
+      } else {
+        setUser(null);
+      }
 
-    setLoading(false);
+      setLoading(false);
+    };
+
+    initAuth();
   }, []);
 
   const startAuth = useCallback((identifier) => {
@@ -44,7 +64,7 @@ export const AuthProvider = ({ children }) => {
   }, []);
 
   const finishAuth = useCallback(
-    (password) => {
+    async (password) => {
       const identifier = (tempIdentifier || '').trim();
       const pwd = (password || '').trim();
 
@@ -52,30 +72,58 @@ export const AuthProvider = ({ children }) => {
         return { ok: false, error: 'Неверные данные для входа' };
       }
 
-      writeBool(LS_KEYS.AUTH, true);
+      try {
+        // Пробуем войти через API
+        const response = await authAPI.login({ identifier, password: pwd });
+        const { user: userData, access_token, refresh_token } = response.data;
 
-      // onboarding по умолчанию НЕ пройден (если вообще нет ключа)
-      if (localStorage.getItem(LS_KEYS.ONBOARDING_DONE) == null) {
-        writeBool(LS_KEYS.ONBOARDING_DONE, false);
+        // Сохраняем токены
+        localStorage.setItem('access_token', access_token);
+        localStorage.setItem('refresh_token', refresh_token);
+
+        writeBool(LS_KEYS.AUTH, true);
+        localStorage.setItem(LS_KEYS.USER_IDENTIFIER, identifier);
+
+        // onboarding по умолчанию НЕ пройден (если вообще нет ключа)
+        if (localStorage.getItem(LS_KEYS.ONBOARDING_DONE) == null) {
+          writeBool(LS_KEYS.ONBOARDING_DONE, false);
+        }
+
+        setIsAuthenticated(true);
+        setUser(userData);
+        setOnboardingCompleted(readBool(LS_KEYS.ONBOARDING_DONE));
+
+        return { ok: true };
+      } catch (err) {
+        // Если пользователь не найден - пробуем зарегистрировать
+        if (err.response?.status === 401) {
+          try {
+            const regResponse = await authAPI.register({ identifier, password: pwd });
+            const { user: userData, access_token, refresh_token } = regResponse.data;
+
+            localStorage.setItem('access_token', access_token);
+            localStorage.setItem('refresh_token', refresh_token);
+
+            writeBool(LS_KEYS.AUTH, true);
+            localStorage.setItem(LS_KEYS.USER_IDENTIFIER, identifier);
+            writeBool(LS_KEYS.ONBOARDING_DONE, false);
+
+            setIsAuthenticated(true);
+            setUser(userData);
+            setOnboardingCompleted(false);
+
+            return { ok: true, isNewUser: true };
+          } catch (regErr) {
+            return { ok: false, error: regErr.response?.data?.error || 'Ошибка регистрации' };
+          }
+        }
+        return { ok: false, error: err.response?.data?.error || 'Ошибка входа' };
       }
-
-      localStorage.setItem(LS_KEYS.USER_IDENTIFIER, identifier);
-
-      setIsAuthenticated(true);
-      setUser({ identifier });
-      setOnboardingCompleted(readBool(LS_KEYS.ONBOARDING_DONE));
-
-      return { ok: true };
     },
     [tempIdentifier]
   );
 
-  const login = useCallback(({
-    identifier,
-    password,
-  }) => {
-    setTempIdentifier((identifier || '').trim());
-
+  const login = useCallback(async ({ identifier, password }) => {
     const id = (identifier || '').trim();
     const pwd = (password || '').trim();
 
@@ -83,22 +131,32 @@ export const AuthProvider = ({ children }) => {
       return { ok: false, error: 'Неверные данные для входа' };
     }
 
-    writeBool(LS_KEYS.AUTH, true);
+    try {
+      const response = await authAPI.login({ identifier: id, password: pwd });
+      const { user: userData, access_token, refresh_token } = response.data;
 
-    if (localStorage.getItem(LS_KEYS.ONBOARDING_DONE) == null) {
-      writeBool(LS_KEYS.ONBOARDING_DONE, false);
+      localStorage.setItem('access_token', access_token);
+      localStorage.setItem('refresh_token', refresh_token);
+
+      writeBool(LS_KEYS.AUTH, true);
+      localStorage.setItem(LS_KEYS.USER_IDENTIFIER, id);
+
+      if (localStorage.getItem(LS_KEYS.ONBOARDING_DONE) == null) {
+        writeBool(LS_KEYS.ONBOARDING_DONE, false);
+      }
+
+      setIsAuthenticated(true);
+      setUser(userData);
+      setOnboardingCompleted(readBool(LS_KEYS.ONBOARDING_DONE));
+
+      return { ok: true };
+    } catch (err) {
+      return { ok: false, error: err.response?.data?.error || 'Ошибка входа' };
     }
-
-    localStorage.setItem(LS_KEYS.USER_IDENTIFIER, id);
-
-    setIsAuthenticated(true);
-    setUser({ identifier: id });
-    setOnboardingCompleted(readBool(LS_KEYS.ONBOARDING_DONE));
-
-    return { ok: true };
   }, []);
 
   const logout = useCallback(() => {
+    authAPI.logout();
     writeBool(LS_KEYS.AUTH, false);
     localStorage.removeItem(LS_KEYS.USER_IDENTIFIER);
 
@@ -119,6 +177,44 @@ export const AuthProvider = ({ children }) => {
     return { ok: true };
   }, []);
 
+  // Обновление профиля
+  const updateProfile = useCallback(async (data) => {
+    try {
+      const response = await authAPI.updateProfile(data);
+      const updatedUser = response.data?.data?.user || response.data?.user;
+      if (updatedUser) {
+        setUser(updatedUser);
+      }
+      return { success: true };
+    } catch (err) {
+      return { success: false, error: err.response?.data?.error || 'Ошибка обновления профиля' };
+    }
+  }, []);
+
+  // Смена пароля
+  const changePassword = useCallback(async (currentPassword, newPassword) => {
+    try {
+      await authAPI.changePassword({ current_password: currentPassword, new_password: newPassword });
+      return { success: true };
+    } catch (err) {
+      return { success: false, error: err.response?.data?.error || 'Ошибка смены пароля' };
+    }
+  }, []);
+
+  // Загрузка данных текущего пользователя
+  const fetchCurrentUser = useCallback(async () => {
+    try {
+      const response = await authAPI.getMe();
+      const userData = response.data?.data?.user || response.data?.user;
+      if (userData) {
+        setUser(userData);
+      }
+      return { success: true, user: userData };
+    } catch (err) {
+      return { success: false, error: err.response?.data?.error || 'Ошибка загрузки профиля' };
+    }
+  }, []);
+
   const value = useMemo(
     () => ({
       loading,
@@ -134,6 +230,9 @@ export const AuthProvider = ({ children }) => {
       logout,
       completeOnboarding,
       resetOnboarding,
+      updateProfile,
+      changePassword,
+      fetchCurrentUser,
     }),
     [
       loading,
@@ -147,6 +246,9 @@ export const AuthProvider = ({ children }) => {
       logout,
       completeOnboarding,
       resetOnboarding,
+      updateProfile,
+      changePassword,
+      fetchCurrentUser,
     ]
   );
 

@@ -9,7 +9,8 @@ db = SQLAlchemy()
 class User(db.Model):
     __tablename__ = 'users'
     id = db.Column(db.Integer, primary_key=True)
-    email = db.Column(db.String(120), unique=True, nullable=False, index=True)
+    email = db.Column(db.String(120), unique=True, nullable=True, index=True)
+    nickname = db.Column(db.String(50), unique=True, nullable=True, index=True)
     password_hash = db.Column(db.String(255), nullable=False)
 
     full_name = db.Column(db.String(100))
@@ -40,6 +41,7 @@ class User(db.Model):
         data = {
             'id': self.id,
             'email': self.email,
+            'nickname': self.nickname,
             'full_name': self.full_name,
             'user_type': self.user_type,
             'created_at': self.created_at.isoformat() if self.created_at else None,
