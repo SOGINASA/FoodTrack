@@ -1,6 +1,8 @@
 import { useState } from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { AuthProvider, useAuth } from './context/AuthContext';
+import { OnboardingProvider } from './context/OnboardingContext';
+
 import Header from './components/layout/Header';
 import Sidebar from './components/layout/Sidebar';
 import Footer from './components/layout/Footer';
@@ -15,31 +17,13 @@ import Recipes from './pages/Recipes';
 import Progress from './pages/Progress';
 import Groups from './pages/Groups';
 import Settings from './pages/Settings';
-import Login from './pages/Login';
-import Register from './pages/Register';
 
-// Защищённый роут — редирект на логин если не авторизован
-// const ProtectedRoute = ({ children }) => {
-//   const { isAuthenticated, loading } = useAuth();
+import Auth from './pages/Auth';
+import Onboarding from './pages/Onboarding';
 
-//   if (loading) {
-//     return (
-//       <div className="min-h-screen flex items-center justify-center">
-//         <Loader size="lg" />
-//       </div>
-//     );
-//   }
-
-//   if (!isAuthenticated) {
-//     return <Navigate to="/login" replace />;
-//   }
-
-//   return children;
-// };
-
-// Публичный роут — редирект на главную если уже авторизован
+// Публичный роут — если уже авторизован, кидаем либо в приложение, либо в онбординг
 const PublicRoute = ({ children }) => {
-  const { isAuthenticated, loading } = useAuth();
+  const { isAuthenticated, loading, onboardingCompleted } = useAuth();
 
   if (loading) {
     return (
@@ -49,8 +33,58 @@ const PublicRoute = ({ children }) => {
     );
   }
 
-  if (isAuthenticated) {
+  if (isAuthenticated && onboardingCompleted) {
     return <Navigate to="/" replace />;
+  }
+
+  if (isAuthenticated && !onboardingCompleted) {
+    return <Navigate to="/onboarding" replace />;
+  }
+
+  return children;
+};
+
+// Роут онбординга — только для авторизованных, и только если онбординг не завершён
+const OnboardingRoute = ({ children }) => {
+  const { isAuthenticated, loading, onboardingCompleted } = useAuth();
+
+  if (loading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <Loader size="lg" />
+      </div>
+    );
+  }
+
+  if (!isAuthenticated) {
+    return <Navigate to="/auth" replace />;
+  }
+
+  if (onboardingCompleted) {
+    return <Navigate to="/" replace />;
+  }
+
+  return children;
+};
+
+// Защищённая часть приложения — только если авторизован + онбординг завершён
+const RequireReady = ({ children }) => {
+  const { isAuthenticated, loading, onboardingCompleted } = useAuth();
+
+  if (loading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <Loader size="lg" />
+      </div>
+    );
+  }
+
+  if (!isAuthenticated) {
+    return <Navigate to="/auth" replace />;
+  }
+
+  if (!onboardingCompleted) {
+    return <Navigate to="/onboarding" replace />;
   }
 
   return children;
@@ -96,35 +130,39 @@ function App() {
   return (
     <Router>
       <AuthProvider>
-        <Routes>
-          {/* Публичные роуты */}
-          <Route
-            path="/login"
-            element={
-              <PublicRoute>
-                <Login />
-              </PublicRoute>
-            }
-          />
-          <Route
-            path="/register"
-            element={
-              <PublicRoute>
-                <Register />
-              </PublicRoute>
-            }
-          />
+        <OnboardingProvider>
+          <Routes>
+            {/* Auth */}
+            <Route
+              path="/auth"
+              element={
+                <PublicRoute>
+                  <Auth />
+                </PublicRoute>
+              }
+            />
 
-          {/* Защищённые роуты */}
-          <Route
-            path="/*"
-            element={
-              // <ProtectedRoute>
-                <AppLayout />
-              // </ProtectedRoute>
-            }
-          />
-        </Routes>
+            {/* Onboarding */}
+            <Route
+              path="/onboarding"
+              element={
+                <OnboardingRoute>
+                  <Onboarding />
+                </OnboardingRoute>
+              }
+            />
+
+            {/* App */}
+            <Route
+              path="/*"
+              element={
+                <RequireReady>
+                  <AppLayout />
+                </RequireReady>
+              }
+            />
+          </Routes>
+        </OnboardingProvider>
       </AuthProvider>
     </Router>
   );

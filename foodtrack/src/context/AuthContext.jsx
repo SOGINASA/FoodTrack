@@ -1,139 +1,160 @@
-import { createContext, useContext, useState, useEffect, useCallback } from 'react';
-import { authAPI } from '../services/api';
+import React, { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react';
 
 const AuthContext = createContext(null);
 
-export const useAuth = () => {
-  const context = useContext(AuthContext);
-  if (!context) {
-    throw new Error('useAuth must be used within an AuthProvider');
-  }
-  return context;
+const LS_KEYS = {
+  AUTH: 'foodtrack_auth',
+  USER_IDENTIFIER: 'foodtrack_user_identifier',
+  ONBOARDING_DONE: 'foodtrack_onboarding_completed',
 };
+
+const readBool = (key) => localStorage.getItem(key) === '1';
+const writeBool = (key, val) => localStorage.setItem(key, val ? '1' : '0');
 
 export const AuthProvider = ({ children }) => {
-  const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(null);
 
-  // Проверка авторизации при загрузке
-  const checkAuth = useCallback(async () => {
-    const token = localStorage.getItem('access_token');
-    if (!token) {
-      setLoading(false);
-      return;
-    }
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [onboardingCompleted, setOnboardingCompleted] = useState(false);
 
-    try {
-      const response = await authAPI.getMe();
-      setUser(response.data.user);
-    } catch (err) {
-      console.error('Auth check failed:', err);
-      localStorage.removeItem('access_token');
-      localStorage.removeItem('refresh_token');
-    } finally {
-      setLoading(false);
-    }
-  }, []);
+  const [user, setUser] = useState(null);
+
+  // Для /auth: одно поле -> следующий экран (пароль)
+  const [tempIdentifier, setTempIdentifier] = useState('');
 
   useEffect(() => {
-    checkAuth();
-  }, [checkAuth]);
+    const authed = readBool(LS_KEYS.AUTH);
+    const onboarded = readBool(LS_KEYS.ONBOARDING_DONE);
+    const identifier = localStorage.getItem(LS_KEYS.USER_IDENTIFIER) || '';
 
-  // Регистрация
-  const register = async (email, password, fullName) => {
-    setError(null);
-    try {
-      const response = await authAPI.register({
-        email,
-        password,
-        full_name: fullName,
-      });
+    setIsAuthenticated(authed);
+    setOnboardingCompleted(onboarded);
 
-      const { user, access_token, refresh_token } = response.data;
-
-      localStorage.setItem('access_token', access_token);
-      localStorage.setItem('refresh_token', refresh_token);
-      setUser(user);
-
-      return { success: true };
-    } catch (err) {
-      const message = err.response?.data?.error || 'Ошибка регистрации';
-      setError(message);
-      return { success: false, error: message };
+    if (authed) {
+      setUser({ identifier });
+    } else {
+      setUser(null);
     }
-  };
 
-  // Вход
-  const login = async (email, password) => {
-    setError(null);
-    try {
-      const response = await authAPI.login({ email, password });
+    setLoading(false);
+  }, []);
 
-      const { user, access_token, refresh_token } = response.data;
+  const startAuth = useCallback((identifier) => {
+    setTempIdentifier((identifier || '').trim());
+  }, []);
 
-      localStorage.setItem('access_token', access_token);
-      localStorage.setItem('refresh_token', refresh_token);
-      setUser(user);
+  const finishAuth = useCallback(
+    (password) => {
+      const identifier = (tempIdentifier || '').trim();
+      const pwd = (password || '').trim();
 
-      return { success: true };
-    } catch (err) {
-      const message = err.response?.data?.error || 'Неверный email или пароль';
-      setError(message);
-      return { success: false, error: message };
-    }
-  };
+      if (!identifier || pwd.length < 4) {
+        return { ok: false, error: 'Неверные данные для входа' };
+      }
 
-  // Выход
-  const logout = () => {
-    authAPI.logout();
-    setUser(null);
-  };
+      writeBool(LS_KEYS.AUTH, true);
 
-  // Обновление профиля
-  const updateProfile = async (data) => {
-    try {
-      const response = await authAPI.updateProfile(data);
-      setUser(response.data.user);
-      return { success: true };
-    } catch (err) {
-      const message = err.response?.data?.error || 'Ошибка обновления профиля';
-      return { success: false, error: message };
-    }
-  };
+      // onboarding по умолчанию НЕ пройден (если вообще нет ключа)
+      if (localStorage.getItem(LS_KEYS.ONBOARDING_DONE) == null) {
+        writeBool(LS_KEYS.ONBOARDING_DONE, false);
+      }
 
-  // Смена пароля
-  const changePassword = async (currentPassword, newPassword) => {
-    try {
-      await authAPI.changePassword({
-        current_password: currentPassword,
-        new_password: newPassword,
-      });
-      return { success: true };
-    } catch (err) {
-      const message = err.response?.data?.error || 'Ошибка смены пароля';
-      return { success: false, error: message };
-    }
-  };
+      localStorage.setItem(LS_KEYS.USER_IDENTIFIER, identifier);
 
-  const value = {
-    user,
-    loading,
-    error,
-    isAuthenticated: !!user,
-    register,
-    login,
-    logout,
-    updateProfile,
-    changePassword,
-    checkAuth,
-  };
+      setIsAuthenticated(true);
+      setUser({ identifier });
+      setOnboardingCompleted(readBool(LS_KEYS.ONBOARDING_DONE));
 
-  return (
-    <AuthContext.Provider value={value}>
-      {children}
-    </AuthContext.Provider>
+      return { ok: true };
+    },
+    [tempIdentifier]
   );
+
+  const login = useCallback(({
+    identifier,
+    password,
+  }) => {
+    setTempIdentifier((identifier || '').trim());
+
+    const id = (identifier || '').trim();
+    const pwd = (password || '').trim();
+
+    if (!id || pwd.length < 4) {
+      return { ok: false, error: 'Неверные данные для входа' };
+    }
+
+    writeBool(LS_KEYS.AUTH, true);
+
+    if (localStorage.getItem(LS_KEYS.ONBOARDING_DONE) == null) {
+      writeBool(LS_KEYS.ONBOARDING_DONE, false);
+    }
+
+    localStorage.setItem(LS_KEYS.USER_IDENTIFIER, id);
+
+    setIsAuthenticated(true);
+    setUser({ identifier: id });
+    setOnboardingCompleted(readBool(LS_KEYS.ONBOARDING_DONE));
+
+    return { ok: true };
+  }, []);
+
+  const logout = useCallback(() => {
+    writeBool(LS_KEYS.AUTH, false);
+    localStorage.removeItem(LS_KEYS.USER_IDENTIFIER);
+
+    setIsAuthenticated(false);
+    setUser(null);
+    setTempIdentifier('');
+  }, []);
+
+  const completeOnboarding = useCallback(() => {
+    writeBool(LS_KEYS.ONBOARDING_DONE, true);
+    setOnboardingCompleted(true);
+    return { ok: true };
+  }, []);
+
+  const resetOnboarding = useCallback(() => {
+    writeBool(LS_KEYS.ONBOARDING_DONE, false);
+    setOnboardingCompleted(false);
+    return { ok: true };
+  }, []);
+
+  const value = useMemo(
+    () => ({
+      loading,
+      isAuthenticated,
+      onboardingCompleted,
+      user,
+
+      tempIdentifier,
+      startAuth,
+      finishAuth,
+
+      login,
+      logout,
+      completeOnboarding,
+      resetOnboarding,
+    }),
+    [
+      loading,
+      isAuthenticated,
+      onboardingCompleted,
+      user,
+      tempIdentifier,
+      startAuth,
+      finishAuth,
+      login,
+      logout,
+      completeOnboarding,
+      resetOnboarding,
+    ]
+  );
+
+  return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 };
 
-export default AuthContext;
+export const useAuth = () => {
+  const ctx = useContext(AuthContext);
+  if (!ctx) throw new Error('useAuth должен использоваться внутри AuthProvider');
+  return ctx;
+};
