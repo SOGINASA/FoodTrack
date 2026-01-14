@@ -222,7 +222,7 @@ const AddMeal = () => {
   };
 
   // Сжатие изображения для уменьшения размера файла
-  const compressImage = (imageData, maxWidth = 1280, quality = 0.7) => {
+  const compressImage = (imageData, maxWidth = 1920, quality = 0.85) => {
     return new Promise((resolve) => {
       const img = new Image();
       img.onload = () => {
@@ -284,7 +284,7 @@ const AddMeal = () => {
 
       // Преобразуем результат в нужный формат
       const mockResult = {
-        dishName: result.top_prediction,
+        dishName: result.top_prediction_ru || result.top_prediction,
         confidence: Math.round(result.confidence),
         calories: result.nutrition?.calories || 0,
         protein: result.nutrition?.protein || 0,

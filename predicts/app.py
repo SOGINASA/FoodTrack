@@ -8,6 +8,7 @@ import shutil
 from pathlib import Path
 from use_model import detect_food, detect_food_simple
 from nutrition import get_nutrition_info
+from food_name_ru import get_russian_name
 
 app = FastAPI(
     title="CalSnap API",
@@ -55,8 +56,10 @@ class NutritionResponse(BaseModel):
 
 class PredictionWithNutritionResponse(BaseModel):
     top_prediction: Optional[str] = None
+    top_prediction_ru: Optional[str] = None
     confidence: float = 0.0
     top_predictions: List[Tuple[str, float]] = []
+    top_predictions_ru: List[Tuple[str, float]] = []
     nutrition: Optional[Dict] = None
 
 
@@ -214,18 +217,29 @@ async def predict_with_nutrition(file: UploadFile = File(...)):
         if not result['top_prediction']:
             return PredictionWithNutritionResponse(
                 top_prediction=None,
+                top_prediction_ru=None,
                 confidence=0.0,
                 top_predictions=[],
+                top_predictions_ru=[],
                 nutrition=None
             )
 
         # Получаем информацию о питательности
         nutrition_data = get_nutrition_info(result['top_prediction'])
 
+        # Переводим названия на русский
+        top_prediction_ru = get_russian_name(result['top_prediction'])
+        top_predictions_ru = [
+            (get_russian_name(name), conf)
+            for name, conf in result['top_predictions']
+        ]
+
         return PredictionWithNutritionResponse(
             top_prediction=result['top_prediction'],
+            top_prediction_ru=top_prediction_ru,
             confidence=result['confidence'],
             top_predictions=result['top_predictions'],
+            top_predictions_ru=top_predictions_ru,
             nutrition=nutrition_data
         )
 
