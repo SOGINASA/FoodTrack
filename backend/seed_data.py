@@ -11,13 +11,13 @@ def seed_all():
     # === Пользователи ===
     users_data = [
         {
-            'email': 'demo@foodtrack.app',
-            'password': 'demo123',
+            'email': 'user@eexample.com',
+            'password': 'user123',
             'full_name': 'Демо Пользователь',
             'user_type': 'user'
         },
         {
-            'email': 'admin@foodtrack.app',
+            'email': 'admin@example.com',
             'password': 'admin123',
             'full_name': 'Администратор',
             'user_type': 'admin'
