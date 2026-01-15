@@ -44,7 +44,7 @@ const PublicRoute = ({ children }) => {
   return children;
 };
 
-// Роут онбординга — только для авторизованных, и только если онбординг не завершён
+// Роут онбординга — только для автоsризованных, и только если онбординг не завершён
 const OnboardingRoute = ({ children }) => {
   const { isAuthenticated, loading, onboardingCompleted } = useAuth();
 
