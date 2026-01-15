@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import Card from '../common/Card';
 import Button from '../common/Button';
 import Modal from '../common/Modal';
-import { Heart, MessageCircle, Share2, MoreVertical, Camera, Send } from 'lucide-react';
+import { Heart, MessageCircle, Share2, MoreVertical, Camera, Send, Reply } from 'lucide-react';
 import { format } from 'date-fns';
 import { ru } from 'date-fns/locale';
 
@@ -50,6 +50,7 @@ const GroupFeed = ({ posts, currentUser, onAddPost, onLikePost, onCommentPost, o
   const FeedPost = ({ post }) => {
     const [showComments, setShowComments] = useState(false);
     const [commentText, setCommentText] = useState('');
+    const [replyingTo, setReplyingTo] = useState(null);
     const isLiked = post.likes.includes(currentUser.id);
 
     const handleAddComment = () => {
@@ -59,10 +60,100 @@ const GroupFeed = ({ posts, currentUser, onAddPost, onLikePost, onCommentPost, o
           userId: currentUser.id,
           userName: currentUser.name,
           text: commentText,
+          replyToId: replyingTo?.id || null,
+          replyToName: replyingTo?.userName || null,
           timestamp: new Date(),
         });
         setCommentText('');
+        setReplyingTo(null);
       }
+    };
+
+    const CommentItem = ({ comment, depth = 0 }) => {
+      const [showReplyInput, setShowReplyInput] = useState(false);
+      const [localReplyText, setLocalReplyText] = useState('');
+
+      const nestedReplies = post.comments.filter(c => c.replyToId === comment.id);
+
+      const handleLocalReply = () => {
+        if (localReplyText.trim()) {
+          onCommentPost(post.id, {
+            id: Date.now(),
+            userId: currentUser.id,
+            userName: currentUser.name,
+            text: localReplyText,
+            replyToId: comment.id,
+            replyToName: comment.userName,
+            timestamp: new Date(),
+          });
+          setLocalReplyText('');
+          setShowReplyInput(false);
+        }
+      };
+
+      return (
+        <div className={`${depth > 0 ? 'ml-6 border-l-2 border-gray-200 pl-3' : ''}`}>
+          <div className="flex gap-3 py-2">
+            <div className="w-8 h-8 rounded-full bg-gray-200 flex-shrink-0 flex items-center justify-center">
+              <span className="text-sm">👤</span>
+            </div>
+            <div className="flex-1 min-w-0">
+              <div className="bg-gray-50 rounded-2xl px-4 py-2">
+                <div className="flex items-center gap-2 flex-wrap">
+                  <span className="font-semibold text-sm">{comment.userName}</span>
+                  {comment.replyToName && (
+                    <span className="text-xs text-secondary flex items-center gap-1">
+                      <Reply className="w-3 h-3" />
+                      {comment.replyToName}
+                    </span>
+                  )}
+                </div>
+                <div className="text-sm break-words">{comment.text}</div>
+              </div>
+              <div className="flex items-center gap-4 mt-1 px-4">
+                <span className="text-xs text-secondary">
+                  {format(comment.timestamp, 'HH:mm', { locale: ru })}
+                </span>
+                <button
+                  onClick={() => setShowReplyInput(!showReplyInput)}
+                  className="text-xs text-secondary hover:text-black flex items-center gap-1"
+                >
+                  <Reply className="w-3 h-3" />
+                  Ответить
+                </button>
+              </div>
+
+              {showReplyInput && (
+                <div className="mt-2 flex gap-2 px-2">
+                  <input
+                    type="text"
+                    value={localReplyText}
+                    onChange={(e) => setLocalReplyText(e.target.value)}
+                    onKeyPress={(e) => e.key === 'Enter' && handleLocalReply()}
+                    placeholder={`Ответ для ${comment.userName}...`}
+                    className="flex-1 px-3 py-2 bg-gray-50 border-none rounded-xl text-sm focus:ring-2 focus:ring-black outline-none"
+                  />
+                  <button
+                    onClick={handleLocalReply}
+                    disabled={!localReplyText.trim()}
+                    className="px-3 py-2 bg-black text-white rounded-xl hover:bg-gray-800 transition-colors disabled:bg-gray-300"
+                  >
+                    <Send className="w-4 h-4" />
+                  </button>
+                </div>
+              )}
+            </div>
+          </div>
+
+          {nestedReplies.length > 0 && (
+            <div>
+              {nestedReplies.map((reply) => (
+                <CommentItem key={reply.id} comment={reply} depth={depth + 1} />
+              ))}
+            </div>
+          )}
+        </div>
+      );
     };
 
     return (
@@ -142,21 +233,24 @@ const GroupFeed = ({ posts, currentUser, onAddPost, onLikePost, onCommentPost, o
         {showComments && (
           <div className="space-y-3 pt-2 border-t border-divider">
             {post.comments.length > 0 && (
-              <div className="space-y-3">
-                {post.comments.map((comment) => (
-                  <div key={comment.id} className="flex gap-3">
-                    <div className="w-8 h-8 rounded-full bg-gray-200 flex-shrink-0"></div>
-                    <div className="flex-1 min-w-0">
-                      <div className="bg-gray-50 rounded-2xl px-4 py-2">
-                        <div className="font-semibold text-sm">{comment.userName}</div>
-                        <div className="text-sm break-words">{comment.text}</div>
-                      </div>
-                      <div className="text-xs text-secondary mt-1 px-4">
-                        {format(comment.timestamp, 'HH:mm', { locale: ru })}
-                      </div>
-                    </div>
-                  </div>
+              <div>
+                {post.comments.filter(c => !c.replyToId).map((comment) => (
+                  <CommentItem key={comment.id} comment={comment} />
                 ))}
+              </div>
+            )}
+
+            {replyingTo && (
+              <div className="px-3 py-2 bg-gray-50 rounded-lg flex items-center justify-between">
+                <span className="text-sm text-secondary">
+                  Ответ для <span className="font-semibold text-black">{replyingTo.userName}</span>
+                </span>
+                <button
+                  onClick={() => setReplyingTo(null)}
+                  className="text-secondary hover:text-black"
+                >
+                  ✕
+                </button>
               </div>
             )}
 
@@ -166,7 +260,7 @@ const GroupFeed = ({ posts, currentUser, onAddPost, onLikePost, onCommentPost, o
                 value={commentText}
                 onChange={(e) => setCommentText(e.target.value)}
                 onKeyPress={(e) => e.key === 'Enter' && handleAddComment()}
-                placeholder="Написать комментарий..."
+                placeholder={replyingTo ? `Ответ для ${replyingTo.userName}...` : "Написать комментарий..."}
                 className="flex-1 px-4 py-2 bg-gray-50 border-none rounded-xl text-sm focus:ring-2 focus:ring-black outline-none"
               />
               <button

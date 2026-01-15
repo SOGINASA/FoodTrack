@@ -2,6 +2,7 @@ from routes.auth import auth_bp
 from routes.meals import meals_bp
 from routes.goals import goals_bp
 from routes.analytics import analytics_bp
+from routes.groups import groups_bp
 
 
 __all__ = [
@@ -9,4 +10,5 @@ __all__ = [
     'meals_bp',
     'goals_bp',
     'analytics_bp',
+    'groups_bp',
 ]

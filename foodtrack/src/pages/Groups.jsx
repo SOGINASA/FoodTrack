@@ -1,19 +1,23 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import GroupList from '../components/groups/GroupList';
 import GroupFeed from '../components/groups/GroupFeed';
 import GroupMembers from '../components/groups/GroupMembers';
+import GroupForum from '../components/groups/GroupForum';
 import Button from '../components/common/Button';
 import Modal from '../components/common/Modal';
 import Toast from '../components/common/Toast';
-import { Users, Plus, ArrowLeft, UserPlus, Edit3, Trash2, LogOut } from 'lucide-react';
+import { groupsAPI, authAPI } from '../services/api';
+import { Users, Plus, ArrowLeft, UserPlus, Edit3, Trash2, LogOut, MessageSquare, Newspaper, Loader2 } from 'lucide-react';
 
 const Groups = () => {
   const [showToast, setShowToast] = useState(null);
   const [selectedGroup, setSelectedGroup] = useState(null);
+  const [activeTab, setActiveTab] = useState('feed');
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [showSettingsModal, setShowSettingsModal] = useState(false);
   const [showEditModal, setShowEditModal] = useState(false);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [loading, setLoading] = useState(true);
   const [newGroupData, setNewGroupData] = useState({
     name: '',
     description: '',
@@ -27,106 +31,81 @@ const Groups = () => {
     isPublic: true,
   });
 
-  const currentUser = {
-    id: 1,
-    name: 'Иван Иванов',
-    avatar: null,
-  };
+  const [currentUser, setCurrentUser] = useState(null);
+  const [groups, setGroups] = useState([]);
+  const [members, setMembers] = useState([]);
+  const [posts, setPosts] = useState([]);
+  const [topics, setTopics] = useState([]);
 
-  const [groups, setGroups] = useState([
-    {
-      id: 1,
-      name: 'Shred Squad',
-      description: 'Сбрасываем вес вместе! Поддержка, мотивация и здоровые привычки 💪',
-      emoji: '🔥',
-      isPublic: true,
-      membersCount: 24,
-      postsToday: 12,
-    },
-    {
-      id: 2,
-      name: 'Здоровое питание',
-      description: 'Обмен рецептами и советами по правильному питанию',
-      emoji: '🥗',
-      isPublic: true,
-      membersCount: 156,
-      postsToday: 45,
-    },
-    {
-      id: 3,
-      name: 'Марафон 30 дней',
-      description: 'Приватный челлендж на 30 дней. Ежедневные отчёты обязательны!',
-      emoji: '🏃',
-      isPublic: false,
-      membersCount: 15,
-      postsToday: 8,
-    },
-  ]);
+  // Загрузка текущего пользователя
+  useEffect(() => {
+    const loadCurrentUser = async () => {
+      try {
+        const response = await authAPI.getMe();
+        setCurrentUser({
+          id: response.data.id,
+          name: response.data.full_name || response.data.nickname,
+          avatar: null,
+        });
+      } catch (error) {
+        console.error('Error loading user:', error);
+      }
+    };
+    loadCurrentUser();
+  }, []);
 
-  const [members] = useState([
-    { id: 1, name: 'Иван Иванов', role: 'owner', streak: 15, avatar: null },
-    { id: 2, name: 'Мария Петрова', role: 'admin', streak: 23, avatar: null },
-    { id: 3, name: 'Алексей Сидоров', role: 'member', streak: 7, avatar: null },
-    { id: 4, name: 'Елена Козлова', role: 'member', streak: 12, avatar: null },
-    { id: 5, name: 'Дмитрий Новиков', role: 'member', streak: 5, avatar: null },
-  ]);
+  // Загрузка групп
+  const loadGroups = useCallback(async () => {
+    try {
+      setLoading(true);
+      const response = await groupsAPI.getMyGroups();
+      setGroups(response.data);
+    } catch (error) {
+      console.error('Error loading groups:', error);
+      setShowToast({ type: 'error', message: 'Ошибка загрузки групп' });
+    } finally {
+      setLoading(false);
+    }
+  }, []);
 
-  const [posts, setPosts] = useState([
-    {
-      id: 1,
-      userId: 2,
-      userName: 'Мария Петрова',
-      userAvatar: null,
-      text: 'Сегодня впервые за долгое время уложилась в норму калорий! 🎉',
-      image: null,
-      meal: {
-        name: 'Куриная грудка с овощами',
-        calories: 420,
-        protein: 45,
-        carbs: 28,
-        fats: 12,
-      },
-      likes: [1, 3],
-      comments: [
-        {
-          id: 1,
-          userId: 1,
-          userName: 'Иван Иванов',
-          text: 'Отличная работа! Так держать! 💪',
-          timestamp: new Date(),
-        },
-      ],
-      timestamp: new Date(Date.now() - 2 * 60 * 60 * 1000),
-    },
-    {
-      id: 2,
-      userId: 3,
-      userName: 'Алексей Сидоров',
-      userAvatar: null,
-      text: 'Неделя на правильном питании позади! Минус 2 кг 🔥',
-      image: 'https://via.placeholder.com/600x400/4D9FFF/FFFFFF?text=Progress+Photo',
-      meal: null,
-      likes: [1, 2, 4],
-      comments: [],
-      timestamp: new Date(Date.now() - 5 * 60 * 60 * 1000),
-    },
-  ]);
+  useEffect(() => {
+    loadGroups();
+  }, [loadGroups]);
 
-  const handleCreateGroup = () => {
+  // Загрузка данных выбранной группы
+  const loadGroupData = useCallback(async (groupId) => {
+    try {
+      const [membersRes, postsRes, topicsRes] = await Promise.all([
+        groupsAPI.getMembers(groupId),
+        groupsAPI.getPosts(groupId),
+        groupsAPI.getTopics(groupId),
+      ]);
+      setMembers(membersRes.data);
+      setPosts(postsRes.data.posts || []);
+      setTopics(topicsRes.data);
+    } catch (error) {
+      console.error('Error loading group data:', error);
+      setShowToast({ type: 'error', message: 'Ошибка загрузки данных группы' });
+    }
+  }, []);
+
+  useEffect(() => {
+    if (selectedGroup) {
+      loadGroupData(selectedGroup.id);
+    }
+  }, [selectedGroup, loadGroupData]);
+
+  const handleCreateGroup = async () => {
     if (newGroupData.name) {
-      const newGroup = {
-        id: Date.now(),
-        name: newGroupData.name,
-        description: newGroupData.description,
-        emoji: newGroupData.emoji,
-        isPublic: newGroupData.isPublic,
-        membersCount: 1,
-        postsToday: 0,
-      };
-      setGroups([...groups, newGroup]);
-      setShowCreateModal(false);
-      setNewGroupData({ name: '', description: '', emoji: '💪', isPublic: true });
-      setShowToast({ type: 'success', message: 'Группа создана!' });
+      try {
+        const response = await groupsAPI.createGroup(newGroupData);
+        setGroups([...groups, response.data]);
+        setShowCreateModal(false);
+        setNewGroupData({ name: '', description: '', emoji: '💪', isPublic: true });
+        setShowToast({ type: 'success', message: 'Группа создана!' });
+      } catch (error) {
+        setShowToast({ type: 'error', message: 'Ошибка создания группы' });
+      }
     }
   };
 
@@ -141,48 +120,74 @@ const Groups = () => {
     setShowEditModal(true);
   };
 
-  const handleEditGroup = () => {
-    setGroups(groups.map(g => 
-      g.id === selectedGroup.id 
-        ? { ...g, ...editGroupData }
-        : g
-    ));
-    setSelectedGroup({ ...selectedGroup, ...editGroupData });
-    setShowEditModal(false);
-    setShowToast({ type: 'success', message: 'Группа обновлена!' });
+  const handleEditGroup = async () => {
+    try {
+      const response = await groupsAPI.updateGroup(selectedGroup.id, editGroupData);
+      setGroups(groups.map(g => g.id === selectedGroup.id ? response.data : g));
+      setSelectedGroup(response.data);
+      setShowEditModal(false);
+      setShowToast({ type: 'success', message: 'Группа обновлена!' });
+    } catch (error) {
+      setShowToast({ type: 'error', message: 'Ошибка обновления группы' });
+    }
   };
 
-  const handleDeleteGroup = () => {
-    setGroups(groups.filter(g => g.id !== selectedGroup.id));
-    setShowDeleteModal(false);
-    setSelectedGroup(null);
-    setShowToast({ type: 'success', message: 'Группа удалена' });
+  const handleDeleteGroup = async () => {
+    try {
+      await groupsAPI.deleteGroup(selectedGroup.id);
+      setGroups(groups.filter(g => g.id !== selectedGroup.id));
+      setShowDeleteModal(false);
+      setSelectedGroup(null);
+      setShowToast({ type: 'success', message: 'Группа удалена' });
+    } catch (error) {
+      setShowToast({ type: 'error', message: 'Ошибка удаления группы' });
+    }
   };
 
-  const handleAddPost = (post) => {
-    setPosts([post, ...posts]);
-    setShowToast({ type: 'success', message: 'Пост опубликован!' });
+  const handleAddPost = async (postData) => {
+    try {
+      const response = await groupsAPI.createPost(selectedGroup.id, {
+        text: postData.text,
+        image: postData.image,
+        mealId: postData.meal?.id,
+      });
+      setPosts([response.data, ...posts]);
+      setShowToast({ type: 'success', message: 'Пост опубликован!' });
+    } catch (error) {
+      setShowToast({ type: 'error', message: 'Ошибка публикации поста' });
+    }
   };
 
-  const handleLikePost = (postId) => {
-    setPosts(posts.map(post => {
-      if (post.id === postId) {
-        const likes = post.likes.includes(currentUser.id)
-          ? post.likes.filter(id => id !== currentUser.id)
-          : [...post.likes, currentUser.id];
-        return { ...post, likes };
-      }
-      return post;
-    }));
+  const handleLikePost = async (postId) => {
+    try {
+      const response = await groupsAPI.toggleLike(selectedGroup.id, postId);
+      setPosts(posts.map(post => {
+        if (post.id === postId) {
+          return { ...post, likes: response.data.likes };
+        }
+        return post;
+      }));
+    } catch (error) {
+      console.error('Error toggling like:', error);
+    }
   };
 
-  const handleCommentPost = (postId, comment) => {
-    setPosts(posts.map(post => {
-      if (post.id === postId) {
-        return { ...post, comments: [...post.comments, comment] };
-      }
-      return post;
-    }));
+  const handleCommentPost = async (postId, comment) => {
+    try {
+      const response = await groupsAPI.addComment(selectedGroup.id, postId, {
+        text: comment.text,
+        replyToId: comment.replyToId,
+        replyToName: comment.replyToName,
+      });
+      setPosts(posts.map(post => {
+        if (post.id === postId) {
+          return { ...post, comments: [...post.comments, response.data] };
+        }
+        return post;
+      }));
+    } catch (error) {
+      setShowToast({ type: 'error', message: 'Ошибка добавления комментария' });
+    }
   };
 
   const handleSharePost = (post) => {
@@ -196,13 +201,77 @@ const Groups = () => {
     }
   };
 
-  const handleLeaveGroup = () => {
-    setShowToast({ type: 'success', message: 'Вы покинули группу' });
-    setSelectedGroup(null);
-    setShowSettingsModal(false);
+  const handleCreateTopic = async (topicData) => {
+    try {
+      const response = await groupsAPI.createTopic(selectedGroup.id, {
+        title: topicData.title,
+        content: topicData.content,
+        category: topicData.category,
+      });
+      setTopics([response.data, ...topics]);
+      setShowToast({ type: 'success', message: 'Тема создана!' });
+    } catch (error) {
+      setShowToast({ type: 'error', message: 'Ошибка создания темы' });
+    }
+  };
+
+  const handleAddReply = async (topicId, replyData) => {
+    try {
+      const response = await groupsAPI.addReply(selectedGroup.id, topicId, {
+        content: replyData.content,
+        replyToId: replyData.replyToId,
+        replyToName: replyData.replyToName,
+      });
+      setTopics(topics.map(topic => {
+        if (topic.id === topicId) {
+          return {
+            ...topic,
+            replies: [...topic.replies, response.data],
+            lastActivity: new Date().toISOString(),
+          };
+        }
+        return topic;
+      }));
+    } catch (error) {
+      setShowToast({ type: 'error', message: 'Ошибка добавления ответа' });
+    }
+  };
+
+  const handlePinTopic = async (topicId) => {
+    try {
+      const response = await groupsAPI.togglePinTopic(selectedGroup.id, topicId);
+      setTopics(topics.map(topic => {
+        if (topic.id === topicId) {
+          return { ...topic, isPinned: response.data.isPinned };
+        }
+        return topic;
+      }));
+    } catch (error) {
+      setShowToast({ type: 'error', message: 'Ошибка закрепления темы' });
+    }
+  };
+
+  const handleLeaveGroup = async () => {
+    try {
+      await groupsAPI.leaveGroup(selectedGroup.id);
+      setGroups(groups.filter(g => g.id !== selectedGroup.id));
+      setShowToast({ type: 'success', message: 'Вы покинули группу' });
+      setSelectedGroup(null);
+      setShowSettingsModal(false);
+    } catch (error) {
+      setShowToast({ type: 'error', message: error.response?.data?.error || 'Ошибка' });
+    }
   };
 
   const emojiOptions = ['💪', '🔥', '🥗', '🏃', '🎯', '⭐', '🏆', '👥'];
+
+  if (loading && !selectedGroup) {
+    return (
+      <div className="flex items-center justify-center min-h-[50vh]">
+        <Loader2 className="w-8 h-8 animate-spin text-gray-400" />
+      </div>
+    );
+  }
 
   if (selectedGroup) {
     return (
@@ -225,7 +294,7 @@ const Groups = () => {
             <h1 className="text-2xl sm:text-3xl font-bold truncate">{selectedGroup.name}</h1>
             <p className="text-secondary">{selectedGroup.membersCount} участников</p>
           </div>
-          <button 
+          <button
             onClick={() => setShowSettingsModal(true)}
             className="px-4 py-2 bg-black text-white rounded-xl font-semibold hover:bg-gray-800 transition-colors text-sm"
           >
@@ -233,16 +302,51 @@ const Groups = () => {
           </button>
         </div>
 
+        <div className="flex gap-2 border-b border-divider pb-2">
+          <button
+            onClick={() => setActiveTab('feed')}
+            className={`flex items-center gap-2 px-4 py-2 rounded-xl font-semibold transition-colors ${
+              activeTab === 'feed'
+                ? 'bg-black text-white'
+                : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+            }`}
+          >
+            <Newspaper className="w-5 h-5" />
+            <span>Лента</span>
+          </button>
+          <button
+            onClick={() => setActiveTab('forum')}
+            className={`flex items-center gap-2 px-4 py-2 rounded-xl font-semibold transition-colors ${
+              activeTab === 'forum'
+                ? 'bg-black text-white'
+                : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+            }`}
+          >
+            <MessageSquare className="w-5 h-5" />
+            <span>Форум</span>
+          </button>
+        </div>
+
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           <div className="lg:col-span-2">
-            <GroupFeed
-              posts={posts}
-              currentUser={currentUser}
-              onAddPost={handleAddPost}
-              onLikePost={handleLikePost}
-              onCommentPost={handleCommentPost}
-              onSharePost={handleSharePost}
-            />
+            {activeTab === 'feed' ? (
+              <GroupFeed
+                posts={posts}
+                currentUser={currentUser}
+                onAddPost={handleAddPost}
+                onLikePost={handleLikePost}
+                onCommentPost={handleCommentPost}
+                onSharePost={handleSharePost}
+              />
+            ) : (
+              <GroupForum
+                topics={topics}
+                currentUser={currentUser}
+                onCreateTopic={handleCreateTopic}
+                onAddReply={handleAddReply}
+                onPinTopic={handlePinTopic}
+              />
+            )}
           </div>
 
           <div className="hidden lg:block">
@@ -261,7 +365,7 @@ const Groups = () => {
               <span className="font-semibold">Пригласить участников</span>
             </button>
 
-            <button 
+            <button
               onClick={handleOpenEditModal}
               className="w-full flex items-center gap-3 px-4 py-3 hover:bg-gray-100 rounded-xl transition-colors text-left"
             >
@@ -269,7 +373,7 @@ const Groups = () => {
               <span className="font-semibold">Редактировать группу</span>
             </button>
 
-            <button 
+            <button
               onClick={handleLeaveGroup}
               className="w-full flex items-center gap-3 px-4 py-3 hover:bg-red-50 rounded-xl transition-colors text-left text-red-600"
             >
@@ -277,7 +381,7 @@ const Groups = () => {
               <span className="font-semibold">Покинуть группу</span>
             </button>
 
-            <button 
+            <button
               onClick={() => {
                 setShowSettingsModal(false);
                 setShowDeleteModal(true);
@@ -384,13 +488,13 @@ const Groups = () => {
         >
           <div className="space-y-4">
             <p className="text-secondary">
-              Вы уверены, что хотите удалить группу <span className="font-semibold text-black">{selectedGroup.name}</span>? 
+              Вы уверены, что хотите удалить группу <span className="font-semibold text-black">{selectedGroup.name}</span>?
               Это действие необратимо.
             </p>
 
             <div className="bg-red-50 border border-red-200 rounded-xl p-4">
               <p className="text-sm text-red-800 font-semibold">
-                ⚠️ Все посты и данные группы будут удалены навсегда
+                Все посты и данные группы будут удалены навсегда
               </p>
             </div>
 

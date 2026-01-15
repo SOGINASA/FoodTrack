@@ -261,3 +261,217 @@ class ProgressPhoto(db.Model):
             'notes': self.notes,
             'created_at': self.created_at.isoformat() if self.created_at else None,
         }
+
+
+# === Группы и социальные функции ===
+
+class Group(db.Model):
+    """Группы пользователей"""
+    __tablename__ = 'groups'
+    id = db.Column(db.Integer, primary_key=True)
+    name = db.Column(db.String(100), nullable=False)
+    description = db.Column(db.Text)
+    emoji = db.Column(db.String(10), default='💪')
+    is_public = db.Column(db.Boolean, default=True)
+    owner_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
+
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+    # Связи
+    owner = db.relationship('User', backref='owned_groups', foreign_keys=[owner_id])
+    members = db.relationship('GroupMember', backref='group', lazy='dynamic', cascade='all, delete-orphan')
+    posts = db.relationship('GroupPost', backref='group', lazy='dynamic', cascade='all, delete-orphan')
+    topics = db.relationship('ForumTopic', backref='group', lazy='dynamic', cascade='all, delete-orphan')
+
+    def to_dict(self, include_members=False):
+        data = {
+            'id': self.id,
+            'name': self.name,
+            'description': self.description,
+            'emoji': self.emoji,
+            'isPublic': self.is_public,
+            'ownerId': self.owner_id,
+            'membersCount': self.members.count(),
+            'postsToday': self.posts.filter(
+                db.func.date(GroupPost.created_at) == date.today()
+            ).count(),
+            'createdAt': self.created_at.isoformat() if self.created_at else None,
+        }
+        if include_members:
+            data['members'] = [m.to_dict() for m in self.members.limit(10)]
+        return data
+
+
+class GroupMember(db.Model):
+    """Участники группы"""
+    __tablename__ = 'group_members'
+    id = db.Column(db.Integer, primary_key=True)
+    group_id = db.Column(db.Integer, db.ForeignKey('groups.id'), nullable=False, index=True)
+    user_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False, index=True)
+    role = db.Column(db.String(20), default='member')  # owner, admin, member
+
+    joined_at = db.Column(db.DateTime, default=datetime.utcnow)
+
+    user = db.relationship('User', backref='group_memberships')
+
+    __table_args__ = (db.UniqueConstraint('group_id', 'user_id', name='unique_group_member'),)
+
+    def to_dict(self):
+        return {
+            'id': self.id,
+            'userId': self.user_id,
+            'name': self.user.full_name or self.user.nickname,
+            'role': self.role,
+            'avatar': None,
+            'joinedAt': self.joined_at.isoformat() if self.joined_at else None,
+        }
+
+
+class GroupPost(db.Model):
+    """Посты в группе"""
+    __tablename__ = 'group_posts'
+    id = db.Column(db.Integer, primary_key=True)
+    group_id = db.Column(db.Integer, db.ForeignKey('groups.id'), nullable=False, index=True)
+    user_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False, index=True)
+
+    text = db.Column(db.Text)
+    image_url = db.Column(db.String(500))
+
+    # Привязка к блюду (опционально)
+    meal_id = db.Column(db.Integer, db.ForeignKey('meals.id'))
+
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+    # Связи
+    user = db.relationship('User', backref='group_posts')
+    meal = db.relationship('Meal', backref='shared_posts')
+    comments = db.relationship('PostComment', backref='post', lazy='dynamic', cascade='all, delete-orphan')
+    likes = db.relationship('PostLike', backref='post', lazy='dynamic', cascade='all, delete-orphan')
+
+    def to_dict(self, current_user_id=None):
+        meal_data = None
+        if self.meal:
+            meal_data = {
+                'name': self.meal.name,
+                'calories': self.meal.calories,
+                'protein': self.meal.protein,
+                'carbs': self.meal.carbs,
+                'fats': self.meal.fats,
+            }
+
+        return {
+            'id': self.id,
+            'userId': self.user_id,
+            'userName': self.user.full_name or self.user.nickname,
+            'userAvatar': None,
+            'text': self.text,
+            'image': self.image_url,
+            'meal': meal_data,
+            'likes': [like.user_id for like in self.likes],
+            'comments': [c.to_dict() for c in self.comments.order_by(PostComment.created_at)],
+            'timestamp': self.created_at.isoformat() if self.created_at else None,
+        }
+
+
+class PostComment(db.Model):
+    """Комментарии к постам"""
+    __tablename__ = 'post_comments'
+    id = db.Column(db.Integer, primary_key=True)
+    post_id = db.Column(db.Integer, db.ForeignKey('group_posts.id'), nullable=False, index=True)
+    user_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
+
+    text = db.Column(db.Text, nullable=False)
+    reply_to_id = db.Column(db.Integer, db.ForeignKey('post_comments.id'))
+    reply_to_name = db.Column(db.String(100))
+
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+
+    user = db.relationship('User', backref='post_comments')
+    replies = db.relationship('PostComment', backref=db.backref('parent', remote_side=[id]), lazy='dynamic')
+
+    def to_dict(self):
+        return {
+            'id': self.id,
+            'userId': self.user_id,
+            'userName': self.user.full_name or self.user.nickname,
+            'text': self.text,
+            'replyToId': self.reply_to_id,
+            'replyToName': self.reply_to_name,
+            'timestamp': self.created_at.isoformat() if self.created_at else None,
+        }
+
+
+class PostLike(db.Model):
+    """Лайки постов"""
+    __tablename__ = 'post_likes'
+    id = db.Column(db.Integer, primary_key=True)
+    post_id = db.Column(db.Integer, db.ForeignKey('group_posts.id'), nullable=False, index=True)
+    user_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
+
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+
+    __table_args__ = (db.UniqueConstraint('post_id', 'user_id', name='unique_post_like'),)
+
+
+class ForumTopic(db.Model):
+    """Темы форума группы"""
+    __tablename__ = 'forum_topics'
+    id = db.Column(db.Integer, primary_key=True)
+    group_id = db.Column(db.Integer, db.ForeignKey('groups.id'), nullable=False, index=True)
+    author_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
+
+    title = db.Column(db.String(200), nullable=False)
+    content = db.Column(db.Text, nullable=False)
+    category = db.Column(db.String(20), default='discussion')  # discussion, question, recipe, achievement, tip
+    is_pinned = db.Column(db.Boolean, default=False)
+
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    last_activity = db.Column(db.DateTime, default=datetime.utcnow)
+
+    author = db.relationship('User', backref='forum_topics')
+    replies = db.relationship('ForumReply', backref='topic', lazy='dynamic', cascade='all, delete-orphan')
+
+    def to_dict(self):
+        return {
+            'id': self.id,
+            'title': self.title,
+            'content': self.content,
+            'category': self.category,
+            'authorId': self.author_id,
+            'authorName': self.author.full_name or self.author.nickname,
+            'authorAvatar': None,
+            'isPinned': self.is_pinned,
+            'replies': [r.to_dict() for r in self.replies.order_by(ForumReply.created_at)],
+            'createdAt': self.created_at.isoformat() if self.created_at else None,
+            'lastActivity': self.last_activity.isoformat() if self.last_activity else None,
+        }
+
+
+class ForumReply(db.Model):
+    """Ответы в темах форума"""
+    __tablename__ = 'forum_replies'
+    id = db.Column(db.Integer, primary_key=True)
+    topic_id = db.Column(db.Integer, db.ForeignKey('forum_topics.id'), nullable=False, index=True)
+    author_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
+
+    content = db.Column(db.Text, nullable=False)
+    reply_to_id = db.Column(db.Integer, db.ForeignKey('forum_replies.id'))
+    reply_to_name = db.Column(db.String(100))
+
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+
+    author = db.relationship('User', backref='forum_replies')
+
+    def to_dict(self):
+        return {
+            'id': self.id,
+            'content': self.content,
+            'authorId': self.author_id,
+            'authorName': self.author.full_name or self.author.nickname,
+            'authorAvatar': None,
+            'replyToId': self.reply_to_id,
+            'replyToName': self.reply_to_name,
+            'createdAt': self.created_at.isoformat() if self.created_at else None,
+        }

@@ -1,4 +1,7 @@
-from models import db, User, Meal, MealIngredient, UserGoals, WeightEntry, Measurement, ProgressPhoto
+from models import (
+    db, User, Meal, MealIngredient, UserGoals, WeightEntry, Measurement, ProgressPhoto,
+    Group, GroupMember, GroupPost, PostComment, PostLike, ForumTopic, ForumReply
+)
 from datetime import datetime, date, timedelta
 import json
 import random
@@ -850,6 +853,211 @@ def seed_all():
 
     print(f"  Создано фото прогресса: {total_photos}")
 
+    # === Группы ===
+    groups_data = [
+        {
+            'name': 'Shred Squad',
+            'description': 'Сбрасываем вес вместе! Поддержка, мотивация и здоровые привычки 💪',
+            'emoji': '🔥',
+            'is_public': True,
+        },
+        {
+            'name': 'Здоровое питание',
+            'description': 'Обмен рецептами и советами по правильному питанию',
+            'emoji': '🥗',
+            'is_public': True,
+        },
+        {
+            'name': 'Марафон 30 дней',
+            'description': 'Приватный челлендж на 30 дней. Ежедневные отчёты обязательны!',
+            'emoji': '🏃',
+            'is_public': False,
+        },
+    ]
+
+    groups = []
+    for i, group_data in enumerate(groups_data):
+        owner = users[i % len(users)]
+        group = Group(
+            name=group_data['name'],
+            description=group_data['description'],
+            emoji=group_data['emoji'],
+            is_public=group_data['is_public'],
+            owner_id=owner.id
+        )
+        db.session.add(group)
+        groups.append(group)
+
+    db.session.flush()
+    print(f"  Создано групп: {len(groups)}")
+
+    # === Участники групп ===
+    total_members = 0
+    for group in groups:
+        # Владелец автоматически участник
+        owner_member = GroupMember(
+            group_id=group.id,
+            user_id=group.owner_id,
+            role='owner'
+        )
+        db.session.add(owner_member)
+        total_members += 1
+
+        # Добавляем других участников
+        for user in users:
+            if user.id != group.owner_id and random.random() > 0.3:
+                member = GroupMember(
+                    group_id=group.id,
+                    user_id=user.id,
+                    role=random.choice(['member', 'member', 'member', 'admin'])
+                )
+                db.session.add(member)
+                total_members += 1
+
+    db.session.flush()
+    print(f"  Создано участников групп: {total_members}")
+
+    # === Посты в группах ===
+    post_texts = [
+        'Сегодня впервые за долгое время уложилась в норму калорий! 🎉',
+        'Неделя на правильном питании позади! Минус 2 кг 🔥',
+        'Приготовила вкусный низкокалорийный ужин, делюсь рецептом!',
+        'Наконец-то достиг своей цели! Спасибо всем за поддержку 💪',
+        'Кто-нибудь пробовал интервальное голодание? Какие впечатления?',
+        'Утренняя тренировка + правильный завтрак = отличное начало дня!',
+    ]
+
+    total_posts = 0
+    for group in groups:
+        members = GroupMember.query.filter_by(group_id=group.id).all()
+        for _ in range(random.randint(3, 8)):
+            member = random.choice(members)
+            post = GroupPost(
+                group_id=group.id,
+                user_id=member.user_id,
+                text=random.choice(post_texts),
+                created_at=datetime.utcnow() - timedelta(hours=random.randint(1, 72))
+            )
+            db.session.add(post)
+            total_posts += 1
+
+    db.session.flush()
+    print(f"  Создано постов: {total_posts}")
+
+    # === Лайки и комментарии ===
+    posts = GroupPost.query.all()
+    total_likes = 0
+    total_comments = 0
+
+    comment_texts = [
+        'Отличная работа! Так держать! 💪',
+        'Вдохновляешь! 🔥',
+        'Супер результат!',
+        'Молодец! Продолжай в том же духе!',
+        'Класс! Как ты это делаешь?',
+    ]
+
+    for post in posts:
+        group_members = GroupMember.query.filter_by(group_id=post.group_id).all()
+
+        # Добавляем лайки
+        for member in group_members:
+            if random.random() > 0.5:
+                like = PostLike(post_id=post.id, user_id=member.user_id)
+                db.session.add(like)
+                total_likes += 1
+
+        # Добавляем комментарии
+        for _ in range(random.randint(0, 3)):
+            commenter = random.choice(group_members)
+            comment = PostComment(
+                post_id=post.id,
+                user_id=commenter.user_id,
+                text=random.choice(comment_texts),
+                created_at=datetime.utcnow() - timedelta(hours=random.randint(0, 24))
+            )
+            db.session.add(comment)
+            total_comments += 1
+
+    db.session.flush()
+    print(f"  Создано лайков: {total_likes}, комментариев: {total_comments}")
+
+    # === Темы форума ===
+    topics_data = [
+        {
+            'title': 'Как правильно считать калории?',
+            'content': 'Привет всем! Подскажите, как вы считаете калории? Используете приложения или вручную? Какой способ точнее?',
+            'category': 'question',
+            'is_pinned': True,
+        },
+        {
+            'title': 'Рецепт низкокалорийного ужина',
+            'content': 'Делюсь своим любимым рецептом!\n\nКуриная грудка с овощами на пару:\n- 200г куриной грудки\n- Брокколи 100г\n- Морковь 50г\n\nВсего 250 ккал!',
+            'category': 'recipe',
+            'is_pinned': False,
+        },
+        {
+            'title': 'Достиг цели - минус 10 кг!',
+            'content': 'Ребята, хочу поделиться радостью! За 3 месяца сбросил 10 кг благодаря правильному питанию и вашей поддержке! 🎉',
+            'category': 'achievement',
+            'is_pinned': False,
+        },
+        {
+            'title': 'Совет: как не срываться на сладкое',
+            'content': 'Делюсь лайфхаком: когда хочется сладкого, съешьте яблоко или выпейте стакан воды с лимоном. Помогает в 90% случаев!',
+            'category': 'tip',
+            'is_pinned': False,
+        },
+    ]
+
+    total_topics = 0
+    for group in groups:
+        members = GroupMember.query.filter_by(group_id=group.id).all()
+        for topic_data in random.sample(topics_data, min(len(topics_data), random.randint(2, 4))):
+            author = random.choice(members)
+            topic = ForumTopic(
+                group_id=group.id,
+                author_id=author.user_id,
+                title=topic_data['title'],
+                content=topic_data['content'],
+                category=topic_data['category'],
+                is_pinned=topic_data['is_pinned'],
+                created_at=datetime.utcnow() - timedelta(days=random.randint(1, 14)),
+                last_activity=datetime.utcnow() - timedelta(hours=random.randint(1, 48))
+            )
+            db.session.add(topic)
+            total_topics += 1
+
+    db.session.flush()
+    print(f"  Создано тем форума: {total_topics}")
+
+    # === Ответы в форуме ===
+    reply_texts = [
+        'Я использую это приложение, очень удобно!',
+        'Согласен! Отличный совет!',
+        'Спасибо за рецепт, обязательно попробую!',
+        'Поздравляю! Отличный результат! 💪',
+        'А как долго ты к этому шёл?',
+    ]
+
+    topics = ForumTopic.query.all()
+    total_replies = 0
+
+    for topic in topics:
+        group_members = GroupMember.query.filter_by(group_id=topic.group_id).all()
+        for _ in range(random.randint(1, 5)):
+            replier = random.choice(group_members)
+            reply = ForumReply(
+                topic_id=topic.id,
+                author_id=replier.user_id,
+                content=random.choice(reply_texts),
+                created_at=datetime.utcnow() - timedelta(hours=random.randint(1, 24))
+            )
+            db.session.add(reply)
+            total_replies += 1
+
+    print(f"  Создано ответов в форуме: {total_replies}")
+
     db.session.commit()
     print("База данных успешно заполнена!")
 
@@ -857,6 +1065,15 @@ def seed_all():
 def clear_all():
     """Очистка всех данных из БД"""
     print("Очистка базы данных...")
+    # Группы и социальные функции
+    ForumReply.query.delete()
+    ForumTopic.query.delete()
+    PostLike.query.delete()
+    PostComment.query.delete()
+    GroupPost.query.delete()
+    GroupMember.query.delete()
+    Group.query.delete()
+    # Остальные данные
     ProgressPhoto.query.delete()
     Measurement.query.delete()
     MealIngredient.query.delete()

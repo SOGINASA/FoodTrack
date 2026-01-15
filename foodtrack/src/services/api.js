@@ -155,3 +155,32 @@ export const progressAPI = {
   addPhoto: (data) => api.post('/progress/photos', data),
   deletePhoto: (id) => api.delete(`/progress/photos/${id}`),
 };
+
+// === GROUPS API ===
+export const groupsAPI = {
+  // Группы
+  getMyGroups: () => api.get('/groups/all'),
+  discoverGroups: () => api.get('/groups/discover'),
+  getGroup: (id) => api.get(`/groups/${id}`),
+  createGroup: (data) => api.post('/groups', data),
+  updateGroup: (id, data) => api.put(`/groups/${id}`, data),
+  deleteGroup: (id) => api.delete(`/groups/${id}`),
+  joinGroup: (id) => api.post(`/groups/${id}/join`),
+  leaveGroup: (id) => api.post(`/groups/${id}/leave`),
+  getMembers: (groupId) => api.get(`/groups/${groupId}/members`),
+
+  // Посты
+  getPosts: (groupId, page = 1) => api.get(`/groups/${groupId}/posts`, { params: { page } }),
+  createPost: (groupId, data) => api.post(`/groups/${groupId}/posts`, data),
+  deletePost: (groupId, postId) => api.delete(`/groups/${groupId}/posts/${postId}`),
+  toggleLike: (groupId, postId) => api.post(`/groups/${groupId}/posts/${postId}/like`),
+  addComment: (groupId, postId, data) => api.post(`/groups/${groupId}/posts/${postId}/comments`, data),
+
+  // Форум
+  getTopics: (groupId) => api.get(`/groups/${groupId}/topics`),
+  getTopic: (groupId, topicId) => api.get(`/groups/${groupId}/topics/${topicId}`),
+  createTopic: (groupId, data) => api.post(`/groups/${groupId}/topics`, data),
+  deleteTopic: (groupId, topicId) => api.delete(`/groups/${groupId}/topics/${topicId}`),
+  togglePinTopic: (groupId, topicId) => api.post(`/groups/${groupId}/topics/${topicId}/pin`),
+  addReply: (groupId, topicId, data) => api.post(`/groups/${groupId}/topics/${topicId}/replies`, data),
+};

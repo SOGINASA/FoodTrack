@@ -44,6 +44,7 @@ def create_app():
     from routes.goals import goals_bp
     from routes.analytics import analytics_bp
     from routes.progress import progress_bp
+    from routes.groups import groups_bp
 
     # Регистрация всех блюпринтов
     app.register_blueprint(auth_bp, url_prefix='/api/auth')
@@ -51,6 +52,7 @@ def create_app():
     app.register_blueprint(goals_bp, url_prefix='/api/goals')
     app.register_blueprint(analytics_bp, url_prefix='/api/analytics')
     app.register_blueprint(progress_bp, url_prefix='/api/progress')
+    app.register_blueprint(groups_bp, url_prefix='/api/groups')
 
     # Главная страница API
     @app.route('/api')
