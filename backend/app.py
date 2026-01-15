@@ -20,7 +20,7 @@ def create_app():
     CORS(app, supports_credentials=True, origins=[
         "http://localhost:3000",
         "http://localhost:5173",
-        "https://foodtrack.vercel.app"
+        "https://food-track-beta.vercel.app/"
     ])
 
     # Создаём папку для БД, если её нет
