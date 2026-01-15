@@ -58,6 +58,8 @@ def update_goals():
             goals.activity_level = data['activity_level']
         if 'goal_type' in data:
             goals.goal_type = data['goal_type']
+        if 'diet_type' in data:
+            goals.diet_type = data['diet_type']
 
         db.session.commit()
 

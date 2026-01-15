@@ -262,10 +262,10 @@ def update_profile():
     try:
         user_id = int(get_jwt_identity())
         user = User.query.get(user_id)
-        
+
         if not user or not user.is_active:
             return jsonify({'error': 'Пользователь не найден'}), 404
-        
+
         data = request.get_json()
         if not data:
             return jsonify({'error': 'Данные не предоставлены'}), 400
@@ -287,18 +287,101 @@ def update_profile():
                 return jsonify({'error': 'Этот nickname уже занят'}), 400
             user.nickname = new_nickname
 
+        # Поля онбординга / физических параметров
+        if 'gender' in data:
+            user.gender = data['gender']
+        if 'birth_year' in data:
+            user.birth_year = int(data['birth_year']) if data['birth_year'] else None
+        if 'height_cm' in data:
+            user.height_cm = int(data['height_cm']) if data['height_cm'] else None
+        if 'weight_kg' in data:
+            user.weight_kg = float(data['weight_kg']) if data['weight_kg'] else None
+        if 'target_weight_kg' in data:
+            user.target_weight_kg = float(data['target_weight_kg']) if data['target_weight_kg'] else None
+        if 'workouts_per_week' in data:
+            user.workouts_per_week = int(data['workouts_per_week']) if data['workouts_per_week'] is not None else 0
+        if 'diet' in data:
+            user.diet = data['diet']
+        if 'diet_notes' in data:
+            user.diet_notes = data['diet_notes']
+        if 'meals_per_day' in data:
+            user.meals_per_day = int(data['meals_per_day']) if data['meals_per_day'] else 3
+        if 'health_flags' in data:
+            import json
+            user.health_flags = json.dumps(data['health_flags']) if data['health_flags'] else None
+        if 'health_notes' in data:
+            user.health_notes = data['health_notes']
+
         db.session.commit()
-        
+
         return jsonify({
             'data': {
                 'user': user.to_dict(include_sensitive=True)
             }
         })
-    
+
     except Exception as e:
         db.session.rollback()
         print(f"Ошибка обновления профиля: {e}")
         return jsonify({'error': 'Ошибка при обновлении профиля'}), 500
+
+
+@auth_bp.route('/onboarding', methods=['POST'])
+@jwt_required()
+def complete_onboarding():
+    """Сохранение данных онбординга"""
+    try:
+        user_id = int(get_jwt_identity())
+        user = User.query.get(user_id)
+
+        if not user or not user.is_active:
+            return jsonify({'error': 'Пользователь не найден'}), 404
+
+        data = request.get_json()
+        if not data:
+            return jsonify({'error': 'Данные не предоставлены'}), 400
+
+        # Обновляем поля профиля из онбординга
+        if 'gender' in data:
+            user.gender = data['gender']
+        if 'birth_year' in data:
+            user.birth_year = int(data['birth_year']) if data['birth_year'] else None
+        if 'height_cm' in data:
+            user.height_cm = int(data['height_cm']) if data['height_cm'] else None
+        if 'weight_kg' in data:
+            user.weight_kg = float(data['weight_kg']) if data['weight_kg'] else None
+        if 'target_weight_kg' in data:
+            user.target_weight_kg = float(data['target_weight_kg']) if data['target_weight_kg'] else None
+        if 'workouts_per_week' in data:
+            user.workouts_per_week = int(data['workouts_per_week']) if data['workouts_per_week'] else 0
+        if 'diet' in data:
+            user.diet = data['diet']
+        if 'diet_notes' in data:
+            user.diet_notes = data['diet_notes']
+        if 'meals_per_day' in data:
+            user.meals_per_day = int(data['meals_per_day']) if data['meals_per_day'] else 3
+        if 'health_flags' in data:
+            import json
+            user.health_flags = json.dumps(data['health_flags']) if data['health_flags'] else None
+        if 'health_notes' in data:
+            user.health_notes = data['health_notes']
+
+        # Помечаем онбординг как завершённый
+        user.onboarding_completed = True
+
+        db.session.commit()
+
+        return jsonify({
+            'message': 'Онбординг завершён',
+            'data': {
+                'user': user.to_dict(include_sensitive=True)
+            }
+        })
+
+    except Exception as e:
+        db.session.rollback()
+        print(f"Ошибка сохранения онбординга: {e}")
+        return jsonify({'error': 'Ошибка при сохранении данных'}), 500
 
 @auth_bp.route('/change-password', methods=['POST'])
 @jwt_required()

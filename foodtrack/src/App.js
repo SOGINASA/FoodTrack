@@ -67,9 +67,9 @@ const OnboardingRoute = ({ children }) => {
   return children;
 };
 
-// Защищённая часть приложения — только если авторизован + онбординг завершён
-const RequireReady = ({ children }) => {
-  const { isAuthenticated, loading, onboardingCompleted } = useAuth();
+// Общий лейаут для гостей и авторизованных
+const GuestAwareLayout = ({ children }) => {
+  const { loading } = useAuth();
 
   if (loading) {
     return (
@@ -79,43 +79,65 @@ const RequireReady = ({ children }) => {
     );
   }
 
-  if (!isAuthenticated) {
-    return <Navigate to="/auth" replace />;
-  }
-
-  if (!onboardingCompleted) {
-    return <Navigate to="/onboarding" replace />;
-  }
-
   return children;
 };
 
-// Основной layout приложения
-const AppLayout = () => {
+// Основной layout приложения (для авторизованных и гостей)
+const AppLayout = ({ guestMode = false }) => {
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+  const { isAuthenticated, onboardingCompleted } = useAuth();
+
+  // Определяем, нужно ли редиректить на онбординг
+  const needsOnboarding = isAuthenticated && !onboardingCompleted;
 
   return (
     <div className="min-h-screen bg-white flex overflow-x-hidden">
       <Sidebar
         isOpen={isSidebarOpen}
         onClose={() => setIsSidebarOpen(false)}
+        guestMode={guestMode && !isAuthenticated}
       />
 
       <div className="flex-1 flex flex-col lg:ml-64 overflow-x-hidden">
-        <Header />
+        <Header guestMode={guestMode && !isAuthenticated} />
 
         <main className="flex-1 pb-20 lg:pb-8 overflow-x-hidden">
           <div className="w-full px-4 py-6 lg:px-8 lg:py-8 lg:max-w-7xl lg:mx-auto overflow-x-hidden">
             <Routes>
-              <Route path="/" element={<Dashboard />} />
-              <Route path="/add-meal" element={<AddMeal />} />
-              <Route path="/diary" element={<Diary />} />
-              <Route path="/analytics" element={<Analytics />} />
-              <Route path="/tips" element={<Tips />} />
+              {/* Публичные страницы - доступны всем */}
               <Route path="/recipes" element={<Recipes />} />
-              <Route path="/progress" element={<Progress />} />
-              <Route path="/groups" element={<Groups />} />
-              <Route path="/settings" element={<Settings />} />
+              <Route path="/add-meal" element={<AddMeal />} />
+
+              {/* Приватные страницы - только авторизованным */}
+              <Route path="/tips" element={
+                !isAuthenticated ? <Navigate to="/auth" replace /> :
+                <Tips />
+              } />
+              <Route path="/" element={
+                needsOnboarding ? <Navigate to="/onboarding" replace /> :
+                !isAuthenticated ? <Navigate to="/auth" replace /> :
+                <Dashboard />
+              } />
+              <Route path="/diary" element={
+                !isAuthenticated ? <Navigate to="/auth" replace /> :
+                <Diary />
+              } />
+              <Route path="/analytics" element={
+                !isAuthenticated ? <Navigate to="/auth" replace /> :
+                <Analytics />
+              } />
+              <Route path="/progress" element={
+                !isAuthenticated ? <Navigate to="/auth" replace /> :
+                <Progress />
+              } />
+              <Route path="/groups" element={
+                !isAuthenticated ? <Navigate to="/auth" replace /> :
+                <Groups />
+              } />
+              <Route path="/settings" element={
+                !isAuthenticated ? <Navigate to="/auth" replace /> :
+                <Settings />
+              } />
             </Routes>
           </div>
         </main>
@@ -152,13 +174,13 @@ function App() {
               }
             />
 
-            {/* App */}
+            {/* App - доступно всем (с ограничениями внутри) */}
             <Route
               path="/*"
               element={
-                <RequireReady>
-                  <AppLayout />
-                </RequireReady>
+                <GuestAwareLayout>
+                  <AppLayout guestMode={true} />
+                </GuestAwareLayout>
               }
             />
           </Routes>

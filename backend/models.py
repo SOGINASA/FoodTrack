@@ -21,6 +21,20 @@ class User(db.Model):
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     last_login = db.Column(db.DateTime)
 
+    # Данные профиля (онбординг)
+    gender = db.Column(db.String(10))  # male, female, na
+    birth_year = db.Column(db.Integer)
+    height_cm = db.Column(db.Integer)
+    weight_kg = db.Column(db.Float)
+    target_weight_kg = db.Column(db.Float)
+    workouts_per_week = db.Column(db.Integer, default=0)
+    diet = db.Column(db.String(20), default='none')  # none, keto, vegetarian, vegan, halal, lowcarb, custom
+    diet_notes = db.Column(db.Text)
+    meals_per_day = db.Column(db.Integer, default=3)
+    health_flags = db.Column(db.Text)  # JSON массив
+    health_notes = db.Column(db.Text)
+    onboarding_completed = db.Column(db.Boolean, default=False)
+
     # токены восстановления/верификации
     reset_token = db.Column(db.String(100), unique=True)
     reset_token_expires = db.Column(db.DateTime)
@@ -46,6 +60,19 @@ class User(db.Model):
             'user_type': self.user_type,
             'created_at': self.created_at.isoformat() if self.created_at else None,
             'last_login': self.last_login.isoformat() if self.last_login else None,
+            # Данные профиля
+            'gender': self.gender,
+            'birth_year': self.birth_year,
+            'height_cm': self.height_cm,
+            'weight_kg': self.weight_kg,
+            'target_weight_kg': self.target_weight_kg,
+            'workouts_per_week': self.workouts_per_week,
+            'diet': self.diet,
+            'diet_notes': self.diet_notes,
+            'meals_per_day': self.meals_per_day,
+            'health_flags': json.loads(self.health_flags) if self.health_flags else [],
+            'health_notes': self.health_notes,
+            'onboarding_completed': self.onboarding_completed,
         }
         if include_sensitive:
             data['is_active'] = self.is_active
@@ -142,6 +169,7 @@ class UserGoals(db.Model):
     target_weight = db.Column(db.Float)
     activity_level = db.Column(db.String(20), default='moderate')  # sedentary, light, moderate, active, very_active
     goal_type = db.Column(db.String(20), default='maintain')  # lose, maintain, gain
+    diet_type = db.Column(db.String(20), default='balanced')  # balanced, low_carb, high_protein, keto, vegetarian
 
     updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 
@@ -155,6 +183,7 @@ class UserGoals(db.Model):
             'target_weight': self.target_weight,
             'activity_level': self.activity_level,
             'goal_type': self.goal_type,
+            'diet_type': self.diet_type,
         }
 
 

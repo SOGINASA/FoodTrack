@@ -141,13 +141,13 @@ export const AuthProvider = ({ children }) => {
       writeBool(LS_KEYS.AUTH, true);
       localStorage.setItem(LS_KEYS.USER_IDENTIFIER, id);
 
-      if (localStorage.getItem(LS_KEYS.ONBOARDING_DONE) == null) {
-        writeBool(LS_KEYS.ONBOARDING_DONE, false);
-      }
+      // Берём статус онбординга с сервера
+      const onboardingDone = userData?.onboarding_completed || false;
+      writeBool(LS_KEYS.ONBOARDING_DONE, onboardingDone);
 
       setIsAuthenticated(true);
       setUser(userData);
-      setOnboardingCompleted(readBool(LS_KEYS.ONBOARDING_DONE));
+      setOnboardingCompleted(onboardingDone);
 
       return { ok: true };
     } catch (err) {
@@ -155,20 +155,66 @@ export const AuthProvider = ({ children }) => {
     }
   }, []);
 
+  const register = useCallback(async ({ identifier, password }) => {
+    const id = (identifier || '').trim();
+    const pwd = (password || '').trim();
+
+    if (!id || pwd.length < 4) {
+      return { ok: false, error: 'Неверные данные для регистрации' };
+    }
+
+    try {
+      const response = await authAPI.register({ identifier: id, password: pwd });
+      const { user: userData, access_token, refresh_token } = response.data;
+
+      localStorage.setItem('access_token', access_token);
+      localStorage.setItem('refresh_token', refresh_token);
+
+      writeBool(LS_KEYS.AUTH, true);
+      localStorage.setItem(LS_KEYS.USER_IDENTIFIER, id);
+      writeBool(LS_KEYS.ONBOARDING_DONE, false);
+
+      setIsAuthenticated(true);
+      setUser(userData);
+      setOnboardingCompleted(false);
+
+      return { ok: true };
+    } catch (err) {
+      return { ok: false, error: err.response?.data?.error || 'Ошибка регистрации' };
+    }
+  }, []);
+
   const logout = useCallback(() => {
     authAPI.logout();
-    writeBool(LS_KEYS.AUTH, false);
-    localStorage.removeItem(LS_KEYS.USER_IDENTIFIER);
+    // Очищаем весь localStorage
+    localStorage.clear();
 
     setIsAuthenticated(false);
+    setOnboardingCompleted(false);
     setUser(null);
     setTempIdentifier('');
   }, []);
 
-  const completeOnboarding = useCallback(() => {
-    writeBool(LS_KEYS.ONBOARDING_DONE, true);
-    setOnboardingCompleted(true);
-    return { ok: true };
+  const completeOnboarding = useCallback(async (onboardingData = {}) => {
+    try {
+      // Отправляем данные онбординга на сервер
+      const response = await authAPI.completeOnboarding(onboardingData);
+      const updatedUser = response.data?.data?.user || response.data?.user;
+
+      if (updatedUser) {
+        setUser(updatedUser);
+      }
+
+      writeBool(LS_KEYS.ONBOARDING_DONE, true);
+      setOnboardingCompleted(true);
+      return { ok: true };
+    } catch (err) {
+      console.error('Ошибка сохранения онбординга:', err);
+      // Даже при ошибке сервера помечаем локально как завершённый
+      writeBool(LS_KEYS.ONBOARDING_DONE, true);
+      setOnboardingCompleted(true);
+      return { ok: true, warning: 'Данные сохранены локально' };
+    }
   }, []);
 
   const resetOnboarding = useCallback(() => {
@@ -227,6 +273,7 @@ export const AuthProvider = ({ children }) => {
       finishAuth,
 
       login,
+      register,
       logout,
       completeOnboarding,
       resetOnboarding,
@@ -243,6 +290,7 @@ export const AuthProvider = ({ children }) => {
       startAuth,
       finishAuth,
       login,
+      register,
       logout,
       completeOnboarding,
       resetOnboarding,

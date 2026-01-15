@@ -64,7 +64,7 @@ const Settings = () => {
           fatsGoal: data.fats_goal,
           targetWeight: data.target_weight || 75,
           activityLevel: data.activity_level || 'moderate',
-          dietType: 'balanced',
+          dietType: data.diet_type || 'balanced',
         });
       } catch (err) {
         console.error('Failed to fetch goals:', err);
@@ -110,6 +110,30 @@ const Settings = () => {
     }
   };
 
+  // Сохранение данных онбординга
+  const handleSaveOnboarding = async (data) => {
+    const updateData = {
+      gender: data.gender,
+      birth_year: data.birthYear,
+      height_cm: data.heightCm,
+      weight_kg: data.weightKg,
+      target_weight_kg: data.targetWeightKg,
+      workouts_per_week: data.workoutsPerWeek,
+      diet: data.diet,
+      diet_notes: data.dietNotes,
+      meals_per_day: data.mealsPerDay,
+      health_flags: data.healthFlags,
+      health_notes: data.healthNotes,
+    };
+
+    const result = await updateProfile(updateData);
+    if (result.success) {
+      setShowToast({ type: 'success', message: 'Данные профиля сохранены' });
+    } else {
+      setShowToast({ type: 'error', message: result.error });
+    }
+  };
+
   // Сохранение целей
   const handleSaveGoals = async (data) => {
     try {
@@ -120,6 +144,7 @@ const Settings = () => {
         fats_goal: data.fatsGoal,
         target_weight: data.targetWeight,
         activity_level: data.activityLevel,
+        diet_type: data.dietType,
       });
       setGoals(data);
       setShowToast({ type: 'success', message: 'Цели сохранены' });
@@ -164,12 +189,24 @@ const Settings = () => {
     );
   }
 
-  // Данные профиля из контекста авторизации
+  // Данные профиля из контекста авторизации (включая онбординг)
   const profile = {
     name: user?.full_name || '',
     email: user?.email || '',
     nickname: user?.nickname || '',
     avatar: null,
+    // Данные онбординга
+    gender: user?.gender || 'na',
+    birth_year: user?.birth_year || '',
+    height_cm: user?.height_cm || '',
+    weight_kg: user?.weight_kg || '',
+    target_weight_kg: user?.target_weight_kg || '',
+    workouts_per_week: user?.workouts_per_week || 0,
+    diet: user?.diet || 'none',
+    diet_notes: user?.diet_notes || '',
+    meals_per_day: user?.meals_per_day || 3,
+    health_flags: user?.health_flags || [],
+    health_notes: user?.health_notes || '',
   };
 
   return (
@@ -216,6 +253,7 @@ const Settings = () => {
           <ProfileSettings
             profile={profile}
             onSave={handleSaveProfile}
+            onSaveOnboarding={handleSaveOnboarding}
             onChangePassword={handleChangePassword}
           />
         )}

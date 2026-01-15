@@ -1,15 +1,55 @@
 import { useState } from 'react';
 import Card from '../common/Card';
 import Button from '../common/Button';
-import { User, Camera, Lock, Eye, EyeOff } from 'lucide-react';
+import { User, Camera, Lock, Eye, EyeOff, Ruler, Apple } from 'lucide-react';
 
-const ProfileSettings = ({ profile, onSave, onChangePassword }) => {
+const genderOptions = [
+  { value: 'male', label: 'Мужской' },
+  { value: 'female', label: 'Женский' },
+  { value: 'na', label: 'Не указан' },
+];
+
+const dietOptions = [
+  { value: 'none', label: 'Без ограничений' },
+  { value: 'keto', label: 'Кето' },
+  { value: 'vegetarian', label: 'Вегетарианство' },
+  { value: 'vegan', label: 'Веганство' },
+  { value: 'halal', label: 'Халяль' },
+  { value: 'lowcarb', label: 'Низкоуглеводная' },
+  { value: 'custom', label: 'Другое' },
+];
+
+const healthFlagOptions = [
+  { value: 'diabetes', label: 'Диабет' },
+  { value: 'hypertension', label: 'Гипертония' },
+  { value: 'allergy', label: 'Пищевая аллергия' },
+  { value: 'lactose', label: 'Непереносимость лактозы' },
+  { value: 'gluten', label: 'Непереносимость глютена' },
+];
+
+const ProfileSettings = ({ profile, onSave, onSaveOnboarding, onChangePassword }) => {
   const [formData, setFormData] = useState({
     name: profile.name || '',
     email: profile.email || '',
     nickname: profile.nickname || '',
     avatar: profile.avatar || null,
   });
+
+  // Данные онбординга
+  const [onboardingData, setOnboardingData] = useState({
+    gender: profile.gender || 'na',
+    birthYear: profile.birth_year || '',
+    heightCm: profile.height_cm || '',
+    weightKg: profile.weight_kg || '',
+    targetWeightKg: profile.target_weight_kg || '',
+    workoutsPerWeek: profile.workouts_per_week || 0,
+    diet: profile.diet || 'none',
+    dietNotes: profile.diet_notes || '',
+    mealsPerDay: profile.meals_per_day || 3,
+    healthFlags: profile.health_flags || [],
+    healthNotes: profile.health_notes || '',
+  });
+  const [hasOnboardingChanges, setHasOnboardingChanges] = useState(false);
 
   const [avatarPreview, setAvatarPreview] = useState(profile.avatar);
   const [hasChanges, setHasChanges] = useState(false);
@@ -47,6 +87,23 @@ const ProfileSettings = ({ profile, onSave, onChangePassword }) => {
   const handleSave = () => {
     onSave(formData);
     setHasChanges(false);
+  };
+
+  const handleOnboardingChange = (field, value) => {
+    setOnboardingData({ ...onboardingData, [field]: value });
+    setHasOnboardingChanges(true);
+  };
+
+  const handleHealthFlagToggle = (flag) => {
+    const newFlags = onboardingData.healthFlags.includes(flag)
+      ? onboardingData.healthFlags.filter((f) => f !== flag)
+      : [...onboardingData.healthFlags, flag];
+    handleOnboardingChange('healthFlags', newFlags);
+  };
+
+  const handleSaveOnboarding = () => {
+    onSaveOnboarding(onboardingData);
+    setHasOnboardingChanges(false);
   };
 
   const handlePasswordChange = (field, value) => {
@@ -156,6 +213,216 @@ const ProfileSettings = ({ profile, onSave, onChangePassword }) => {
 
           {hasChanges && (
             <Button variant="primary" className="w-full" onClick={handleSave}>
+              Сохранить изменения
+            </Button>
+          )}
+        </div>
+      </Card>
+
+      {/* Физические параметры */}
+      <Card padding="lg">
+        <div className="flex items-center gap-3 mb-6">
+          <Ruler className="w-6 h-6" />
+          <h3 className="text-xl font-bold">Физические параметры</h3>
+        </div>
+
+        <div className="space-y-6">
+          {/* Пол */}
+          <div>
+            <label className="block text-sm font-semibold mb-2">Пол</label>
+            <div className="flex gap-2">
+              {genderOptions.map((option) => (
+                <button
+                  key={option.value}
+                  type="button"
+                  onClick={() => handleOnboardingChange('gender', option.value)}
+                  className={`flex-1 py-3 rounded-xl font-medium transition-all ${
+                    onboardingData.gender === option.value
+                      ? 'bg-black text-white'
+                      : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                  }`}
+                >
+                  {option.label}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* Год рождения */}
+          <div>
+            <label className="block text-sm font-semibold mb-2">Год рождения</label>
+            <input
+              type="number"
+              value={onboardingData.birthYear}
+              onChange={(e) => handleOnboardingChange('birthYear', parseInt(e.target.value) || '')}
+              placeholder="Например: 1990"
+              min="1920"
+              max="2010"
+              className="w-full px-4 py-3 bg-gray-50 border-none rounded-xl text-base focus:ring-2 focus:ring-black outline-none"
+            />
+          </div>
+
+          {/* Рост и Вес */}
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <label className="block text-sm font-semibold mb-2">Рост (см)</label>
+              <input
+                type="number"
+                value={onboardingData.heightCm}
+                onChange={(e) => handleOnboardingChange('heightCm', parseInt(e.target.value) || '')}
+                placeholder="170"
+                min="100"
+                max="250"
+                className="w-full px-4 py-3 bg-gray-50 border-none rounded-xl text-base focus:ring-2 focus:ring-black outline-none"
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-semibold mb-2">Вес (кг)</label>
+              <input
+                type="number"
+                value={onboardingData.weightKg}
+                onChange={(e) => handleOnboardingChange('weightKg', parseFloat(e.target.value) || '')}
+                placeholder="70"
+                min="30"
+                max="300"
+                step="0.1"
+                className="w-full px-4 py-3 bg-gray-50 border-none rounded-xl text-base focus:ring-2 focus:ring-black outline-none"
+              />
+            </div>
+          </div>
+
+          {/* Целевой вес */}
+          <div>
+            <label className="block text-sm font-semibold mb-2">Целевой вес (кг)</label>
+            <input
+              type="number"
+              value={onboardingData.targetWeightKg}
+              onChange={(e) => handleOnboardingChange('targetWeightKg', parseFloat(e.target.value) || '')}
+              placeholder="65"
+              min="30"
+              max="300"
+              step="0.1"
+              className="w-full px-4 py-3 bg-gray-50 border-none rounded-xl text-base focus:ring-2 focus:ring-black outline-none"
+            />
+          </div>
+
+          {/* Тренировки в неделю */}
+          <div>
+            <label className="block text-sm font-semibold mb-2">
+              Тренировок в неделю: {onboardingData.workoutsPerWeek}
+            </label>
+            <input
+              type="range"
+              value={onboardingData.workoutsPerWeek}
+              onChange={(e) => handleOnboardingChange('workoutsPerWeek', parseInt(e.target.value))}
+              min="0"
+              max="7"
+              className="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-black"
+            />
+            <div className="flex justify-between text-xs text-gray-500 mt-1">
+              <span>0</span>
+              <span>7</span>
+            </div>
+          </div>
+        </div>
+      </Card>
+
+      {/* Питание и здоровье */}
+      <Card padding="lg">
+        <div className="flex items-center gap-3 mb-6">
+          <Apple className="w-6 h-6" />
+          <h3 className="text-xl font-bold">Питание и здоровье</h3>
+        </div>
+
+        <div className="space-y-6">
+          {/* Тип питания */}
+          <div>
+            <label className="block text-sm font-semibold mb-2">Тип питания</label>
+            <select
+              value={onboardingData.diet}
+              onChange={(e) => handleOnboardingChange('diet', e.target.value)}
+              className="w-full px-4 py-3 bg-gray-50 border-none rounded-xl text-base focus:ring-2 focus:ring-black outline-none"
+            >
+              {dietOptions.map((option) => (
+                <option key={option.value} value={option.value}>
+                  {option.label}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          {/* Заметки по диете */}
+          {onboardingData.diet === 'custom' && (
+            <div>
+              <label className="block text-sm font-semibold mb-2">Описание диеты</label>
+              <textarea
+                value={onboardingData.dietNotes}
+                onChange={(e) => handleOnboardingChange('dietNotes', e.target.value)}
+                placeholder="Опишите ваш тип питания..."
+                rows={3}
+                className="w-full px-4 py-3 bg-gray-50 border-none rounded-xl text-base focus:ring-2 focus:ring-black outline-none resize-none"
+              />
+            </div>
+          )}
+
+          {/* Приёмов пищи в день */}
+          <div>
+            <label className="block text-sm font-semibold mb-2">
+              Приёмов пищи в день: {onboardingData.mealsPerDay}
+            </label>
+            <div className="flex gap-2">
+              {[2, 3, 4, 5, 6].map((num) => (
+                <button
+                  key={num}
+                  type="button"
+                  onClick={() => handleOnboardingChange('mealsPerDay', num)}
+                  className={`flex-1 py-3 rounded-xl font-medium transition-all ${
+                    onboardingData.mealsPerDay === num
+                      ? 'bg-black text-white'
+                      : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                  }`}
+                >
+                  {num}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* Особенности здоровья */}
+          <div>
+            <label className="block text-sm font-semibold mb-2">Особенности здоровья</label>
+            <div className="flex flex-wrap gap-2">
+              {healthFlagOptions.map((option) => (
+                <button
+                  key={option.value}
+                  type="button"
+                  onClick={() => handleHealthFlagToggle(option.value)}
+                  className={`px-4 py-2 rounded-xl text-sm font-medium transition-all ${
+                    onboardingData.healthFlags.includes(option.value)
+                      ? 'bg-black text-white'
+                      : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                  }`}
+                >
+                  {option.label}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* Заметки по здоровью */}
+          <div>
+            <label className="block text-sm font-semibold mb-2">Дополнительные заметки</label>
+            <textarea
+              value={onboardingData.healthNotes}
+              onChange={(e) => handleOnboardingChange('healthNotes', e.target.value)}
+              placeholder="Аллергии, хронические заболевания, особенности..."
+              rows={3}
+              className="w-full px-4 py-3 bg-gray-50 border-none rounded-xl text-base focus:ring-2 focus:ring-black outline-none resize-none"
+            />
+          </div>
+
+          {hasOnboardingChanges && (
+            <Button variant="primary" className="w-full" onClick={handleSaveOnboarding}>
               Сохранить изменения
             </Button>
           )}

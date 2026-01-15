@@ -67,7 +67,7 @@ export default function Onboarding() {
 
   const CurrentStep = steps[step];
 
-  const onContinue = () => {
+  const onContinue = async () => {
     setError('');
 
     const ok = next();
@@ -75,7 +75,22 @@ export default function Onboarding() {
 
     // если это был последний шаг — завершаем онбординг
     if (step === totalSteps - 1) {
-      completeOnboarding();
+      // Отправляем данные онбординга на сервер
+      const onboardingData = {
+        gender: draft.gender,
+        birth_year: draft.birthYear,
+        height_cm: draft.heightCm,
+        weight_kg: draft.weightKg,
+        target_weight_kg: draft.targetWeightKg,
+        workouts_per_week: draft.workoutsPerWeek,
+        diet: draft.diet,
+        diet_notes: draft.dietNotes,
+        meals_per_day: draft.mealsPerDay,
+        health_flags: draft.healthFlags,
+        health_notes: draft.healthNotes,
+      };
+
+      await completeOnboarding(onboardingData);
       navigate('/', { replace: true });
     }
   };

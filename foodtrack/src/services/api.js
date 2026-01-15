@@ -70,6 +70,7 @@ export const authAPI = {
   getMe: () => api.get('/auth/me'),
   updateProfile: (data) => api.put('/auth/profile', data),
   changePassword: (data) => api.post('/auth/change-password', data),
+  completeOnboarding: (data) => api.post('/auth/onboarding', data),
 };
 
 // === MEALS API ===

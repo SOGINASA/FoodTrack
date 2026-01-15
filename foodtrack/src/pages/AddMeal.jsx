@@ -4,12 +4,14 @@ import Card from '../components/common/Card';
 import Modal from '../components/common/Modal';
 import Toast from '../components/common/Toast';
 import Loader from '../components/common/Loader';
-import { Camera, Upload, X, Check, Sparkles, TrendingUp, RotateCw } from 'lucide-react';
+import { Camera, Upload, X, Check, Sparkles, TrendingUp, RotateCw, LogIn } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { mealsAPI } from '../services/api';
+import { useAuth } from '../context/AuthContext';
 
 const AddMeal = () => {
   const navigate = useNavigate();
+  const { isAuthenticated } = useAuth();
   const [showToast, setShowToast] = useState(null);
   const [isMobile, setIsMobile] = useState(false);
   const [activeMode, setActiveMode] = useState(null);
@@ -20,6 +22,14 @@ const AddMeal = () => {
   const [cameraError, setCameraError] = useState(null);
   const [cameraReady, setCameraReady] = useState(false);
   const [facingMode, setFacingMode] = useState('environment');
+  const [selectedMealType, setSelectedMealType] = useState('snack');
+
+  const mealTypes = [
+    { value: 'breakfast', label: 'Завтрак' },
+    { value: 'lunch', label: 'Обед' },
+    { value: 'dinner', label: 'Ужин' },
+    { value: 'snack', label: 'Перекус' },
+  ];
   
   const videoRef = useRef(null);
   const canvasRef = useRef(null);
@@ -319,9 +329,35 @@ const AddMeal = () => {
     }
   };
 
-  const handleSaveMeal = () => {
-    setShowToast({ type: 'success', message: 'Приём пищи сохранён!' });
-    setTimeout(() => navigate('/diary'), 1000);
+  const handleSaveMeal = async () => {
+    if (!analysisResult) return;
+
+    try {
+      const mealData = {
+        name: analysisResult.dishName,
+        type: selectedMealType,
+        calories: analysisResult.calories,
+        protein: analysisResult.protein,
+        carbs: analysisResult.carbs,
+        fats: analysisResult.fats,
+        portions: 1,
+        ai_confidence: analysisResult.confidence,
+        health_score: analysisResult.healthScore,
+        ai_advice: analysisResult.aiAdvice,
+        tags: analysisResult.tags,
+        ingredients: analysisResult.ingredients || [],
+      };
+
+      await mealsAPI.create(mealData);
+      setShowToast({ type: 'success', message: 'Приём пищи сохранён!' });
+      setTimeout(() => navigate('/diary'), 1000);
+    } catch (error) {
+      console.error('Ошибка сохранения:', error);
+      setShowToast({
+        type: 'error',
+        message: error.response?.data?.error || 'Ошибка при сохранении'
+      });
+    }
   };
 
   const handleRetake = () => {
@@ -334,6 +370,7 @@ const AddMeal = () => {
     setCapturedImage(null);
     setAnalysisResult(null);
     setShowResultModal(false);
+    setSelectedMealType('snack');
   };
 
   if (analyzing) {
@@ -614,22 +651,76 @@ const AddMeal = () => {
               </div>
             </Card>
 
-            <div className="flex gap-3">
-              <Button
-                variant="secondary"
-                className="flex-1"
-                onClick={handleRetake}
-              >
-                Переснять
-              </Button>
-              <Button
-                variant="primary"
-                className="flex-1"
-                onClick={handleSaveMeal}
-              >
-                Сохранить в дневник
-              </Button>
-            </div>
+            {isAuthenticated ? (
+              <>
+                <div>
+                  <label className="block font-bold text-lg mb-3">Тип приёма пищи</label>
+                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+                    {mealTypes.map((type) => (
+                      <button
+                        key={type.value}
+                        onClick={() => setSelectedMealType(type.value)}
+                        className={`px-4 py-3 rounded-xl font-semibold transition-all ${
+                          selectedMealType === type.value
+                            ? 'bg-black text-white'
+                            : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                        }`}
+                      >
+                        {type.label}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                <div className="flex gap-3">
+                  <Button
+                    variant="secondary"
+                    className="flex-1"
+                    onClick={handleRetake}
+                  >
+                    Переснять
+                  </Button>
+                  <Button
+                    variant="primary"
+                    className="flex-1"
+                    onClick={handleSaveMeal}
+                  >
+                    Сохранить в дневник
+                  </Button>
+                </div>
+              </>
+            ) : (
+              <>
+                <Card padding="lg" className="bg-gradient-to-r from-blue-50 to-purple-50">
+                  <div className="flex items-start gap-3">
+                    <LogIn className="w-6 h-6 text-blue-600 flex-shrink-0 mt-1" />
+                    <div>
+                      <div className="font-bold text-lg mb-1">Войдите, чтобы сохранить</div>
+                      <p className="text-sm text-gray-700">
+                        Зарегистрируйтесь или войдите в аккаунт, чтобы сохранять приёмы пищи в дневник и отслеживать прогресс
+                      </p>
+                    </div>
+                  </div>
+                </Card>
+
+                <div className="flex gap-3">
+                  <Button
+                    variant="secondary"
+                    className="flex-1"
+                    onClick={handleRetake}
+                  >
+                    Переснять
+                  </Button>
+                  <Button
+                    variant="primary"
+                    className="flex-1"
+                    onClick={() => navigate('/auth')}
+                  >
+                    Войти / Регистрация
+                  </Button>
+                </div>
+              </>
+            )}
           </div>
         )}
       </Modal>
