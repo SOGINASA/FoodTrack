@@ -36,7 +36,15 @@ def create_app():
         db.create_all()
         # Проверяем, есть ли уже данные в БД
         if User.query.first() is None:
-            seed_all()
+            try:
+                seed_all()
+            except Exception as e:
+                # Игнорируем ошибки если данные уже добавлены другим worker процессом
+                if 'UNIQUE constraint failed' in str(e):
+                    print(f"[INFO] Данные уже были добавлены другим процессом")
+                    db.session.rollback()
+                else:
+                    raise
 
     # Импорт всех блюпринтов
     from routes import auth_bp

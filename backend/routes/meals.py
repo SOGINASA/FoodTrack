@@ -3,6 +3,11 @@ from flask_jwt_extended import jwt_required, get_jwt_identity
 from models import db, Meal, MealIngredient
 from datetime import datetime, date
 import json
+import logging
+
+# Настройка логирования
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
 
 meals_bp = Blueprint('meals', __name__)
 
@@ -13,12 +18,14 @@ def get_meals():
     """Получить приёмы пищи пользователя"""
     try:
         user_id = int(get_jwt_identity())
-
+        
         # Фильтр по дате
         date_str = request.args.get('date')
         start_date = request.args.get('start_date')
         end_date = request.args.get('end_date')
         meal_type = request.args.get('type')
+
+        logger.info(f"[GET /meals] user_id={user_id}, date={date_str}, meal_type={meal_type}")
 
         query = Meal.query.filter_by(user_id=user_id)
 
@@ -35,13 +42,15 @@ def get_meals():
 
         meals = query.order_by(Meal.meal_date.desc(), Meal.meal_time.desc()).all()
 
+        logger.info(f"[GET /meals] Найдено {len(meals)} приёмов пищи")
+
         return jsonify({
             'meals': [meal.to_dict() for meal in meals],
             'count': len(meals)
         })
 
     except Exception as e:
-        print(f"Ошибка получения приёмов пищи: {e}")
+        logger.error(f"[GET /meals] Ошибка: {e}", exc_info=True)
         return jsonify({'error': 'Ошибка получения данных'}), 500
 
 
@@ -291,10 +300,14 @@ def get_today_meals():
         user_id = int(get_jwt_identity())
         today = date.today()
 
+        logger.info(f"[GET /meals/today] user_id={user_id}, date={today}")
+
         meals = Meal.query.filter_by(
             user_id=user_id,
             meal_date=today
         ).order_by(Meal.meal_time.desc()).all()
+
+        logger.info(f"[GET /meals/today] Найдено {len(meals)} приёмов пищи за сегодня")
 
         # Подсчёт итогов
         totals = {
