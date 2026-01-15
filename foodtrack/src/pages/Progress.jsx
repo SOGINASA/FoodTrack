@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import ProgressPhotos from '../components/progress/ProgressPhotos';
 import PhotoComparison from '../components/progress/PhotoComparison';
 import WeightTracker from '../components/progress/WeightTracker';
@@ -8,28 +8,59 @@ import Loader from '../components/common/Loader';
 import Toast from '../components/common/Toast';
 import { Image, Trophy } from 'lucide-react';
 import { useAnalytics } from '../hooks/useAnalytics';
+import { progressAPI } from '../services/api';
 
 const Progress = () => {
   const [showToast, setShowToast] = useState(null);
-  
-  const { 
-    weightHistory, 
-    goals, 
-    loading, 
-    error, 
-    fetchWeightHistory, 
-    fetchGoals, 
-    addWeight 
+
+  const {
+    weightHistory,
+    goals,
+    loading,
+    error,
+    fetchWeightHistory,
+    fetchGoals,
+    addWeight
   } = useAnalytics();
 
   const [photos, setPhotos] = useState([]);
   const [measurements, setMeasurements] = useState([]);
+  const [progressLoading, setProgressLoading] = useState(true);
+
+  // Загрузка замеров
+  const fetchMeasurements = useCallback(async () => {
+    try {
+      const response = await progressAPI.getMeasurements();
+      setMeasurements(response.data.measurements || []);
+    } catch (err) {
+      console.error('Ошибка загрузки замеров:', err);
+    }
+  }, []);
+
+  // Загрузка фото
+  const fetchPhotos = useCallback(async () => {
+    try {
+      const response = await progressAPI.getPhotos();
+      setPhotos(response.data.photos || []);
+    } catch (err) {
+      console.error('Ошибка загрузки фото:', err);
+    }
+  }, []);
 
   // Загружаем данные при монтировании компонента
   useEffect(() => {
-    fetchWeightHistory(90);
-    fetchGoals();
-  }, [fetchWeightHistory, fetchGoals]);
+    const loadData = async () => {
+      setProgressLoading(true);
+      await Promise.all([
+        fetchWeightHistory(90),
+        fetchGoals(),
+        fetchMeasurements(),
+        fetchPhotos()
+      ]);
+      setProgressLoading(false);
+    };
+    loadData();
+  }, [fetchWeightHistory, fetchGoals, fetchMeasurements, fetchPhotos]);
 
   // Преобразуем данные веса
   const getWeightData = () => {
@@ -42,14 +73,29 @@ const Progress = () => {
     })).reverse(); // Показываем от старого к новому
   };
 
-  const handleAddPhoto = (photo) => {
-    setPhotos([...photos, photo]);
-    setShowToast({ type: 'success', message: 'Фото добавлено' });
+  const handleAddPhoto = async (photo) => {
+    try {
+      const response = await progressAPI.addPhoto({
+        image_url: photo.image_url || photo.url,
+        date: photo.date instanceof Date ? photo.date.toISOString().split('T')[0] : photo.date,
+        category: photo.category || 'front',
+        notes: photo.notes
+      });
+      setPhotos([response.data.photo, ...photos]);
+      setShowToast({ type: 'success', message: 'Фото добавлено' });
+    } catch (err) {
+      setShowToast({ type: 'error', message: 'Ошибка при сохранении фото' });
+    }
   };
 
-  const handleDeletePhoto = (photoId) => {
-    setPhotos(photos.filter(p => p.id !== photoId));
-    setShowToast({ type: 'success', message: 'Фото удалено' });
+  const handleDeletePhoto = async (photoId) => {
+    try {
+      await progressAPI.deletePhoto(photoId);
+      setPhotos(photos.filter(p => p.id !== photoId));
+      setShowToast({ type: 'success', message: 'Фото удалено' });
+    } catch (err) {
+      setShowToast({ type: 'error', message: 'Ошибка при удалении фото' });
+    }
   };
 
   const handleAddWeight = async (entry) => {
@@ -62,13 +108,27 @@ const Progress = () => {
       setShowToast({ type: 'success', message: 'Вес добавлен' });
       await fetchWeightHistory(90);
     } else {
-      setShowToast({ type: 'error', message: result.error });
+      setShowToast({ type: 'error', message: result.error || 'Ошибка при сохранении' });
     }
   };
 
-  const handleAddMeasurements = (entry) => {
-    setMeasurements([...measurements, entry]);
-    setShowToast({ type: 'success', message: 'Замеры добавлены' });
+  const handleAddMeasurements = async (entry) => {
+    try {
+      const response = await progressAPI.addMeasurement({
+        date: entry.date instanceof Date ? entry.date.toISOString().split('T')[0] : entry.date,
+        chest: entry.chest,
+        waist: entry.waist,
+        hips: entry.hips,
+        biceps: entry.biceps,
+        thigh: entry.thigh,
+        neck: entry.neck,
+        notes: entry.notes
+      });
+      setMeasurements([response.data.measurement, ...measurements]);
+      setShowToast({ type: 'success', message: 'Замеры добавлены' });
+    } catch (err) {
+      setShowToast({ type: 'error', message: 'Ошибка при сохранении замеров' });
+    }
   };
 
   // Расчёт статистики
@@ -79,7 +139,7 @@ const Progress = () => {
   const goalWeight = goals?.target_weight || 75;
   const totalPhotos = photos.length;
 
-  if (loading) {
+  if (loading || progressLoading) {
     return (
       <div className="flex items-center justify-center min-h-[60vh]">
         <Loader size="lg" />

@@ -142,3 +142,16 @@ export const analyticsAPI = {
   // Серия дней
   getStreak: () => api.get('/analytics/streak'),
 };
+
+// === PROGRESS API ===
+export const progressAPI = {
+  // Замеры тела
+  getMeasurements: () => api.get('/progress/measurements'),
+  addMeasurement: (data) => api.post('/progress/measurements', data),
+  deleteMeasurement: (id) => api.delete(`/progress/measurements/${id}`),
+
+  // Фото прогресса
+  getPhotos: () => api.get('/progress/photos'),
+  addPhoto: (data) => api.post('/progress/photos', data),
+  deletePhoto: (id) => api.delete(`/progress/photos/${id}`),
+};

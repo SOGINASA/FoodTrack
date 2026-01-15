@@ -43,12 +43,14 @@ def create_app():
     from routes.meals import meals_bp
     from routes.goals import goals_bp
     from routes.analytics import analytics_bp
+    from routes.progress import progress_bp
 
     # Регистрация всех блюпринтов
     app.register_blueprint(auth_bp, url_prefix='/api/auth')
     app.register_blueprint(meals_bp, url_prefix='/api/meals')
     app.register_blueprint(goals_bp, url_prefix='/api/goals')
     app.register_blueprint(analytics_bp, url_prefix='/api/analytics')
+    app.register_blueprint(progress_bp, url_prefix='/api/progress')
 
     # Главная страница API
     @app.route('/api')

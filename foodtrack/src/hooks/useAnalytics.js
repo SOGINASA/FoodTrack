@@ -117,9 +117,9 @@ export const useAnalytics = () => {
   }, []);
 
   // Добавить запись веса
-  const addWeight = useCallback(async (weight, date, notes) => {
+  const addWeight = useCallback(async (data) => {
     try {
-      const response = await goalsAPI.addWeight({ weight, date, notes });
+      const response = await goalsAPI.addWeight(data);
       setWeightHistory((prev) => [response.data.entry, ...prev]);
       return { success: true };
     } catch (err) {

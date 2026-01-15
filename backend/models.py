@@ -205,3 +205,59 @@ class WeightEntry(db.Model):
             'date': self.date.isoformat() if self.date else None,
             'notes': self.notes,
         }
+
+
+class Measurement(db.Model):
+    """Замеры тела"""
+    __tablename__ = 'measurements'
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False, index=True)
+
+    date = db.Column(db.Date, nullable=False, index=True)
+    chest = db.Column(db.Float)  # грудь
+    waist = db.Column(db.Float)  # талия
+    hips = db.Column(db.Float)  # бёдра
+    biceps = db.Column(db.Float)  # бицепс
+    thigh = db.Column(db.Float)  # бедро
+    neck = db.Column(db.Float)  # шея
+    notes = db.Column(db.Text)
+
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+
+    def to_dict(self):
+        return {
+            'id': self.id,
+            'date': self.date.isoformat() if self.date else None,
+            'chest': self.chest,
+            'waist': self.waist,
+            'hips': self.hips,
+            'biceps': self.biceps,
+            'thigh': self.thigh,
+            'neck': self.neck,
+            'notes': self.notes,
+            'created_at': self.created_at.isoformat() if self.created_at else None,
+        }
+
+
+class ProgressPhoto(db.Model):
+    """Фото прогресса"""
+    __tablename__ = 'progress_photos'
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False, index=True)
+
+    date = db.Column(db.Date, nullable=False, index=True)
+    image_url = db.Column(db.String(500), nullable=False)
+    category = db.Column(db.String(20), default='front')  # front, side, back
+    notes = db.Column(db.Text)
+
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+
+    def to_dict(self):
+        return {
+            'id': self.id,
+            'date': self.date.isoformat() if self.date else None,
+            'image_url': self.image_url,
+            'category': self.category,
+            'notes': self.notes,
+            'created_at': self.created_at.isoformat() if self.created_at else None,
+        }
