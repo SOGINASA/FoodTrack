@@ -1597,28 +1597,38 @@ const Recipes = () => {
               </div>
             </div>
 
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
-              <div className="text-center p-3 bg-gray-50 rounded-xl">
-                <Clock className="w-5 h-5 mx-auto mb-1 text-gray-600" />
-                <div className="text-sm text-secondary">Время</div>
-                <div className="font-bold">{selectedRecipe.time} мин</div>
-              </div>
-              <div className="text-center p-3 bg-gray-50 rounded-xl">
-                <Flame className="w-5 h-5 mx-auto mb-1 text-orange-600" />
-                <div className="text-sm text-secondary">Калории</div>
-                <div className="font-bold">{selectedRecipe.calories}</div>
-              </div>
-              <div className="text-center p-3 bg-gray-50 rounded-xl">
-                <div className="text-lg mb-1">🍗</div>
-                <div className="text-sm text-secondary">Белки</div>
-                <div className="font-bold text-[#FF6B6B]">{selectedRecipe.protein}г</div>
-              </div>
-              <div className="text-center p-3 bg-gray-50 rounded-xl">
-                <div className="text-lg mb-1">🥖</div>
-                <div className="text-sm text-secondary">Углеводы</div>
-                <div className="font-bold text-[#FFB84D]">{selectedRecipe.carbs}г</div>
-              </div>
-            </div>
+            <div className="grid grid-cols-2 sm:grid-cols-5 gap-4">
+  <div className="text-center p-3 bg-gray-50 rounded-xl">
+    <Clock className="w-5 h-5 mx-auto mb-1 text-gray-600" />
+    <div className="text-sm text-secondary">Время</div>
+    <div className="font-bold">{selectedRecipe.time} мин</div>
+  </div>
+
+  <div className="text-center p-3 bg-gray-50 rounded-xl">
+    <Flame className="w-5 h-5 mx-auto mb-1 text-orange-600" />
+    <div className="text-sm text-secondary">Калории</div>
+    <div className="font-bold">{selectedRecipe.calories}</div>
+  </div>
+
+  <div className="text-center p-3 bg-gray-50 rounded-xl">
+    <div className="text-lg mb-1">🍗</div>
+    <div className="text-sm text-secondary">Белки</div>
+    <div className="font-bold text-[#FF6B6B]">{selectedRecipe.protein}г</div>
+  </div>
+
+  <div className="text-center p-3 bg-gray-50 rounded-xl">
+    <div className="text-lg mb-1">🥖</div>
+    <div className="text-sm text-secondary">Углеводы</div>
+    <div className="font-bold text-[#FFB84D]">{selectedRecipe.carbs}г</div>
+  </div>
+
+  <div className="text-center p-3 bg-gray-50 rounded-xl">
+    <div className="text-lg mb-1">🧈</div>
+    <div className="text-sm text-secondary">Жиры</div>
+    <div className="font-bold text-[#4D9FFF]">{selectedRecipe.fats}г</div>
+  </div>
+</div>
+
 
             <div>
               <h3 className="font-bold text-lg mb-3">Ингредиенты</h3>

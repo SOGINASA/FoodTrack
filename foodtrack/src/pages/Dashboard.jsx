@@ -1,4 +1,6 @@
 import React, { useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
+
 import DashboardStats from '../components/dashboard/DashboardStats';
 import WeeklyChart from '../components/dashboard/WeeklyChart';
 import StreakBadge from '../components/dashboard/StreakBadge';
@@ -9,7 +11,40 @@ import Loader from '../components/common/Loader';
 import { useMeals } from '../hooks/useMeals';
 import { useAnalytics } from '../hooks/useAnalytics';
 
+const QuickIconTips = ({ className = '' }) => (
+  <svg viewBox="0 0 24 24" className={className} fill="none" aria-hidden="true">
+    <path d="M9.5 21h5M10 17h4" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+    <path
+      d="M8 10a4 4 0 1 1 8 0c0 1.7-.9 2.6-1.8 3.5-.7.7-1.2 1.4-1.2 2.5h-2c0-1.1-.5-1.8-1.2-2.5C8.9 12.6 8 11.7 8 10Z"
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinejoin="round"
+    />
+  </svg>
+);
+
+const QuickIconRecipes = ({ className = '' }) => (
+  <svg viewBox="0 0 24 24" className={className} fill="none" aria-hidden="true">
+    <path d="M7 3h10v18H7z" stroke="currentColor" strokeWidth="2" strokeLinejoin="round" />
+    <path d="M9 7h6M9 11h6M9 15h6" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+  </svg>
+);
+
+const QuickIconProgress = ({ className = '' }) => (
+  <svg viewBox="0 0 24 24" className={className} fill="none" aria-hidden="true">
+    <path d="M4 19V5" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+    <path
+      d="M8 19v-6M12 19V9M16 19v-10M20 19v-4"
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinecap="round"
+    />
+  </svg>
+);
+
 const Dashboard = () => {
+  const navigate = useNavigate();
+
   const { meals, loading, error, fetchToday } = useMeals();
   const { streak, fetchStreak, weeklyStats, fetchWeeklyStats } = useAnalytics();
 
@@ -23,6 +58,12 @@ const Dashboard = () => {
   const totalProtein = meals.reduce((sum, meal) => sum + (meal.protein || 0), 0);
   const totalCarbs = meals.reduce((sum, meal) => sum + (meal.carbs || 0), 0);
   const totalFats = meals.reduce((sum, meal) => sum + (meal.fats || 0), 0);
+
+  const quickLinks = [
+    { label: 'Советы', path: '/tips', Icon: QuickIconTips },
+    { label: 'Рецепты', path: '/recipes', Icon: QuickIconRecipes },
+    { label: 'Прогресс', path: '/progress', Icon: QuickIconProgress },
+  ];
 
   if (loading) {
     return (
@@ -52,6 +93,31 @@ const Dashboard = () => {
 
       <WeeklyChart />
 
+      {/* ✅ Видно ТОЛЬКО на мобильных (скрыто на lg и выше) */}
+      <div className="grid grid-cols-3 gap-3 lg:hidden">
+        {quickLinks.map(({ label, path, Icon }) => (
+          <button
+            key={path}
+            type="button"
+            onClick={() => navigate(path)}
+            className={[
+              'group w-full rounded-2xl border border-gray-200 bg-white',
+              'px-3 py-3 sm:px-4 sm:py-4',
+              'flex items-center justify-center gap-2',
+              'hover:border-black hover:shadow-sm transition',
+              'active:scale-[0.99]',
+            ].join(' ')}
+          >
+            <span className="inline-flex items-center justify-center">
+              <Icon className="h-5 w-5 sm:h-6 sm:w-6 text-black/80 group-hover:text-black transition" />
+            </span>
+            <span className="text-sm sm:text-base font-semibold text-black">
+              {label}
+            </span>
+          </button>
+        ))}
+      </div>
+
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         <Card padding="lg" className="lg:col-span-2">
           <DashboardStats
@@ -68,7 +134,9 @@ const Dashboard = () => {
 
         <Card padding="lg" className="flex flex-col justify-center items-center text-center">
           <div className="mb-4">
-            <div className="text-5xl font-bold mb-2">{Math.round((totalCalories / 2500) * 100)}%</div>
+            <div className="text-5xl font-bold mb-2">
+              {Math.round((totalCalories / 2500) * 100)}%
+            </div>
             <p className="text-secondary">от дневной цели</p>
           </div>
           <div className="space-y-2 text-sm text-secondary w-full">
