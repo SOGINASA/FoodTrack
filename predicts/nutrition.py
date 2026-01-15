@@ -39,7 +39,7 @@ def get_nutrition_info(food_name: str) -> Optional[Dict]:
 
     try:
         # API endpoint для определения питательной ценности
-        url = "https://api.spoonacular.com../../imgs/guessNutrition"
+        url = "https://api.spoonacular.com/recipes/guessNutrition"
 
         params = {
             'title': mapped_name,
