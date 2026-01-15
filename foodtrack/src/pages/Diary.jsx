@@ -1,149 +1,86 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import DiaryList from '../components/diary/DiaryList';
 import EditMealModal from '../components/diary/EditMealModal';
 import Card from '../components/common/Card';
 import Toast from '../components/common/Toast';
+import Loader from '../components/common/Loader';
 import { Calendar, ChevronLeft, ChevronRight } from 'lucide-react';
 import { format, addDays, subDays } from 'date-fns';
 import { ru } from 'date-fns/locale';
 import { useNavigate } from 'react-router-dom';
+import { useMeals } from '../hooks/useMeals';
 
 const Diary = () => {
   const navigate = useNavigate();
   const [currentDate, setCurrentDate] = useState(new Date());
   const [showToast, setShowToast] = useState(null);
   const [editingMeal, setEditingMeal] = useState(null);
+  
+  const { meals, loading, error, fetchMeals, updateMeal, deleteMeal, addMeal } = useMeals();
 
-  const [meals, setMeals] = useState([
-    {
-      id: 1,
-      name: 'Овсяная каша с бананом',
-      time: '08:00',
-      calories: 320,
-      protein: 12,
-      carbs: 58,
-      fats: 6,
-      type: 'breakfast',
-      portions: 1,
-      image: null,
-    },
-    {
-      id: 2,
-      name: 'Кофе с молоком',
-      time: '08:30',
-      calories: 45,
-      protein: 2,
-      carbs: 5,
-      fats: 2,
-      type: 'breakfast',
-      portions: 1,
-      image: null,
-    },
-    {
-      id: 3,
-      name: 'Греческий йогурт',
-      time: '11:00',
-      calories: 150,
-      protein: 15,
-      carbs: 12,
-      fats: 5,
-      type: 'snack',
-      portions: 1,
-      image: null,
-    },
-    {
-      id: 4,
-      name: 'Куриная грудка с рисом',
-      time: '13:30',
-      calories: 520,
-      protein: 45,
-      carbs: 62,
-      fats: 8,
-      type: 'lunch',
-      portions: 1,
-      image: null,
-    },
-    {
-      id: 5,
-      name: 'Овощной салат',
-      time: '14:00',
-      calories: 120,
-      protein: 3,
-      carbs: 18,
-      fats: 4,
-      type: 'lunch',
-      portions: 1,
-      image: null,
-    },
-    {
-      id: 6,
-      name: 'Яблоко',
-      time: '16:30',
-      calories: 80,
-      protein: 0,
-      carbs: 21,
-      fats: 0,
-      type: 'snack',
-      portions: 1,
-      image: null,
-    },
-    {
-      id: 7,
-      name: 'Лосось на гриле',
-      time: '19:00',
-      calories: 380,
-      protein: 38,
-      carbs: 8,
-      fats: 22,
-      type: 'dinner',
-      portions: 1,
-      image: null,
-    },
-    {
-      id: 8,
-      name: 'Тушёные овощи',
-      time: '19:15',
-      calories: 140,
-      protein: 4,
-      carbs: 24,
-      fats: 3,
-      type: 'dinner',
-      portions: 1,
-      image: null,
-    },
-  ]);
+  // Загружаем приёмы пищи при смене даты
+  useEffect(() => {
+    const dateStr = format(currentDate, 'yyyy-MM-dd');
+    fetchMeals(dateStr);
+  }, [currentDate, fetchMeals]);
 
-  const totalCalories = meals.reduce((sum, meal) => sum + meal.calories, 0);
-  const totalProtein = meals.reduce((sum, meal) => sum + meal.protein, 0);
-  const totalCarbs = meals.reduce((sum, meal) => sum + meal.carbs, 0);
-  const totalFats = meals.reduce((sum, meal) => sum + meal.fats, 0);
+  const totalCalories = meals.reduce((sum, meal) => sum + (meal.calories || 0), 0);
+  const totalProtein = meals.reduce((sum, meal) => sum + (meal.protein || 0), 0);
+  const totalCarbs = meals.reduce((sum, meal) => sum + (meal.carbs || 0), 0);
+  const totalFats = meals.reduce((sum, meal) => sum + (meal.fats || 0), 0);
 
   const handleEdit = (meal) => {
     setEditingMeal(meal);
   };
 
-  const handleSaveEdit = (editedMeal) => {
-    setMeals(meals.map(m => m.id === editedMeal.id ? editedMeal : m));
-    setShowToast({ type: 'success', message: 'Блюдо обновлено' });
+  const handleSaveEdit = async (editedMeal) => {
+    const result = await updateMeal(editedMeal.id, editedMeal);
+    if (result.success) {
+      setShowToast({ type: 'success', message: 'Блюдо обновлено' });
+      setEditingMeal(null);
+    } else {
+      setShowToast({ type: 'error', message: result.error || 'Ошибка обновления' });
+    }
   };
 
-  const handleDelete = (meal) => {
-    setMeals(meals.filter(m => m.id !== meal.id));
-    setShowToast({ type: 'success', message: `Удалено: ${meal.name}` });
+  const handleDelete = async (meal) => {
+    const result = await deleteMeal(meal.id);
+    if (result.success) {
+      setShowToast({ type: 'success', message: `Удалено: ${meal.name}` });
+    } else {
+      setShowToast({ type: 'error', message: result.error || 'Ошибка удаления' });
+    }
   };
 
   const handleCopy = (meal) => {
-    const newMeal = {
-      ...meal,
-      id: Date.now(),
-    };
-    setMeals([...meals, newMeal]);
-    setShowToast({ type: 'success', message: `Скопировано: ${meal.name}` });
+    navigate('/add-meal');
   };
 
   const handleAddMeal = (mealType) => {
     navigate('/add-meal');
   };
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center min-h-[60vh]">
+        <Loader size="lg" />
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="space-y-6 pb-6">
+        <div className="flex items-center gap-3">
+          <Calendar className="w-8 h-8" />
+          <h1 className="text-3xl lg:text-4xl font-bold">Дневник питания</h1>
+        </div>
+        <Card padding="lg" className="bg-red-50 border border-red-200">
+          <p className="text-red-800">{error}</p>
+        </Card>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6 pb-6">

@@ -348,7 +348,7 @@ const AddMeal = () => {
         ingredients: analysisResult.ingredients || [],
       };
 
-      await mealsAPI.create(mealData);
+      const response = await mealsAPI.create(mealData);
       setShowToast({ type: 'success', message: 'Приём пищи сохранён!' });
       setTimeout(() => navigate('/diary'), 1000);
     } catch (error) {

@@ -1,64 +1,46 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import ProgressPhotos from '../components/progress/ProgressPhotos';
 import PhotoComparison from '../components/progress/PhotoComparison';
 import WeightTracker from '../components/progress/WeightTracker';
 import MeasurementsTracker from '../components/progress/MeasurementsTracker';
 import Card from '../components/common/Card';
+import Loader from '../components/common/Loader';
 import Toast from '../components/common/Toast';
 import { Image, Trophy } from 'lucide-react';
+import { useAnalytics } from '../hooks/useAnalytics';
 
 const Progress = () => {
   const [showToast, setShowToast] = useState(null);
+  
+  const { 
+    weightHistory, 
+    goals, 
+    loading, 
+    error, 
+    fetchWeightHistory, 
+    fetchGoals, 
+    addWeight 
+  } = useAnalytics();
 
-  const [photos, setPhotos] = useState([
-    {
-      id: 1,
-      date: new Date('2024-01-15'),
-      imageUrl: 'https://via.placeholder.com/400x400/FF6B6B/FFFFFF?text=Start',
-    },
-    {
-      id: 2,
-      date: new Date('2024-02-15'),
-      imageUrl: 'https://via.placeholder.com/400x400/FFB84D/FFFFFF?text=1+Month',
-    },
-    {
-      id: 3,
-      date: new Date('2024-03-15'),
-      imageUrl: 'https://via.placeholder.com/400x400/4D9FFF/FFFFFF?text=2+Months',
-    },
-  ]);
+  const [photos, setPhotos] = useState([]);
+  const [measurements, setMeasurements] = useState([]);
 
-  const [weightData, setWeightData] = useState([
-    { id: 1, weight: 85.5, date: new Date('2024-01-15') },
-    { id: 2, weight: 84.2, date: new Date('2024-01-22') },
-    { id: 3, weight: 83.8, date: new Date('2024-01-29') },
-    { id: 4, weight: 82.9, date: new Date('2024-02-05') },
-    { id: 5, weight: 82.1, date: new Date('2024-02-12') },
-    { id: 6, weight: 81.5, date: new Date('2024-02-19') },
-  ]);
+  // Загружаем данные при монтировании компонента
+  useEffect(() => {
+    fetchWeightHistory(90);
+    fetchGoals();
+  }, [fetchWeightHistory, fetchGoals]);
 
-  const [measurements, setMeasurements] = useState([
-    {
-      id: 1,
-      date: new Date('2024-01-15'),
-      chest: 98,
-      waist: 92,
-      hips: 102,
-      arm: 35,
-      thigh: 58,
-    },
-    {
-      id: 2,
-      date: new Date('2024-02-15'),
-      chest: 96,
-      waist: 89,
-      hips: 100,
-      arm: 34,
-      thigh: 56,
-    },
-  ]);
-
-  const goalWeight = 75;
+  // Преобразуем данные веса
+  const getWeightData = () => {
+    if (!weightHistory || !Array.isArray(weightHistory)) return [];
+    return weightHistory.map((entry, idx) => ({
+      id: idx,
+      weight: entry.weight,
+      date: new Date(entry.date),
+      notes: entry.notes
+    })).reverse(); // Показываем от старого к новому
+  };
 
   const handleAddPhoto = (photo) => {
     setPhotos([...photos, photo]);
@@ -70,9 +52,18 @@ const Progress = () => {
     setShowToast({ type: 'success', message: 'Фото удалено' });
   };
 
-  const handleAddWeight = (entry) => {
-    setWeightData([...weightData, entry]);
-    setShowToast({ type: 'success', message: 'Вес добавлен' });
+  const handleAddWeight = async (entry) => {
+    const result = await addWeight({
+      weight: entry.weight,
+      date: entry.date.toISOString().split('T')[0],
+      notes: entry.notes
+    });
+    if (result.success) {
+      setShowToast({ type: 'success', message: 'Вес добавлен' });
+      await fetchWeightHistory(90);
+    } else {
+      setShowToast({ type: 'error', message: result.error });
+    }
   };
 
   const handleAddMeasurements = (entry) => {
@@ -80,11 +71,35 @@ const Progress = () => {
     setShowToast({ type: 'success', message: 'Замеры добавлены' });
   };
 
-  const daysOnTrack = 45;
+  // Расчёт статистики
+  const weightDataArray = getWeightData();
+  const currentWeight = weightDataArray.length > 0 ? weightDataArray[weightDataArray.length - 1].weight : 0;
+  const startWeight = weightDataArray.length > 0 ? weightDataArray[0].weight : 0;
+  const totalWeightLoss = startWeight > 0 ? (startWeight - currentWeight).toFixed(1) : 0;
+  const goalWeight = goals?.target_weight || 75;
   const totalPhotos = photos.length;
-  const totalWeightLoss = weightData.length > 0 
-    ? (weightData[0].weight - weightData[weightData.length - 1].weight).toFixed(1)
-    : 0;
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center min-h-[60vh]">
+        <Loader size="lg" />
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="space-y-8 pb-6">
+        <div className="flex items-center gap-3">
+          <Image className="w-8 h-8" />
+          <h1 className="text-3xl lg:text-4xl font-bold">Прогресс</h1>
+        </div>
+        <Card padding="lg" className="bg-red-50 border border-red-200">
+          <p className="text-red-800">{error}</p>
+        </Card>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-8 pb-6">
@@ -100,8 +115,8 @@ const Progress = () => {
             <h3 className="font-bold text-xl mb-2">Отличная работа!</h3>
             <div className="grid grid-cols-3 gap-4 text-center">
               <div>
-                <div className="text-3xl font-bold text-purple-600">{daysOnTrack}</div>
-                <div className="text-sm text-secondary">дней в треке</div>
+                <div className="text-3xl font-bold text-purple-600">{weightDataArray.length}</div>
+                <div className="text-sm text-secondary">записей веса</div>
               </div>
               <div>
                 <div className="text-3xl font-bold text-purple-600">{totalPhotos}</div>
@@ -117,7 +132,7 @@ const Progress = () => {
       </Card>
 
       <WeightTracker
-        weightData={weightData}
+        weightData={weightDataArray}
         goalWeight={goalWeight}
         onAddWeight={handleAddWeight}
       />
