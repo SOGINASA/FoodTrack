@@ -727,8 +727,9 @@ def seed_all():
         # Получаем шаблоны для диеты пользователя
         diet_templates = meals_templates.get(diet_type, []) + meals_templates['regular']
 
-        for days_ago in range(14):
-            meal_date = date.today() - timedelta(days=days_ago)
+        # Создаём данные от сегодня до 14 дней в прошлое
+        for days_ago in range(-1, 13):  # -1 создаст данные за сегодня и завтра, 0-13 за прошлые дни
+            meal_date = date.today() + timedelta(days=days_ago)
 
             # Определяем количество приёмов пищи
             meals_count_today = user.meals_per_day or random.randint(3, 5)
