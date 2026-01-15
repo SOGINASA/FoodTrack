@@ -234,6 +234,13 @@ async def predict_with_nutrition(file: UploadFile = File(...)):
 
         # Получаем информацию о питательности
         nutrition_data = get_nutrition_info(result['top_prediction'])
+        
+        # Проверяем, есть ли ошибка при получении питательной информации
+        if nutrition_data and 'error' in nutrition_data:
+            import logging
+            logger = logging.getLogger(__name__)
+            logger.warning(f"Nutrition data error: {nutrition_data['error']}")
+            nutrition_data = None
 
         # Переводим названия на русский
         top_prediction_ru = get_russian_name(result['top_prediction'])

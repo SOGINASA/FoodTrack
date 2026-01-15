@@ -19,6 +19,9 @@ RUN apt-get update && apt-get install -y \
 # Копируем requirements для Docker (без Windows-зависимостей)
 COPY requirements.docker.txt .
 
+# Копируем .env файл
+COPY .env .
+
 # Устанавливаем Python зависимости
 RUN pip install --no-cache-dir -r requirements.docker.txt
 

@@ -3,6 +3,11 @@ from typing import Dict, Optional
 from dotenv import load_dotenv
 from requests_oauthlib import OAuth1Session
 from food_name_mapper import map_food_name
+import logging
+
+# Настройка логирования
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
 
 # Загружаем переменные окружения из .env файла (относительно текущего скрипта)
 env_path = os.path.join(os.path.dirname(__file__), '.env')
@@ -11,6 +16,9 @@ load_dotenv(env_path)
 # Получаем API ключи из переменной окружения
 FATSECRET_CONSUMER_KEY = os.getenv('FATSECRET_CONSUMER_KEY', '')
 FATSECRET_CONSUMER_SECRET = os.getenv('FATSECRET_CONSUMER_SECRET', '')
+
+logger.info(f"FatSecret API Key loaded: {bool(FATSECRET_CONSUMER_KEY)}")
+logger.info(f"FatSecret Secret loaded: {bool(FATSECRET_CONSUMER_SECRET)}")
 
 
 def get_nutrition_info(food_name: str) -> Optional[Dict]:
@@ -32,8 +40,10 @@ def get_nutrition_info(food_name: str) -> Optional[Dict]:
         }
     """
     if not FATSECRET_CONSUMER_KEY or not FATSECRET_CONSUMER_SECRET:
+        error_msg = 'FatSecret API ключи не найдены. Добавьте FATSECRET_CONSUMER_KEY и FATSECRET_CONSUMER_SECRET в .env файл'
+        logger.error(error_msg)
         return {
-            'error': 'FatSecret API ключи не найдены. Добавьте FATSECRET_CONSUMER_KEY и FATSECRET_CONSUMER_SECRET в .env файл'
+            'error': error_msg
         }
 
     # Преобразуем название из модели в понятное для API
@@ -115,8 +125,10 @@ def get_nutrition_info(food_name: str) -> Optional[Dict]:
         return result
 
     except Exception as e:
+        error_msg = f'Ошибка при запросе к API: {str(e)}'
+        logger.error(error_msg, exc_info=True)
         return {
-            'error': f'Ошибка при запросе к API: {str(e)}'
+            'error': error_msg
         }
 
 
