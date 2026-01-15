@@ -100,7 +100,7 @@ export const mealsAPI = {
   analyzePhoto: (file) => {
     const formData = new FormData();
     formData.append('file', file);
-    return axios.post('https://korolevst.supertest.beast-inside.kz/food_predict/predict/with-nutrition', formData, {
+    return axios.post('http://localhost:8000/predict/with-nutrition', formData, {
       headers: { 'Content-Type': 'multipart/form-data' },
     });
   },

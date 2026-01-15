@@ -1,19 +1,21 @@
-import requests
 import os
 from typing import Dict, Optional
 from dotenv import load_dotenv
+from requests_oauthlib import OAuth1Session
 from food_name_mapper import map_food_name
 
-# Загружаем переменные окружения из .env файла
-load_dotenv('.env')
+# Загружаем переменные окружения из .env файла (относительно текущего скрипта)
+env_path = os.path.join(os.path.dirname(__file__), '.env')
+load_dotenv(env_path)
 
-# Получаем API ключ из переменной окружения
-SPOONACULAR_API_KEY = os.getenv('SPOONACULAR_API_KEY', '')
+# Получаем API ключи из переменной окружения
+FATSECRET_CONSUMER_KEY = os.getenv('FATSECRET_CONSUMER_KEY', '')
+FATSECRET_CONSUMER_SECRET = os.getenv('FATSECRET_CONSUMER_SECRET', '')
 
 
 def get_nutrition_info(food_name: str) -> Optional[Dict]:
     """
-    Получает информацию о калорийности и питательных веществах блюда через Spoonacular API
+    Получает информацию о калорийности и питательных веществах блюда через FatSecret API
 
     Args:
         food_name: Название блюда/продукта (из модели)
@@ -29,51 +31,92 @@ def get_nutrition_info(food_name: str) -> Optional[Dict]:
             'original_name': str
         }
     """
-    if not SPOONACULAR_API_KEY:
+    if not FATSECRET_CONSUMER_KEY or not FATSECRET_CONSUMER_SECRET:
         return {
-            'error': 'API ключ Spoonacular не найден. Добавьте SPOONACULAR_API_KEY в .env файл'
+            'error': 'FatSecret API ключи не найдены. Добавьте FATSECRET_CONSUMER_KEY и FATSECRET_CONSUMER_SECRET в .env файл'
         }
 
     # Преобразуем название из модели в понятное для API
     mapped_name = map_food_name(food_name)
 
     try:
-        # API endpoint для определения питательной ценности
-        url = "https://api.spoonacular.com/recipes/guessNutrition"
+        # Создаем OAuth1 сессию для FatSecret API
+        oauth = OAuth1Session(
+            FATSECRET_CONSUMER_KEY,
+            client_secret=FATSECRET_CONSUMER_SECRET
+        )
+
+        # FatSecret использует метод-based интеграцию
+        url = "https://platform.fatsecret.com/rest/server.api"
 
         params = {
-            'title': mapped_name,
-            'apiKey': SPOONACULAR_API_KEY
+            'method': 'foods.search',
+            'search_expression': mapped_name,
+            'max_results': 1,
+            'format': 'json'
         }
 
-        response = requests.get(url, params=params, timeout=10)
+        response = oauth.post(url, data=params, timeout=10)
         response.raise_for_status()
 
         data = response.json()
 
+        # Проверяем, есть ли результаты
+        if 'foods' not in data or 'food' not in data['foods']:
+            return {
+                'error': f'Блюдо "{mapped_name}" не найдено в базе данных FatSecret'
+            }
+
+        food = data['foods']['food']
+        
+        # Парсим информацию из food_description
+        # Формат: "Per 100g - Calories: 254kcal | Fat: 20.00g | Carbs: 0.00g | Protein: 17.17g"
+        description = food.get('food_description', '')
+        
+        # Извлекаем калории, жиры, углеводы, белки из описания
+        calories = 0
+        protein = 0
+        fat = 0
+        carbs = 0
+        
+        if description:
+            import re
+            # Извлекаем значения с использованием regex
+            cal_match = re.search(r'Calories:\s*([\d.]+)', description)
+            if cal_match:
+                calories = float(cal_match.group(1))
+            
+            fat_match = re.search(r'Fat:\s*([\d.]+)', description)
+            if fat_match:
+                fat = float(fat_match.group(1))
+            
+            carbs_match = re.search(r'Carbs:\s*([\d.]+)', description)
+            if carbs_match:
+                carbs = float(carbs_match.group(1))
+            
+            protein_match = re.search(r'Protein:\s*([\d.]+)', description)
+            if protein_match:
+                protein = float(protein_match.group(1))
+
         # Извлекаем нужную информацию
         result = {
-            'title': data.get('title', mapped_name),
+            'title': food.get('food_name', mapped_name),
             'original_name': food_name,  # Сохраняем оригинальное название из модели
-            'calories': data.get('calories', {}).get('value', 0),
-            'protein': data.get('protein', {}).get('value', 0),
-            'fat': data.get('fat', {}).get('value', 0),
-            'carbs': data.get('carbs', {}).get('value', 0),
-            'calories_unit': data.get('calories', {}).get('unit', 'kcal'),
-            'protein_unit': data.get('protein', {}).get('unit', 'g'),
-            'fat_unit': data.get('fat', {}).get('unit', 'g'),
-            'carbs_unit': data.get('carbs', {}).get('unit', 'g')
+            'calories': calories,
+            'protein': protein,
+            'fat': fat,
+            'carbs': carbs,
+            'calories_unit': 'kcal',
+            'protein_unit': 'g',
+            'fat_unit': 'g',
+            'carbs_unit': 'g'
         }
 
         return result
 
-    except requests.exceptions.RequestException as e:
-        return {
-            'error': f'Ошибка при запросе к API: {str(e)}'
-        }
     except Exception as e:
         return {
-            'error': f'Неизвестная ошибка: {str(e)}'
+            'error': f'Ошибка при запросе к API: {str(e)}'
         }
 
 
@@ -102,6 +145,6 @@ def format_nutrition_info(nutrition_data: Dict) -> str:
 
 # Пример использования
 if __name__ == "__main__":
-    test_food = "chicken alfredo"
+    test_food = "hamburger"
     nutrition = get_nutrition_info(test_food)
     print(format_nutrition_info(nutrition))
