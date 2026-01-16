@@ -2,13 +2,75 @@ import React, { useState } from 'react';
 import RecipeCard from '../components/recipes/RecipeCard';
 import Modal from '../components/common/Modal';
 import Button from '../components/common/Button';
-import { ChefHat, Search, Filter, Clock, Flame, X } from 'lucide-react';
+import { ChefHat, Search, Filter, Clock, Flame, Calendar, Check } from 'lucide-react';
+import { mealPlansAPI } from '../services/api';
 
 const Recipes = () => {
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('all');
   const [selectedDifficulty, setSelectedDifficulty] = useState('all');
   const [selectedRecipe, setSelectedRecipe] = useState(null);
+
+  // Состояния для добавления в план питания
+  const [showDatePicker, setShowDatePicker] = useState(false);
+  const [selectedDate, setSelectedDate] = useState(new Date().toISOString().split('T')[0]);
+  const [isAddingToPlan, setIsAddingToPlan] = useState(false);
+  const [addSuccess, setAddSuccess] = useState(false);
+
+  // Функция добавления рецепта в план питания
+  const handleAddToMealPlan = async () => {
+    if (!selectedRecipe) return;
+
+    setIsAddingToPlan(true);
+    try {
+      await mealPlansAPI.create({
+        recipeId: selectedRecipe.id,
+        name: selectedRecipe.name,
+        image: selectedRecipe.image,
+        date: selectedDate,
+        category: selectedRecipe.category,
+        calories: selectedRecipe.calories,
+        protein: selectedRecipe.protein,
+        carbs: selectedRecipe.carbs,
+        fats: selectedRecipe.fats,
+        time: selectedRecipe.time,
+        difficulty: selectedRecipe.difficulty,
+        ingredients: selectedRecipe.ingredients,
+        steps: selectedRecipe.steps,
+        tags: selectedRecipe.tags,
+      });
+
+      setAddSuccess(true);
+      setTimeout(() => {
+        setAddSuccess(false);
+        setShowDatePicker(false);
+      }, 1500);
+    } catch (error) {
+      console.error('Ошибка добавления в план:', error);
+      alert('Не удалось добавить рецепт в план питания');
+    } finally {
+      setIsAddingToPlan(false);
+    }
+  };
+
+  // Генерация дат на 7 дней вперёд
+  const getNextDays = () => {
+    const days = [];
+    const today = new Date();
+    const dayNames = ['Вс', 'Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб'];
+
+    for (let i = 0; i < 7; i++) {
+      const date = new Date(today);
+      date.setDate(today.getDate() + i);
+      days.push({
+        date: date.toISOString().split('T')[0],
+        dayName: i === 0 ? 'Сегодня' : i === 1 ? 'Завтра' : dayNames[date.getDay()],
+        dayNumber: date.getDate(),
+        month: date.toLocaleString('ru', { month: 'short' }),
+      });
+    }
+    return days;
+  };
 
   // База всех рецептов (50)
   const allRecipes = [
@@ -1570,7 +1632,11 @@ const Recipes = () => {
       {selectedRecipe && (
         <Modal
           isOpen={!!selectedRecipe}
-          onClose={() => setSelectedRecipe(null)}
+          onClose={() => {
+            setSelectedRecipe(null);
+            setShowDatePicker(false);
+            setAddSuccess(false);
+          }}
           size="lg"
           showCloseButton={true}
         >
@@ -1656,9 +1722,65 @@ const Recipes = () => {
               </ol>
             </div>
 
-            <Button variant="primary" className="w-full">
-              Добавить в план питания
-            </Button>
+            {!showDatePicker ? (
+              <Button
+                variant="primary"
+                className="w-full"
+                onClick={() => setShowDatePicker(true)}
+              >
+                <Calendar className="w-5 h-5 mr-2" />
+                Добавить в план питания
+              </Button>
+            ) : (
+              <div className="space-y-4 p-4 bg-gray-50 rounded-xl">
+                <h4 className="font-bold text-center">Выберите дату</h4>
+
+                <div className="grid grid-cols-7 gap-2">
+                  {getNextDays().map((day) => (
+                    <button
+                      key={day.date}
+                      onClick={() => setSelectedDate(day.date)}
+                      className={`p-2 rounded-xl text-center transition-all ${
+                        selectedDate === day.date
+                          ? 'bg-black text-white'
+                          : 'bg-white hover:bg-gray-100'
+                      }`}
+                    >
+                      <div className="text-xs opacity-70">{day.dayName}</div>
+                      <div className="font-bold">{day.dayNumber}</div>
+                      <div className="text-xs opacity-70">{day.month}</div>
+                    </button>
+                  ))}
+                </div>
+
+                <div className="flex gap-2">
+                  <Button
+                    variant="secondary"
+                    className="flex-1"
+                    onClick={() => setShowDatePicker(false)}
+                  >
+                    Отмена
+                  </Button>
+                  <Button
+                    variant="primary"
+                    className="flex-1"
+                    onClick={handleAddToMealPlan}
+                    disabled={isAddingToPlan}
+                  >
+                    {isAddingToPlan ? (
+                      'Добавление...'
+                    ) : addSuccess ? (
+                      <>
+                        <Check className="w-5 h-5 mr-2" />
+                        Добавлено!
+                      </>
+                    ) : (
+                      'Добавить'
+                    )}
+                  </Button>
+                </div>
+              </div>
+            )}
           </div>
         </Modal>
       )}

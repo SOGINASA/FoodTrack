@@ -21,7 +21,7 @@ const DashboardStats = ({
       <div className="flex items-center justify-between gap-4">
         <div className="flex-1">
           <div className="flex items-baseline gap-2 flex-wrap">
-            <span className="text-6xl lg:text-7xl font-bold tracking-tight leading-none">{calories}</span>
+            <span className="text-6xl lg:text-7xl font-bold tracking-tight leading-none">{Number(calories.toFixed(2))}</span>
             <span className="text-2xl lg:text-3xl text-secondary font-semibold">/ {caloriesGoal}</span>
           </div>
           <p className="text-secondary mt-2 text-base lg:text-lg font-normal">Калорий съедено</p>

@@ -595,19 +595,19 @@ const AddMeal = () => {
 
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
               <Card padding="default" className="text-center">
-                <div className="text-3xl font-bold text-black">{analysisResult.calories}</div>
+                <div className="text-3xl font-bold text-black">{Number(analysisResult.calories.toFixed(2))}</div>
                 <div className="text-sm text-secondary mt-1">Калорий</div>
               </Card>
               <Card padding="default" className="text-center">
-                <div className="text-3xl font-bold text-[#FF6B6B]">{analysisResult.protein}г</div>
+                <div className="text-3xl font-bold text-[#FF6B6B]">{Number(analysisResult.protein.toFixed(2))}г</div>
                 <div className="text-sm text-secondary mt-1">Белки</div>
               </Card>
               <Card padding="default" className="text-center">
-                <div className="text-3xl font-bold text-[#FFB84D]">{analysisResult.carbs}г</div>
+                <div className="text-3xl font-bold text-[#FFB84D]">{Number(analysisResult.carbs.toFixed(2))}г</div>
                 <div className="text-sm text-secondary mt-1">Углеводы</div>
               </Card>
               <Card padding="default" className="text-center">
-                <div className="text-3xl font-bold text-[#4D9FFF]">{analysisResult.fats}г</div>
+                <div className="text-3xl font-bold text-[#4D9FFF]">{Number(analysisResult.fats.toFixed(2))}г</div>
                 <div className="text-sm text-secondary mt-1">Жиры</div>
               </Card>
             </div>

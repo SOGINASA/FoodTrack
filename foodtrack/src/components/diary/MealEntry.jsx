@@ -68,10 +68,10 @@ const MealEntry = ({ meal, mealType, onEdit, onDelete, onCopy }) => {
           <p className="text-sm text-secondary">{meal.time}</p>
           
           <div className="flex items-center gap-3 mt-1 text-xs">
-            <span className="font-semibold">🔥 {meal.calories}</span>
-            <span className="text-secondary">🍗 {meal.protein}г</span>
-            <span className="text-secondary">🥖 {meal.carbs}г</span>
-            <span className="text-secondary">🧈 {meal.fats}г</span>
+            <span className="font-semibold">🔥 {Number(meal.calories?.toFixed(2) || 0)}</span>
+            <span className="text-secondary">🍗 {Number(meal.protein?.toFixed(2) || 0)}г</span>
+            <span className="text-secondary">🥖 {Number(meal.carbs?.toFixed(2) || 0)}г</span>
+            <span className="text-secondary">🧈 {Number(meal.fats?.toFixed(2) || 0)}г</span>
           </div>
         </div>
       </div>

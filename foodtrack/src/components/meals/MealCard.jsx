@@ -21,10 +21,10 @@ const MealCard = ({ meal }) => {
         <p className="text-sm text-secondary mt-0.5 font-normal">{time}</p>
         
         <div className="flex items-center gap-3 mt-2 text-sm">
-          <span className="font-semibold">🔥 {calories}</span>
-          <span className="text-secondary">🍗 {protein}г</span>
-          <span className="text-secondary">🥖 {carbs}г</span>
-          <span className="text-secondary">🧈 {fats}г</span>
+          <span className="font-semibold">🔥 {Number(calories?.toFixed(2) || 0)}</span>
+          <span className="text-secondary">🍗 {Number(protein?.toFixed(2) || 0)}г</span>
+          <span className="text-secondary">🥖 {Number(carbs?.toFixed(2) || 0)}г</span>
+          <span className="text-secondary">🧈 {Number(fats?.toFixed(2) || 0)}г</span>
         </div>
       </div>
     </Card>

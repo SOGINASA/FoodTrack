@@ -475,3 +475,63 @@ class ForumReply(db.Model):
             'replyToName': self.reply_to_name,
             'createdAt': self.created_at.isoformat() if self.created_at else None,
         }
+
+
+# === План питания (рецепты) ===
+
+class MealPlan(db.Model):
+    """Запланированные рецепты в плане питания"""
+    __tablename__ = 'meal_plans'
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False, index=True)
+
+    # Данные рецепта (копируются из фронтенда)
+    recipe_id = db.Column(db.Integer, nullable=False)  # ID рецепта из фронтенда
+    name = db.Column(db.String(200), nullable=False)
+    image_url = db.Column(db.String(500))
+
+    # Тип приёма пищи и дата
+    meal_type = db.Column(db.String(20), nullable=False)  # breakfast, lunch, dinner, snack
+    planned_date = db.Column(db.Date, nullable=False, index=True)
+
+    # Нутриенты
+    calories = db.Column(db.Integer, default=0)
+    protein = db.Column(db.Float, default=0)
+    carbs = db.Column(db.Float, default=0)
+    fats = db.Column(db.Float, default=0)
+
+    # Время приготовления и сложность
+    cooking_time = db.Column(db.Integer)  # минуты
+    difficulty = db.Column(db.String(20))  # easy, medium, hard
+
+    # Ингредиенты и шаги (JSON)
+    ingredients = db.Column(db.Text)  # JSON массив
+    steps = db.Column(db.Text)  # JSON массив
+    tags = db.Column(db.Text)  # JSON массив
+
+    # Статус
+    is_completed = db.Column(db.Boolean, default=False)  # приготовлено ли
+
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+    def to_dict(self):
+        return {
+            'id': self.id,
+            'recipeId': self.recipe_id,
+            'name': self.name,
+            'image': self.image_url,
+            'type': self.meal_type,
+            'date': self.planned_date.isoformat() if self.planned_date else None,
+            'calories': self.calories,
+            'protein': self.protein,
+            'carbs': self.carbs,
+            'fats': self.fats,
+            'time': self.cooking_time,
+            'difficulty': self.difficulty,
+            'ingredients': json.loads(self.ingredients) if self.ingredients else [],
+            'steps': json.loads(self.steps) if self.steps else [],
+            'tags': json.loads(self.tags) if self.tags else [],
+            'isCompleted': self.is_completed,
+            'createdAt': self.created_at.isoformat() if self.created_at else None,
+        }
