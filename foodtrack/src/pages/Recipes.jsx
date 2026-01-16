@@ -11,7 +11,7 @@ const Recipes = () => {
   const [selectedDifficulty, setSelectedDifficulty] = useState('all');
   const [selectedRecipe, setSelectedRecipe] = useState(null);
 
-  // Состояния для добавления в план питания
+  // Состояния для добавления в план питанияs
   const [showDatePicker, setShowDatePicker] = useState(false);
   const [selectedDate, setSelectedDate] = useState(new Date().toISOString().split('T')[0]);
   const [isAddingToPlan, setIsAddingToPlan] = useState(false);
