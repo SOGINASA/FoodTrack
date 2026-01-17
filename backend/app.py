@@ -76,6 +76,9 @@ def create_app():
                 'meals': '/api/meals - управление приёмами пищи',
                 'goals': '/api/goals - цели пользователя и трекинг веса',
                 'analytics': '/api/analytics - статистика и аналитика',
+                'progress': '/api/progress - отслеживание прогресса и изменения веса',
+                'groups': '/api/groups - управление группами и социальные функции',
+                'meal_plans': '/api/meal-plans - планы питания и рецепты',
             }
         })
 
