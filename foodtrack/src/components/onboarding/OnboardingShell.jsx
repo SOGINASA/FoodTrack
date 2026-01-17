@@ -11,6 +11,24 @@ export default function OnboardingShell({
 }) {
   return (
     <div className="w-full">
+      {/* Брендинг */}
+      <div className="flex items-center justify-center gap-3 mb-6">
+        <img
+          src="/imgs/logo.png"
+          alt="FoodTrack logo"
+          className="h-14 w-14 rounded-2xl object-contain"
+          draggable="false"
+        />
+        <div className="leading-tight">
+          <div className="text-2xl font-bold text-black tracking-tight">
+            FoodTrack
+          </div>
+          <div className="text-sm text-gray-500">
+            Трекер питания и прогресса
+          </div>
+        </div>
+      </div>
+
       {/* Верхняя панель */}
       <div className="flex items-center justify-between mb-6">
         {onBack ? (

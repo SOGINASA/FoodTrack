@@ -78,11 +78,9 @@ export default function Auth() {
         return;
       }
 
-      // Успешный вход/регистрация
       if (mode === 'register') {
         navigate('/onboarding', { replace: true });
       } else {
-        // При логине проверяем onboarding_completed с сервера (уже обработано в login)
         navigate('/', { replace: true });
       }
     } finally {
@@ -99,6 +97,25 @@ export default function Auth() {
   return (
     <div className="min-h-screen bg-white flex items-center justify-center px-4 py-8">
       <div className="w-full max-w-md">
+        {/* Брендинг */}
+<div className="flex items-center justify-center gap-3 mb-6">
+  <img
+    src="/imgs/logo.png"
+    alt="FoodTrack logo"
+    className="h-14 w-14 rounded-2xl object-contain"
+    draggable="false"
+  />
+  <div className="leading-tight">
+    <div className="text-2xl font-bold text-black tracking-tight">
+      FoodTrack
+    </div>
+    <div className="text-sm text-gray-500">
+      Трекер питания и прогресса
+    </div>
+  </div>
+</div>
+
+
         {/* Переключатель режима */}
         <div className="flex bg-gray-100 rounded-2xl p-1 mb-8">
           <button
