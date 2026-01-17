@@ -40,7 +40,7 @@ const CircularProgress = ({
           />
         </svg>
         <div className="absolute inset-0 flex flex-col items-center justify-center">
-          <span className="text-2xl font-bold leading-none">{value}</span>
+          <span className="text-2xl font-bold leading-none">{Number(value.toFixed(2))}</span>
           <span className="text-xs text-tertiary">{unit}</span>
         </div>
       </div>

@@ -156,6 +156,30 @@ export const progressAPI = {
   deletePhoto: (id) => api.delete(`/progress/photos/${id}`),
 };
 
+// === MEAL PLANS API ===
+export const mealPlansAPI = {
+  // Получить все планы питания (с фильтрами)
+  getAll: (params = {}) => api.get('/meal-plans', { params }),
+
+  // Получить план на неделю
+  getWeek: (startDate) => api.get('/meal-plans/week', { params: { start_date: startDate } }),
+
+  // Получить конкретный план
+  getById: (id) => api.get(`/meal-plans/${id}`),
+
+  // Добавить рецепт в план питания
+  create: (data) => api.post('/meal-plans', data),
+
+  // Обновить план
+  update: (id, data) => api.put(`/meal-plans/${id}`, data),
+
+  // Удалить план
+  delete: (id) => api.delete(`/meal-plans/${id}`),
+
+  // Отметить как выполненный
+  toggleComplete: (id) => api.post(`/meal-plans/${id}/complete`),
+};
+
 // === GROUPS API ===
 export const groupsAPI = {
   // Группы

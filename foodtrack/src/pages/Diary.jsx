@@ -120,25 +120,25 @@ const Diary = () => {
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
         <Card padding="default">
           <div className="text-sm text-secondary mb-1">Калории</div>
-          <div className="text-3xl font-bold">{totalCalories}</div>
+          <div className="text-3xl font-bold">{Number(totalCalories.toFixed(2))}</div>
           <div className="text-xs text-secondary mt-1">из 2500</div>
         </Card>
 
         <Card padding="default">
           <div className="text-sm text-secondary mb-1">Белки</div>
-          <div className="text-3xl font-bold text-[#FF6B6B]">{totalProtein}г</div>
+          <div className="text-3xl font-bold text-[#FF6B6B]">{Number(totalProtein.toFixed(2))}г</div>
           <div className="text-xs text-secondary mt-1">из 150г</div>
         </Card>
 
         <Card padding="default">
           <div className="text-sm text-secondary mb-1">Углеводы</div>
-          <div className="text-3xl font-bold text-[#FFB84D]">{totalCarbs}г</div>
+          <div className="text-3xl font-bold text-[#FFB84D]">{Number(totalCarbs.toFixed(2))}г</div>
           <div className="text-xs text-secondary mt-1">из 200г</div>
         </Card>
 
         <Card padding="default">
           <div className="text-sm text-secondary mb-1">Жиры</div>
-          <div className="text-3xl font-bold text-[#4D9FFF]">{totalFats}г</div>
+          <div className="text-3xl font-bold text-[#4D9FFF]">{Number(totalFats.toFixed(2))}г</div>
           <div className="text-xs text-secondary mt-1">из 70г</div>
         </Card>
       </div>

@@ -1,6 +1,6 @@
 from models import (
     db, User, Meal, MealIngredient, UserGoals, WeightEntry, Measurement, ProgressPhoto,
-    Group, GroupMember, GroupPost, PostComment, PostLike, ForumTopic, ForumReply
+    Group, GroupMember, GroupPost, PostComment, PostLike, ForumTopic, ForumReply, MealPlan
 )
 from datetime import datetime, date, timedelta
 import json

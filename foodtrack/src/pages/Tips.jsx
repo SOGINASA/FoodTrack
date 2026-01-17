@@ -1,30 +1,113 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import TipCard from '../components/tips/TipCard';
+import Loader from '../components/common/Loader';
 import { Lightbulb, Filter, Search } from 'lucide-react';
+import { useMeals } from '../hooks/useMeals';
+import { useAnalytics } from '../hooks/useAnalytics';
 
 const Tips = () => {
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('all');
   const [selectedPriority, setSelectedPriority] = useState('all');
 
-  // Данные пользователя для анализа
-  const userStats = {
-    currentCalories: 2150,
-    targetCalories: 2000,
-    currentProtein: 85,
-    targetProtein: 150,
-    currentCarbs: 280,
-    targetCarbs: 200,
-    currentFats: 95,
-    targetFats: 70,
-    weight: 85,
-    targetWeight: 75,
-    activityLevel: 'moderate',
-    streak: 7,
-    avgCaloriesWeek: 2200,
-    waterIntake: 1.5, // литров
-    mealsPerDay: 3,
-    sleepHours: 6,
+  // Получаем реальные данные пользователя
+  const { meals, loading: mealsLoading, fetchToday } = useMeals();
+  const {
+    goals,
+    streak,
+    weeklyStats,
+    weightHistory,
+    loading: analyticsLoading,
+    fetchGoals,
+    fetchStreak,
+    fetchWeeklyStats,
+    fetchWeightHistory
+  } = useAnalytics();
+
+  // Загружаем данные при монтировании
+  useEffect(() => {
+    fetchToday();
+    fetchGoals();
+    fetchStreak();
+    fetchWeeklyStats();
+    fetchWeightHistory(30);
+  }, [fetchToday, fetchGoals, fetchStreak, fetchWeeklyStats, fetchWeightHistory]);
+
+  // Вычисляем текущие показатели из приёмов пищи
+  const currentTotals = useMemo(() => {
+    return meals.reduce(
+      (acc, meal) => ({
+        calories: acc.calories + (meal.calories || 0),
+        protein: acc.protein + (meal.protein || 0),
+        carbs: acc.carbs + (meal.carbs || 0),
+        fats: acc.fats + (meal.fats || 0),
+      }),
+      { calories: 0, protein: 0, carbs: 0, fats: 0 }
+    );
+  }, [meals]);
+
+  // Формируем userStats из реальных данных
+  const userStats = useMemo(() => {
+    const currentWeight = weightHistory?.[0]?.weight || goals?.current_weight || 0;
+    const targetWeight = goals?.target_weight || currentWeight;
+    const avgCalories = weeklyStats?.summary?.avg_calories || 0;
+
+    // Используем средние за неделю если есть, иначе сегодняшние
+    const hasWeeklyData = avgCalories > 0;
+    const effectiveCalories = hasWeeklyData ? avgCalories : currentTotals.calories;
+
+    // Процент выполнения целей (для более умной фильтрации)
+    const targetCals = goals?.daily_calories || 2000;
+    const targetProt = goals?.daily_protein || 150;
+    const targetCarb = goals?.daily_carbs || 200;
+    const targetFat = goals?.daily_fats || 70;
+
+    return {
+      // Текущие значения (сегодня)
+      currentCalories: currentTotals.calories,
+      currentProtein: currentTotals.protein,
+      currentCarbs: currentTotals.carbs,
+      currentFats: currentTotals.fats,
+      // Цели
+      targetCalories: targetCals,
+      targetProtein: targetProt,
+      targetCarbs: targetCarb,
+      targetFats: targetFat,
+      // Средние за неделю (для анализа паттернов)
+      avgCalories: effectiveCalories,
+      avgProtein: weeklyStats?.summary?.avg_protein || currentTotals.protein,
+      avgCarbs: weeklyStats?.summary?.avg_carbs || currentTotals.carbs,
+      avgFats: weeklyStats?.summary?.avg_fats || currentTotals.fats,
+      // Флаг наличия данных
+      hasData: hasWeeklyData || currentTotals.calories > 0,
+      hasTodayData: currentTotals.calories > 0,
+      // Остальное
+      weight: currentWeight,
+      targetWeight: targetWeight,
+      activityLevel: goals?.activity_level || 'moderate',
+      streak: streak?.current_streak || 0,
+      avgCaloriesWeek: avgCalories,
+      waterIntake: goals?.water_goal || 2,
+      mealsPerDay: meals.length,
+      sleepHours: 7,
+    };
+  }, [currentTotals, goals, streak, weeklyStats, weightHistory, meals.length]);
+
+  const isLoading = mealsLoading || analyticsLoading;
+
+  // Функция для проверки превышения (учитывает средние данные)
+  const exceedsTarget = (current, avg, target, threshold = 0) => {
+    if (!userStats.hasData) return false;
+    // Приоритет средним за неделю, но учитываем и сегодня
+    const value = userStats.hasData ? avg : current;
+    return value > target + threshold;
+  };
+
+  // Функция для проверки недобора
+  const belowTarget = (current, avg, target, ratio = 1) => {
+    if (!userStats.hasData) return false;
+    const value = userStats.hasData ? avg : current;
+    return value < target * ratio;
   };
 
   // База всех советов (100+)
@@ -33,11 +116,11 @@ const Tips = () => {
     {
       id: 1,
       title: 'Контролируйте размер порций',
-      description: 'Вы превышаете дневную норму калорий на 150 ккал. Попробуйте использовать меньшие тарелки - исследования показывают, что это помогает съедать на 20% меньше.',
+      description: 'Вы превышаете дневную норму калорий. Попробуйте использовать меньшие тарелки - исследования показывают, что это помогает съедать на 20% меньше.',
       icon: '🍽️',
       category: 'calories',
-      priority: userStats.currentCalories > userStats.targetCalories + 100 ? 'high' : 'medium',
-      condition: () => userStats.currentCalories > userStats.targetCalories
+      priority: exceedsTarget(userStats.currentCalories, userStats.avgCalories, userStats.targetCalories, 100) ? 'high' : 'medium',
+      condition: () => exceedsTarget(userStats.currentCalories, userStats.avgCalories, userStats.targetCalories)
     },
     {
       id: 2,
@@ -46,7 +129,7 @@ const Tips = () => {
       icon: '🥤',
       category: 'calories',
       priority: 'high',
-      condition: () => userStats.currentCalories > userStats.targetCalories + 200
+      condition: () => exceedsTarget(userStats.currentCalories, userStats.avgCalories, userStats.targetCalories, 200)
     },
     {
       id: 3,
@@ -55,7 +138,7 @@ const Tips = () => {
       icon: '🌙',
       category: 'calories',
       priority: 'medium',
-      condition: () => userStats.currentCalories > userStats.targetCalories
+      condition: () => exceedsTarget(userStats.currentCalories, userStats.avgCalories, userStats.targetCalories)
     },
     {
       id: 4,
@@ -64,7 +147,7 @@ const Tips = () => {
       icon: '⏱️',
       category: 'calories',
       priority: 'low',
-      condition: () => userStats.currentCalories > userStats.targetCalories
+      condition: () => exceedsTarget(userStats.currentCalories, userStats.avgCalories, userStats.targetCalories)
     },
     {
       id: 5,
@@ -73,7 +156,7 @@ const Tips = () => {
       icon: '📋',
       category: 'calories',
       priority: 'medium',
-      condition: () => userStats.currentCalories > userStats.targetCalories + 150
+      condition: () => exceedsTarget(userStats.currentCalories, userStats.avgCalories, userStats.targetCalories, 150)
     },
     {
       id: 6,
@@ -82,7 +165,7 @@ const Tips = () => {
       icon: '🚫',
       category: 'calories',
       priority: 'high',
-      condition: () => userStats.currentCalories > userStats.targetCalories + 300
+      condition: () => exceedsTarget(userStats.currentCalories, userStats.avgCalories, userStats.targetCalories, 300)
     },
     {
       id: 7,
@@ -91,7 +174,7 @@ const Tips = () => {
       icon: '💧',
       category: 'calories',
       priority: 'medium',
-      condition: () => userStats.currentCalories > userStats.targetCalories
+      condition: () => exceedsTarget(userStats.currentCalories, userStats.avgCalories, userStats.targetCalories)
     },
     {
       id: 8,
@@ -100,7 +183,7 @@ const Tips = () => {
       icon: '🍰',
       category: 'calories',
       priority: 'high',
-      condition: () => userStats.currentCalories > userStats.targetCalories + 250
+      condition: () => exceedsTarget(userStats.currentCalories, userStats.avgCalories, userStats.targetCalories, 250)
     },
     {
       id: 9,
@@ -109,7 +192,7 @@ const Tips = () => {
       icon: '🏷️',
       category: 'calories',
       priority: 'medium',
-      condition: () => userStats.currentCalories > userStats.targetCalories
+      condition: () => exceedsTarget(userStats.currentCalories, userStats.avgCalories, userStats.targetCalories)
     },
     {
       id: 10,
@@ -118,7 +201,7 @@ const Tips = () => {
       icon: '🍽️',
       category: 'calories',
       priority: 'low',
-      condition: () => userStats.currentCalories > userStats.targetCalories
+      condition: () => exceedsTarget(userStats.currentCalories, userStats.avgCalories, userStats.targetCalories)
     },
     {
       id: 11,
@@ -127,7 +210,7 @@ const Tips = () => {
       icon: '👨‍🍳',
       category: 'calories',
       priority: 'high',
-      condition: () => userStats.currentCalories > userStats.targetCalories + 200
+      condition: () => exceedsTarget(userStats.currentCalories, userStats.avgCalories, userStats.targetCalories, 200)
     },
     {
       id: 12,
@@ -136,7 +219,7 @@ const Tips = () => {
       icon: '👥',
       category: 'calories',
       priority: 'medium',
-      condition: () => userStats.currentCalories > userStats.targetCalories
+      condition: () => exceedsTarget(userStats.currentCalories, userStats.avgCalories, userStats.targetCalories)
     },
     {
       id: 13,
@@ -145,7 +228,7 @@ const Tips = () => {
       icon: '📺',
       category: 'calories',
       priority: 'medium',
-      condition: () => userStats.currentCalories > userStats.targetCalories + 100
+      condition: () => exceedsTarget(userStats.currentCalories, userStats.avgCalories, userStats.targetCalories, 100)
     },
     {
       id: 14,
@@ -154,7 +237,7 @@ const Tips = () => {
       icon: '🧴',
       category: 'calories',
       priority: 'medium',
-      condition: () => userStats.currentCalories > userStats.targetCalories
+      condition: () => exceedsTarget(userStats.currentCalories, userStats.avgCalories, userStats.targetCalories)
     },
     {
       id: 15,
@@ -163,7 +246,7 @@ const Tips = () => {
       icon: '🥫',
       category: 'calories',
       priority: 'medium',
-      condition: () => userStats.currentCalories > userStats.targetCalories + 150
+      condition: () => exceedsTarget(userStats.currentCalories, userStats.avgCalories, userStats.targetCalories, 150)
     },
     {
       id: 16,
@@ -172,7 +255,7 @@ const Tips = () => {
       icon: '📝',
       category: 'calories',
       priority: 'high',
-      condition: () => userStats.currentCalories > userStats.targetCalories + 200
+      condition: () => exceedsTarget(userStats.currentCalories, userStats.avgCalories, userStats.targetCalories, 200)
     },
     {
       id: 17,
@@ -181,7 +264,7 @@ const Tips = () => {
       icon: '🔥',
       category: 'calories',
       priority: 'medium',
-      condition: () => userStats.currentCalories > userStats.targetCalories
+      condition: () => exceedsTarget(userStats.currentCalories, userStats.avgCalories, userStats.targetCalories)
     },
     {
       id: 18,
@@ -190,7 +273,7 @@ const Tips = () => {
       icon: '🌅',
       category: 'calories',
       priority: 'high',
-      condition: () => userStats.mealsPerDay < 3 && userStats.currentCalories > userStats.targetCalories
+      condition: () => userStats.hasData && userStats.mealsPerDay < 3 && exceedsTarget(userStats.currentCalories, userStats.avgCalories, userStats.targetCalories)
     },
     {
       id: 19,
@@ -199,7 +282,7 @@ const Tips = () => {
       icon: '🌾',
       category: 'calories',
       priority: 'medium',
-      condition: () => userStats.currentCalories > userStats.targetCalories
+      condition: () => exceedsTarget(userStats.currentCalories, userStats.avgCalories, userStats.targetCalories)
     },
     {
       id: 20,
@@ -208,18 +291,18 @@ const Tips = () => {
       icon: '🍷',
       category: 'calories',
       priority: 'high',
-      condition: () => userStats.currentCalories > userStats.targetCalories + 300
+      condition: () => exceedsTarget(userStats.currentCalories, userStats.avgCalories, userStats.targetCalories, 300)
     },
 
     // БЕЛКИ - Недостаток (20 советов)
     {
       id: 21,
       title: 'Увеличьте потребление белка',
-      description: `Вы потребляете ${userStats.currentProtein}г белка при норме ${userStats.targetProtein}г. Белок важен для сохранения мышечной массы при похудении.`,
+      description: `Вы потребляете меньше белка чем нужно. Белок важен для сохранения мышечной массы при похудении.`,
       icon: '🥩',
       category: 'protein',
-      priority: userStats.currentProtein < userStats.targetProtein * 0.7 ? 'high' : 'medium',
-      condition: () => userStats.currentProtein < userStats.targetProtein
+      priority: belowTarget(userStats.currentProtein, userStats.avgProtein, userStats.targetProtein, 0.7) ? 'high' : 'medium',
+      condition: () => belowTarget(userStats.currentProtein, userStats.avgProtein, userStats.targetProtein)
     },
     {
       id: 22,
@@ -228,7 +311,7 @@ const Tips = () => {
       icon: '🥚',
       category: 'protein',
       priority: 'high',
-      condition: () => userStats.currentProtein < userStats.targetProtein * 0.8
+      condition: () => belowTarget(userStats.currentProtein, userStats.avgProtein, userStats.targetProtein, 0.8)
     },
     {
       id: 23,
@@ -237,7 +320,7 @@ const Tips = () => {
       icon: '🥛',
       category: 'protein',
       priority: 'medium',
-      condition: () => userStats.currentProtein < userStats.targetProtein
+      condition: () => belowTarget(userStats.currentProtein, userStats.avgProtein, userStats.targetProtein)
     },
     {
       id: 24,
@@ -246,7 +329,7 @@ const Tips = () => {
       icon: '🐟',
       category: 'protein',
       priority: 'high',
-      condition: () => userStats.currentProtein < userStats.targetProtein * 0.75
+      condition: () => belowTarget(userStats.currentProtein, userStats.avgProtein, userStats.targetProtein, 0.75)
     },
     {
       id: 25,
@@ -255,7 +338,7 @@ const Tips = () => {
       icon: '🧀',
       category: 'protein',
       priority: 'medium',
-      condition: () => userStats.currentProtein < userStats.targetProtein
+      condition: () => belowTarget(userStats.currentProtein, userStats.avgProtein, userStats.targetProtein)
     },
     {
       id: 26,
@@ -264,7 +347,7 @@ const Tips = () => {
       icon: '🥤',
       category: 'protein',
       priority: 'high',
-      condition: () => userStats.currentProtein < userStats.targetProtein * 0.6
+      condition: () => belowTarget(userStats.currentProtein, userStats.avgProtein, userStats.targetProtein, 0.6)
     },
     {
       id: 27,
@@ -273,7 +356,7 @@ const Tips = () => {
       icon: '🥜',
       category: 'protein',
       priority: 'low',
-      condition: () => userStats.currentProtein < userStats.targetProtein
+      condition: () => belowTarget(userStats.currentProtein, userStats.avgProtein, userStats.targetProtein)
     },
     {
       id: 28,
@@ -282,7 +365,7 @@ const Tips = () => {
       icon: '🍗',
       category: 'protein',
       priority: 'high',
-      condition: () => userStats.currentProtein < userStats.targetProtein * 0.8
+      condition: () => belowTarget(userStats.currentProtein, userStats.avgProtein, userStats.targetProtein, 0.8)
     },
     {
       id: 29,
@@ -291,7 +374,7 @@ const Tips = () => {
       icon: '🫘',
       category: 'protein',
       priority: 'medium',
-      condition: () => userStats.currentProtein < userStats.targetProtein
+      condition: () => belowTarget(userStats.currentProtein, userStats.avgProtein, userStats.targetProtein)
     },
     {
       id: 30,
@@ -300,7 +383,7 @@ const Tips = () => {
       icon: '🥡',
       category: 'protein',
       priority: 'medium',
-      condition: () => userStats.currentProtein < userStats.targetProtein * 0.85
+      condition: () => belowTarget(userStats.currentProtein, userStats.avgProtein, userStats.targetProtein, 0.85)
     },
     {
       id: 31,
@@ -309,7 +392,7 @@ const Tips = () => {
       icon: '⏰',
       category: 'protein',
       priority: 'high',
-      condition: () => userStats.currentProtein < userStats.targetProtein * 0.7
+      condition: () => belowTarget(userStats.currentProtein, userStats.avgProtein, userStats.targetProtein, 0.7)
     },
     {
       id: 32,
@@ -318,7 +401,7 @@ const Tips = () => {
       icon: '💪',
       category: 'protein',
       priority: 'high',
-      condition: () => userStats.activityLevel !== 'sedentary' && userStats.currentProtein < userStats.targetProtein
+      condition: () => userStats.activityLevel !== 'sedentary' && belowTarget(userStats.currentProtein, userStats.avgProtein, userStats.targetProtein)
     },
     {
       id: 33,
@@ -327,7 +410,7 @@ const Tips = () => {
       icon: '🌱',
       category: 'protein',
       priority: 'low',
-      condition: () => userStats.currentProtein < userStats.targetProtein
+      condition: () => belowTarget(userStats.currentProtein, userStats.avgProtein, userStats.targetProtein)
     },
     {
       id: 34,
@@ -336,7 +419,7 @@ const Tips = () => {
       icon: '🫛',
       category: 'protein',
       priority: 'medium',
-      condition: () => userStats.currentProtein < userStats.targetProtein * 0.8
+      condition: () => belowTarget(userStats.currentProtein, userStats.avgProtein, userStats.targetProtein, 0.8)
     },
     {
       id: 35,
@@ -345,7 +428,7 @@ const Tips = () => {
       icon: '🍫',
       category: 'protein',
       priority: 'low',
-      condition: () => userStats.currentProtein < userStats.targetProtein
+      condition: () => belowTarget(userStats.currentProtein, userStats.avgProtein, userStats.targetProtein)
     },
     {
       id: 36,
@@ -354,7 +437,7 @@ const Tips = () => {
       icon: '🦃',
       category: 'protein',
       priority: 'medium',
-      condition: () => userStats.currentProtein < userStats.targetProtein
+      condition: () => belowTarget(userStats.currentProtein, userStats.avgProtein, userStats.targetProtein)
     },
     {
       id: 37,
@@ -363,7 +446,7 @@ const Tips = () => {
       icon: '🥞',
       category: 'protein',
       priority: 'low',
-      condition: () => userStats.currentProtein < userStats.targetProtein
+      condition: () => belowTarget(userStats.currentProtein, userStats.avgProtein, userStats.targetProtein)
     },
     {
       id: 38,
@@ -372,7 +455,7 @@ const Tips = () => {
       icon: '🥩',
       category: 'protein',
       priority: 'medium',
-      condition: () => userStats.currentProtein < userStats.targetProtein * 0.75
+      condition: () => belowTarget(userStats.currentProtein, userStats.avgProtein, userStats.targetProtein) * 0.75
     },
     {
       id: 39,
@@ -381,7 +464,7 @@ const Tips = () => {
       icon: '🌾',
       category: 'protein',
       priority: 'low',
-      condition: () => userStats.currentProtein < userStats.targetProtein
+      condition: () => belowTarget(userStats.currentProtein, userStats.avgProtein, userStats.targetProtein)
     },
     {
       id: 40,
@@ -390,7 +473,7 @@ const Tips = () => {
       icon: '🌙',
       category: 'protein',
       priority: 'medium',
-      condition: () => userStats.currentProtein < userStats.targetProtein * 0.8
+      condition: () => belowTarget(userStats.currentProtein, userStats.avgProtein, userStats.targetProtein) * 0.8
     },
 
     // УГЛЕВОДЫ - Избыток (20 советов)
@@ -401,7 +484,7 @@ const Tips = () => {
       icon: '🍞',
       category: 'carbs',
       priority: userStats.currentCarbs > userStats.targetCarbs * 1.3 ? 'high' : 'medium',
-      condition: () => userStats.currentCarbs > userStats.targetCarbs
+      condition: () => exceedsTarget(userStats.currentCarbs, userStats.avgCarbs, userStats.targetCarbs)
     },
     {
       id: 42,
@@ -410,7 +493,7 @@ const Tips = () => {
       icon: '🥖',
       category: 'carbs',
       priority: 'high',
-      condition: () => userStats.currentCarbs > userStats.targetCarbs * 1.2
+      condition: () => exceedsTarget(userStats.currentCarbs, userStats.avgCarbs, userStats.targetCarbs, userStats.targetCarbs * 0.2)
     },
     {
       id: 43,
@@ -419,7 +502,7 @@ const Tips = () => {
       icon: '🥣',
       category: 'carbs',
       priority: 'high',
-      condition: () => userStats.currentCarbs > userStats.targetCarbs * 1.4
+      condition: () => exceedsTarget(userStats.currentCarbs, userStats.avgCarbs, userStats.targetCarbs, userStats.targetCarbs * 0.4)
     },
     {
       id: 44,
@@ -428,7 +511,7 @@ const Tips = () => {
       icon: '🍚',
       category: 'carbs',
       priority: 'high',
-      condition: () => userStats.currentCarbs > userStats.targetCarbs * 1.3
+      condition: () => exceedsTarget(userStats.currentCarbs, userStats.avgCarbs, userStats.targetCarbs, userStats.targetCarbs * 0.3)
     },
     {
       id: 45,
@@ -437,7 +520,7 @@ const Tips = () => {
       icon: '🍯',
       category: 'carbs',
       priority: 'high',
-      condition: () => userStats.currentCarbs > userStats.targetCarbs * 1.5
+      condition: () => exceedsTarget(userStats.currentCarbs, userStats.avgCarbs, userStats.targetCarbs, userStats.targetCarbs * 0.5)
     },
     {
       id: 46,
@@ -446,7 +529,7 @@ const Tips = () => {
       icon: '🍠',
       category: 'carbs',
       priority: 'medium',
-      condition: () => userStats.currentCarbs > userStats.targetCarbs * 1.2
+      condition: () => exceedsTarget(userStats.currentCarbs, userStats.avgCarbs, userStats.targetCarbs, userStats.targetCarbs * 0.2)
     },
     {
       id: 47,
@@ -455,7 +538,7 @@ const Tips = () => {
       icon: '🧃',
       category: 'carbs',
       priority: 'high',
-      condition: () => userStats.currentCarbs > userStats.targetCarbs * 1.4
+      condition: () => exceedsTarget(userStats.currentCarbs, userStats.avgCarbs, userStats.targetCarbs, userStats.targetCarbs * 0.4)
     },
     {
       id: 48,
@@ -464,7 +547,7 @@ const Tips = () => {
       icon: '🥦',
       category: 'carbs',
       priority: 'high',
-      condition: () => userStats.currentCarbs > userStats.targetCarbs * 1.3
+      condition: () => exceedsTarget(userStats.currentCarbs, userStats.avgCarbs, userStats.targetCarbs, userStats.targetCarbs * 0.3)
     },
     {
       id: 49,
@@ -473,7 +556,7 @@ const Tips = () => {
       icon: '🍎',
       category: 'carbs',
       priority: 'medium',
-      condition: () => userStats.currentCarbs > userStats.targetCarbs * 1.2
+      condition: () => exceedsTarget(userStats.currentCarbs, userStats.avgCarbs, userStats.targetCarbs, userStats.targetCarbs * 0.2)
     },
     {
       id: 50,
@@ -482,7 +565,7 @@ const Tips = () => {
       icon: '🧁',
       category: 'carbs',
       priority: 'high',
-      condition: () => userStats.currentCarbs > userStats.targetCarbs * 1.5
+      condition: () => exceedsTarget(userStats.currentCarbs, userStats.avgCarbs, userStats.targetCarbs, userStats.targetCarbs * 0.5)
     },
     {
       id: 51,
@@ -491,7 +574,7 @@ const Tips = () => {
       icon: '🍝',
       category: 'carbs',
       priority: 'medium',
-      condition: () => userStats.currentCarbs > userStats.targetCarbs * 1.2
+      condition: () => exceedsTarget(userStats.currentCarbs, userStats.avgCarbs, userStats.targetCarbs, userStats.targetCarbs * 0.2)
     },
     {
       id: 52,
@@ -500,7 +583,7 @@ const Tips = () => {
       icon: '⏰',
       category: 'carbs',
       priority: 'high',
-      condition: () => userStats.currentCarbs > userStats.targetCarbs * 1.3
+      condition: () => exceedsTarget(userStats.currentCarbs, userStats.avgCarbs, userStats.targetCarbs, userStats.targetCarbs * 0.3)
     },
     {
       id: 53,
@@ -509,7 +592,7 @@ const Tips = () => {
       icon: '🥛',
       category: 'carbs',
       priority: 'medium',
-      condition: () => userStats.currentCarbs > userStats.targetCarbs * 1.2
+      condition: () => exceedsTarget(userStats.currentCarbs, userStats.avgCarbs, userStats.targetCarbs, userStats.targetCarbs * 0.2)
     },
     {
       id: 54,
@@ -518,7 +601,7 @@ const Tips = () => {
       icon: '🍫',
       category: 'carbs',
       priority: 'medium',
-      condition: () => userStats.currentCarbs > userStats.targetCarbs * 1.3
+      condition: () => exceedsTarget(userStats.currentCarbs, userStats.avgCarbs, userStats.targetCarbs, userStats.targetCarbs * 0.3)
     },
     {
       id: 55,
@@ -527,7 +610,7 @@ const Tips = () => {
       icon: '🌽',
       category: 'carbs',
       priority: 'medium',
-      condition: () => userStats.currentCarbs > userStats.targetCarbs * 1.2
+      condition: () => exceedsTarget(userStats.currentCarbs, userStats.avgCarbs, userStats.targetCarbs, userStats.targetCarbs * 0.2)
     },
     {
       id: 56,
@@ -536,7 +619,7 @@ const Tips = () => {
       icon: '🔍',
       category: 'carbs',
       priority: 'high',
-      condition: () => userStats.currentCarbs > userStats.targetCarbs * 1.4
+      condition: () => exceedsTarget(userStats.currentCarbs, userStats.avgCarbs, userStats.targetCarbs, userStats.targetCarbs * 0.4)
     },
     {
       id: 57,
@@ -545,7 +628,7 @@ const Tips = () => {
       icon: '🥣',
       category: 'carbs',
       priority: 'high',
-      condition: () => userStats.currentCarbs > userStats.targetCarbs * 1.3
+      condition: () => exceedsTarget(userStats.currentCarbs, userStats.avgCarbs, userStats.targetCarbs, userStats.targetCarbs * 0.3)
     },
     {
       id: 58,
@@ -554,7 +637,7 @@ const Tips = () => {
       icon: '🍕',
       category: 'carbs',
       priority: 'medium',
-      condition: () => userStats.currentCarbs > userStats.targetCarbs * 1.2
+      condition: () => exceedsTarget(userStats.currentCarbs, userStats.avgCarbs, userStats.targetCarbs, userStats.targetCarbs * 0.2)
     },
     {
       id: 59,
@@ -563,7 +646,7 @@ const Tips = () => {
       icon: '🥤',
       category: 'carbs',
       priority: 'medium',
-      condition: () => userStats.currentCarbs > userStats.targetCarbs * 1.3
+      condition: () => exceedsTarget(userStats.currentCarbs, userStats.avgCarbs, userStats.targetCarbs, userStats.targetCarbs * 0.3)
     },
     {
       id: 60,
@@ -572,7 +655,7 @@ const Tips = () => {
       icon: '🥫',
       category: 'carbs',
       priority: 'medium',
-      condition: () => userStats.currentCarbs > userStats.targetCarbs * 1.2
+      condition: () => exceedsTarget(userStats.currentCarbs, userStats.avgCarbs, userStats.targetCarbs, userStats.targetCarbs * 0.2)
     },
 
     // ЖИРЫ - Избыток (20 советов)
@@ -583,7 +666,7 @@ const Tips = () => {
       icon: '🧈',
       category: 'fats',
       priority: userStats.currentFats > userStats.targetFats * 1.3 ? 'high' : 'medium',
-      condition: () => userStats.currentFats > userStats.targetFats
+      condition: () => exceedsTarget(userStats.currentFats, userStats.avgFats, userStats.targetFats)
     },
     {
       id: 62,
@@ -592,7 +675,7 @@ const Tips = () => {
       icon: '🍗',
       category: 'fats',
       priority: 'high',
-      condition: () => userStats.currentFats > userStats.targetFats * 1.3
+      condition: () => exceedsTarget(userStats.currentFats, userStats.avgFats, userStats.targetFats, userStats.targetFats * 0.3)
     },
     {
       id: 63,
@@ -601,7 +684,7 @@ const Tips = () => {
       icon: '🐔',
       category: 'fats',
       priority: 'high',
-      condition: () => userStats.currentFats > userStats.targetFats * 1.2
+      condition: () => exceedsTarget(userStats.currentFats, userStats.avgFats, userStats.targetFats, userStats.targetFats * 0.2)
     },
     {
       id: 64,
@@ -610,7 +693,7 @@ const Tips = () => {
       icon: '🍳',
       category: 'fats',
       priority: 'high',
-      condition: () => userStats.currentFats > userStats.targetFats * 1.4
+      condition: () => exceedsTarget(userStats.currentFats, userStats.avgFats, userStats.targetFats, userStats.targetFats * 0.4)
     },
     {
       id: 65,
@@ -619,7 +702,7 @@ const Tips = () => {
       icon: '🥛',
       category: 'fats',
       priority: 'high',
-      condition: () => userStats.currentFats > userStats.targetFats * 1.3
+      condition: () => exceedsTarget(userStats.currentFats, userStats.avgFats, userStats.targetFats, userStats.targetFats * 0.3)
     },
     {
       id: 66,
@@ -628,7 +711,7 @@ const Tips = () => {
       icon: '🥜',
       category: 'fats',
       priority: 'medium',
-      condition: () => userStats.currentFats > userStats.targetFats * 1.2
+      condition: () => exceedsTarget(userStats.currentFats, userStats.avgFats, userStats.targetFats, userStats.targetFats * 0.2)
     },
     {
       id: 67,
@@ -637,7 +720,7 @@ const Tips = () => {
       icon: '🍟',
       category: 'fats',
       priority: 'high',
-      condition: () => userStats.currentFats > userStats.targetFats * 1.5
+      condition: () => exceedsTarget(userStats.currentFats, userStats.avgFats, userStats.targetFats, userStats.targetFats * 0.5)
     },
     {
       id: 68,
@@ -646,7 +729,7 @@ const Tips = () => {
       icon: '🥑',
       category: 'fats',
       priority: 'medium',
-      condition: () => userStats.currentFats > userStats.targetFats * 1.2
+      condition: () => exceedsTarget(userStats.currentFats, userStats.avgFats, userStats.targetFats, userStats.targetFats * 0.2)
     },
     {
       id: 69,
@@ -655,7 +738,7 @@ const Tips = () => {
       icon: '🥪',
       category: 'fats',
       priority: 'high',
-      condition: () => userStats.currentFats > userStats.targetFats * 1.3
+      condition: () => exceedsTarget(userStats.currentFats, userStats.avgFats, userStats.targetFats, userStats.targetFats * 0.3)
     },
     {
       id: 70,
@@ -664,7 +747,7 @@ const Tips = () => {
       icon: '🐟',
       category: 'fats',
       priority: 'medium',
-      condition: () => userStats.currentFats > userStats.targetFats * 1.2
+      condition: () => exceedsTarget(userStats.currentFats, userStats.avgFats, userStats.targetFats, userStats.targetFats * 0.2)
     },
     {
       id: 71,
@@ -673,7 +756,7 @@ const Tips = () => {
       icon: '🏷️',
       category: 'fats',
       priority: 'medium',
-      condition: () => userStats.currentFats > userStats.targetFats * 1.2
+      condition: () => exceedsTarget(userStats.currentFats, userStats.avgFats, userStats.targetFats, userStats.targetFats * 0.2)
     },
     {
       id: 72,
@@ -682,7 +765,7 @@ const Tips = () => {
       icon: '🔪',
       category: 'fats',
       priority: 'high',
-      condition: () => userStats.currentFats > userStats.targetFats * 1.3
+      condition: () => exceedsTarget(userStats.currentFats, userStats.avgFats, userStats.targetFats, userStats.targetFats * 0.3)
     },
     {
       id: 73,
@@ -691,7 +774,7 @@ const Tips = () => {
       icon: '🍝',
       category: 'fats',
       priority: 'high',
-      condition: () => userStats.currentFats > userStats.targetFats * 1.4
+      condition: () => exceedsTarget(userStats.currentFats, userStats.avgFats, userStats.targetFats, userStats.targetFats * 0.4)
     },
     {
       id: 74,
@@ -700,7 +783,7 @@ const Tips = () => {
       icon: '🥥',
       category: 'fats',
       priority: 'medium',
-      condition: () => userStats.currentFats > userStats.targetFats * 1.2
+      condition: () => exceedsTarget(userStats.currentFats, userStats.avgFats, userStats.targetFats, userStats.targetFats * 0.2)
     },
     {
       id: 75,
@@ -709,7 +792,7 @@ const Tips = () => {
       icon: '🍔',
       category: 'fats',
       priority: 'high',
-      condition: () => userStats.currentFats > userStats.targetFats * 1.5
+      condition: () => exceedsTarget(userStats.currentFats, userStats.avgFats, userStats.targetFats, userStats.targetFats * 0.5)
     },
     {
       id: 76,
@@ -718,7 +801,7 @@ const Tips = () => {
       icon: '🧴',
       category: 'fats',
       priority: 'high',
-      condition: () => userStats.currentFats > userStats.targetFats * 1.3
+      condition: () => exceedsTarget(userStats.currentFats, userStats.avgFats, userStats.targetFats, userStats.targetFats * 0.3)
     },
     {
       id: 77,
@@ -727,7 +810,7 @@ const Tips = () => {
       icon: '🥗',
       category: 'fats',
       priority: 'medium',
-      condition: () => userStats.currentFats > userStats.targetFats * 1.2
+      condition: () => exceedsTarget(userStats.currentFats, userStats.avgFats, userStats.targetFats, userStats.targetFats * 0.2)
     },
     {
       id: 78,
@@ -736,7 +819,7 @@ const Tips = () => {
       icon: '🍰',
       category: 'fats',
       priority: 'high',
-      condition: () => userStats.currentFats > userStats.targetFats * 1.4
+      condition: () => exceedsTarget(userStats.currentFats, userStats.avgFats, userStats.targetFats, userStats.targetFats * 0.4)
     },
     {
       id: 79,
@@ -745,7 +828,7 @@ const Tips = () => {
       icon: '🥜',
       category: 'fats',
       priority: 'medium',
-      condition: () => userStats.currentFats > userStats.targetFats * 1.2
+      condition: () => exceedsTarget(userStats.currentFats, userStats.avgFats, userStats.targetFats, userStats.targetFats * 0.2)
     },
     {
       id: 80,
@@ -754,7 +837,7 @@ const Tips = () => {
       icon: '🍲',
       category: 'fats',
       priority: 'medium',
-      condition: () => userStats.currentFats > userStats.targetFats * 1.3
+      condition: () => exceedsTarget(userStats.currentFats, userStats.avgFats, userStats.targetFats, userStats.targetFats * 0.3)
     },
 
     // ОБРАЗ ЖИЗНИ (20 советов)
@@ -765,7 +848,7 @@ const Tips = () => {
       icon: '💧',
       category: 'lifestyle',
       priority: userStats.waterIntake < 1.5 ? 'high' : 'medium',
-      condition: () => userStats.waterIntake < 2
+      condition: () => userStats.hasData && userStats.waterIntake < 2
     },
     {
       id: 82,
@@ -774,7 +857,7 @@ const Tips = () => {
       icon: '😴',
       category: 'lifestyle',
       priority: userStats.sleepHours < 6 ? 'high' : 'medium',
-      condition: () => userStats.sleepHours < 7
+      condition: () => userStats.hasData && userStats.sleepHours < 7
     },
     {
       id: 83,
@@ -783,7 +866,7 @@ const Tips = () => {
       icon: '🚶',
       category: 'lifestyle',
       priority: userStats.activityLevel === 'sedentary' ? 'high' : 'medium',
-      condition: () => userStats.activityLevel === 'sedentary' || userStats.activityLevel === 'light'
+      condition: () => userStats.hasData && (userStats.activityLevel === 'sedentary' || userStats.activityLevel === 'light')
     },
     {
       id: 84,
@@ -792,7 +875,7 @@ const Tips = () => {
       icon: '🏋️',
       category: 'lifestyle',
       priority: 'high',
-      condition: () => userStats.activityLevel !== 'very_active'
+      condition: () => userStats.hasData && userStats.activityLevel !== 'very_active'
     },
     {
       id: 85,
@@ -801,7 +884,7 @@ const Tips = () => {
       icon: '🧘',
       category: 'lifestyle',
       priority: 'medium',
-      condition: () => true
+      condition: () => userStats.hasData
     },
     {
       id: 86,
@@ -810,7 +893,7 @@ const Tips = () => {
       icon: '☀️',
       category: 'lifestyle',
       priority: 'medium',
-      condition: () => true
+      condition: () => userStats.hasData
     },
     {
       id: 87,
@@ -819,7 +902,7 @@ const Tips = () => {
       icon: '🚶‍♂️',
       category: 'lifestyle',
       priority: 'low',
-      condition: () => true
+      condition: () => userStats.hasData
     },
     {
       id: 88,
@@ -828,7 +911,7 @@ const Tips = () => {
       icon: '🥕',
       category: 'lifestyle',
       priority: 'medium',
-      condition: () => true
+      condition: () => userStats.hasData
     },
     {
       id: 89,
@@ -837,7 +920,7 @@ const Tips = () => {
       icon: '🛒',
       category: 'lifestyle',
       priority: 'medium',
-      condition: () => true
+      condition: () => userStats.hasData
     },
     {
       id: 90,
@@ -846,7 +929,7 @@ const Tips = () => {
       icon: '⚖️',
       category: 'lifestyle',
       priority: 'high',
-      condition: () => true
+      condition: () => userStats.hasData
     },
     {
       id: 91,
@@ -855,7 +938,7 @@ const Tips = () => {
       icon: '👥',
       category: 'lifestyle',
       priority: 'medium',
-      condition: () => true
+      condition: () => userStats.hasData
     },
     {
       id: 92,
@@ -864,7 +947,7 @@ const Tips = () => {
       icon: '📸',
       category: 'lifestyle',
       priority: 'low',
-      condition: () => true
+      condition: () => userStats.hasData
     },
     {
       id: 93,
@@ -873,7 +956,7 @@ const Tips = () => {
       icon: '🎉',
       category: 'lifestyle',
       priority: 'low',
-      condition: () => userStats.streak >= 7
+      condition: () => userStats.hasData && userStats.streak >= 7
     },
     {
       id: 94,
@@ -882,7 +965,7 @@ const Tips = () => {
       icon: '🍕',
       category: 'lifestyle',
       priority: 'medium',
-      condition: () => true
+      condition: () => userStats.hasData
     },
     {
       id: 95,
@@ -891,7 +974,7 @@ const Tips = () => {
       icon: '🍵',
       category: 'lifestyle',
       priority: 'low',
-      condition: () => true
+      condition: () => userStats.hasData
     },
     {
       id: 96,
@@ -900,7 +983,7 @@ const Tips = () => {
       icon: '🌞',
       category: 'lifestyle',
       priority: 'low',
-      condition: () => userStats.sleepHours < 7
+      condition: () => userStats.hasData && userStats.sleepHours < 7
     },
     {
       id: 97,
@@ -909,7 +992,7 @@ const Tips = () => {
       icon: '🎯',
       category: 'lifestyle',
       priority: 'low',
-      condition: () => true
+      condition: () => userStats.hasData
     },
     {
       id: 98,
@@ -918,7 +1001,7 @@ const Tips = () => {
       icon: '📦',
       category: 'lifestyle',
       priority: 'high',
-      condition: () => true
+      condition: () => userStats.hasData
     },
     {
       id: 99,
@@ -927,7 +1010,7 @@ const Tips = () => {
       icon: '🍴',
       category: 'lifestyle',
       priority: 'low',
-      condition: () => true
+      condition: () => userStats.hasData
     },
     {
       id: 100,
@@ -936,7 +1019,7 @@ const Tips = () => {
       icon: '⏰',
       category: 'lifestyle',
       priority: 'high',
-      condition: () => userStats.mealsPerDay < 3
+      condition: () => userStats.hasData && userStats.mealsPerDay < 3
     },
 
     // МОТИВАЦИЯ (10 советов)
@@ -947,7 +1030,7 @@ const Tips = () => {
       icon: '🔥',
       category: 'motivation',
       priority: 'low',
-      condition: () => userStats.streak >= 7
+      condition: () => userStats.hasData && userStats.streak >= 7
     },
     {
       id: 102,
@@ -956,7 +1039,7 @@ const Tips = () => {
       icon: '🎯',
       category: 'motivation',
       priority: 'medium',
-      condition: () => userStats.weight - userStats.targetWeight <= 5
+      condition: () => userStats.hasData && userStats.weight > 0 && userStats.weight - userStats.targetWeight <= 5 && userStats.weight > userStats.targetWeight
     },
     {
       id: 103,
@@ -965,7 +1048,7 @@ const Tips = () => {
       icon: '💭',
       category: 'motivation',
       priority: 'low',
-      condition: () => true
+      condition: () => userStats.hasData
     },
     {
       id: 104,
@@ -974,7 +1057,7 @@ const Tips = () => {
       icon: '💪',
       category: 'motivation',
       priority: 'low',
-      condition: () => true
+      condition: () => userStats.hasData
     },
     {
       id: 105,
@@ -983,7 +1066,7 @@ const Tips = () => {
       icon: '📈',
       category: 'motivation',
       priority: 'low',
-      condition: () => true
+      condition: () => userStats.hasData
     },
     {
       id: 106,
@@ -992,7 +1075,7 @@ const Tips = () => {
       icon: '🏃‍♂️',
       category: 'motivation',
       priority: 'low',
-      condition: () => true
+      condition: () => userStats.hasData
     },
     {
       id: 107,
@@ -1001,7 +1084,7 @@ const Tips = () => {
       icon: '🚀',
       category: 'motivation',
       priority: 'low',
-      condition: () => userStats.streak >= 1
+      condition: () => userStats.hasData && userStats.streak >= 1
     },
     {
       id: 108,
@@ -1010,7 +1093,7 @@ const Tips = () => {
       icon: '🙏',
       category: 'motivation',
       priority: 'low',
-      condition: () => true
+      condition: () => userStats.hasData
     },
     {
       id: 109,
@@ -1019,7 +1102,7 @@ const Tips = () => {
       icon: '👑',
       category: 'motivation',
       priority: 'low',
-      condition: () => true
+      condition: () => userStats.hasData
     },
     {
       id: 110,
@@ -1028,7 +1111,7 @@ const Tips = () => {
       icon: '🌅',
       category: 'motivation',
       priority: 'low',
-      condition: () => true
+      condition: () => userStats.hasData
     },
   ];
 
@@ -1066,6 +1149,14 @@ const Tips = () => {
     { value: 'medium', label: 'Средний' },
     { value: 'low', label: 'Низкий' },
   ];
+
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center min-h-[60vh]">
+        <Loader size="lg" />
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6 pb-6">
