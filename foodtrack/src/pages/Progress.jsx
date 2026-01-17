@@ -41,7 +41,14 @@ const Progress = () => {
   const fetchPhotos = useCallback(async () => {
     try {
       const response = await progressAPI.getPhotos();
-      setPhotos(response.data.photos || []);
+      const transformedPhotos = (response.data.photos || []).map(p => ({
+        id: p.id,
+        date: new Date(p.date),
+        imageUrl: p.image_url,
+        category: p.category,
+        notes: p.notes
+      }));
+      setPhotos(transformedPhotos);
     } catch (err) {
       console.error('Ошибка загрузки фото:', err);
     }
@@ -76,12 +83,20 @@ const Progress = () => {
   const handleAddPhoto = async (photo) => {
     try {
       const response = await progressAPI.addPhoto({
-        image_url: photo.image_url || photo.url,
+        image_url: photo.imageUrl || photo.image_url || photo.url,
         date: photo.date instanceof Date ? photo.date.toISOString().split('T')[0] : photo.date,
         category: photo.category || 'front',
         notes: photo.notes
       });
-      setPhotos([response.data.photo, ...photos]);
+      const photoData = response.data.photo;
+      const transformedPhoto = {
+        id: photoData.id,
+        date: new Date(photoData.date),
+        imageUrl: photoData.image_url,
+        category: photoData.category,
+        notes: photoData.notes
+      };
+      setPhotos([transformedPhoto, ...photos]);
       setShowToast({ type: 'success', message: 'Фото добавлено' });
     } catch (err) {
       setShowToast({ type: 'error', message: 'Ошибка при сохранении фото' });
@@ -183,7 +198,7 @@ const Progress = () => {
                 <div className="text-sm text-secondary">фото прогресса</div>
               </div>
               <div>
-                <div className="text-3xl font-bold text-purple-600">-{totalWeightLoss}</div>
+                <div className="text-3xl font-bold text-purple-600">{totalWeightLoss}</div>
                 <div className="text-sm text-secondary">кг сброшено</div>
               </div>
             </div>
