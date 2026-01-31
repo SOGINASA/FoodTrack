@@ -2,8 +2,9 @@ import React, { useState, useEffect } from 'react';
 import RecipeCard from '../components/recipes/RecipeCard';
 import Modal from '../components/common/Modal';
 import Button from '../components/common/Button';
-import { ChefHat, Search, Filter, Clock, Flame, Calendar, Check } from 'lucide-react';
-import { mealPlansAPI } from '../services/api';
+import { ChefHat, Search, Filter, Clock, Flame, Calendar, Check, Refrigerator } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
+import { mealPlansAPI, recipesAPI } from '../services/api';
 
 const Recipes = () => {
   const navigate = useNavigate();
