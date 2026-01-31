@@ -1,3 +1,4 @@
+import os
 from flask import Flask, jsonify
 from flask_cors import CORS
 from flask_migrate import Migrate
@@ -7,7 +8,6 @@ from models import db, User, UserGoals
 from seed_data import seed_all
 from flask_jwt_extended.exceptions import JWTExtendedException
 from werkzeug.exceptions import HTTPException
-import os
 
 # Инициализация расширений
 migrate = Migrate()
@@ -48,6 +48,7 @@ def create_app():
 
     # Импорт всех блюпринтов
     from routes import auth_bp
+    from routes.oauth import oauth_bp
     from routes.meals import meals_bp
     from routes.goals import goals_bp
     from routes.analytics import analytics_bp
@@ -59,6 +60,7 @@ def create_app():
 
     # Регистрация всех блюпринтов
     app.register_blueprint(auth_bp, url_prefix='/api/auth')
+    app.register_blueprint(oauth_bp, url_prefix='/api/auth/oauth')
     app.register_blueprint(meals_bp, url_prefix='/api/meals')
     app.register_blueprint(goals_bp, url_prefix='/api/goals')
     app.register_blueprint(analytics_bp, url_prefix='/api/analytics')

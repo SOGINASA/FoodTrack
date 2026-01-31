@@ -40,10 +40,24 @@ class User(db.Model):
     reset_token_expires = db.Column(db.DateTime)
     verification_token = db.Column(db.String(100), unique=True)
 
+    # === OAuth поля ===
+    oauth_provider = db.Column(db.String(50), nullable=True, index=True)  # google, github, apple
+    oauth_id = db.Column(db.String(255), nullable=True)  # ID от провайдера
+    oauth_access_token = db.Column(db.Text, nullable=True)
+    oauth_refresh_token = db.Column(db.Text, nullable=True)
+    oauth_token_expires = db.Column(db.DateTime, nullable=True)
+    oauth_linked_at = db.Column(db.DateTime, nullable=True)
+    email_verified_at = db.Column(db.DateTime, nullable=True)
+
     # Связи
     meals = db.relationship('Meal', backref='user', lazy='dynamic', cascade='all, delete-orphan')
     goals = db.relationship('UserGoals', backref='user', uselist=False, cascade='all, delete-orphan')
     weights = db.relationship('WeightEntry', backref='user', lazy='dynamic', cascade='all, delete-orphan')
+    
+    # Индекс для уникальности OAuth
+    __table_args__ = (
+        db.UniqueConstraint('oauth_provider', 'oauth_id', name='uq_oauth_provider_id'),
+    )
 
     def set_password(self, password):
         self.password_hash = generate_password_hash(password)
@@ -569,4 +583,68 @@ class Recipe(db.Model):
             'tags': json.loads(self.tags) if self.tags else [],
             'ingredients': json.loads(self.ingredients) if self.ingredients else [],
             'steps': json.loads(self.steps) if self.steps else [],
+        }
+
+
+class AuditLog(db.Model):
+    """Логирование всех операций с аутентификацией и пользователем"""
+    __tablename__ = 'audit_logs'
+    
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=True, index=True)
+    
+    # Основные поля действия
+    action = db.Column(db.String(50), nullable=False, index=True)  # REGISTER_EMAIL, LOGIN_OAUTH, etc.
+    action_type = db.Column(db.String(20), nullable=False)  # auth, profile, oauth, account
+    status = db.Column(db.String(20), default='success')  # success, failure
+    
+    # Детали запроса
+    ip_address = db.Column(db.String(45), index=True)  # IPv4 и IPv6
+    user_agent = db.Column(db.Text)
+    device_type = db.Column(db.String(50))  # Desktop, Mobile, Tablet
+    browser = db.Column(db.String(50))  # Chrome, Safari, Firefox
+    os = db.Column(db.String(50))  # Windows, macOS, Linux, iOS, Android
+    
+    # OAuth специфичные поля
+    oauth_provider = db.Column(db.String(50), nullable=True)  # google, github, apple
+    oauth_id = db.Column(db.String(255), nullable=True)
+    
+    # Ошибки и детали
+    error_code = db.Column(db.String(50), nullable=True)
+    error_message = db.Column(db.Text, nullable=True)
+    error_details = db.Column(db.Text, nullable=True)  # Full stacktrace
+    
+    # Изменения данных
+    changes = db.Column(db.Text, nullable=True)  # JSON с измененными полями
+    
+    # Метаданные
+    session_id = db.Column(db.String(100), index=True)
+    request_id = db.Column(db.String(100), unique=True)
+    
+    # Временные метки
+    created_at = db.Column(db.DateTime, default=datetime.utcnow, index=True)
+    duration_ms = db.Column(db.Integer)  # Длительность операции в миллисекундах
+    
+    # Индексы для быстрого поиска
+    __table_args__ = (
+        db.Index('ix_audit_user_action_date', 'user_id', 'action', 'created_at'),
+        db.Index('ix_audit_ip_date', 'ip_address', 'created_at'),
+        db.Index('ix_audit_session', 'session_id', 'created_at'),
+    )
+    
+    def to_dict(self):
+        return {
+            'id': self.id,
+            'user_id': self.user_id,
+            'action': self.action,
+            'action_type': self.action_type,
+            'status': self.status,
+            'ip_address': self.ip_address,
+            'device_type': self.device_type,
+            'browser': self.browser,
+            'os': self.os,
+            'oauth_provider': self.oauth_provider,
+            'error_message': self.error_message,
+            'created_at': self.created_at.isoformat() if self.created_at else None,
+            'duration_ms': self.duration_ms,
         }

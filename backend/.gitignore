@@ -1,3 +1,4 @@
 /database
 *.pyc
 /routes/__pycache__
+.env

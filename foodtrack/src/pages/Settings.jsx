@@ -6,11 +6,12 @@ import ProfileSettings from '../components/settings/ProfileSettings';
 import GoalsSettings from '../components/settings/GoalsSettings';
 import NotificationSettings from '../components/settings/NotificationSettings';
 import PrivacySettings from '../components/settings/PrivacySettings';
+import OAuthSettings from '../components/settings/OAuthSettings';
 import PricingPage from '../components/settings/PricingPage';
 import Toast from '../components/common/Toast';
 import Modal from '../components/common/Modal';
 import Loader from '../components/common/Loader';
-import { Settings as SettingsIcon, LogOut, User, Target, Bell, Shield, Crown } from 'lucide-react';
+import { Settings as SettingsIcon, LogOut, User, Target, Bell, Shield, Crown, LogIn } from 'lucide-react';
 
 const Settings = () => {
   const navigate = useNavigate();
@@ -81,6 +82,7 @@ const Settings = () => {
     { id: 'goals', label: 'Цели', icon: Target },
     { id: 'notifications', label: 'Уведомления', icon: Bell },
     { id: 'privacy', label: 'Приватность', icon: Shield },
+    { id: 'oauth', label: 'OAuth', icon: LogIn },
     { id: 'pricing', label: 'Подписка', icon: Crown },
   ];
 
@@ -276,6 +278,10 @@ const Settings = () => {
             onExportData={handleExportData}
             onDeleteAccount={handleDeleteAccount}
           />
+        )}
+
+        {activeTab === 'oauth' && (
+          <OAuthSettings />
         )}
 
         {activeTab === 'pricing' && (

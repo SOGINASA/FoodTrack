@@ -20,6 +20,30 @@ class Config:
     JWT_ACCESS_TOKEN_EXPIRES = timedelta(hours=24)
     JWT_REFRESH_TOKEN_EXPIRES = timedelta(days=30)
     
+    # OAuth Google
+    GOOGLE_CLIENT_ID = os.environ.get('GOOGLE_CLIENT_ID')
+    GOOGLE_CLIENT_SECRET = os.environ.get('GOOGLE_CLIENT_SECRET')
+    GOOGLE_REDIRECT_URI = os.environ.get('GOOGLE_REDIRECT_URI', 
+                                         'http://localhost:5252/api/auth/oauth/google/callback')
+    
+    # OAuth GitHub
+    GITHUB_CLIENT_ID = os.environ.get('GITHUB_CLIENT_ID')
+    GITHUB_CLIENT_SECRET = os.environ.get('GITHUB_CLIENT_SECRET')
+    GITHUB_REDIRECT_URI = os.environ.get('GITHUB_REDIRECT_URI',
+                                         'http://localhost:5252/api/auth/oauth/github/callback')
+    
+    # OAuth Apple
+    APPLE_CLIENT_ID = os.environ.get('APPLE_CLIENT_ID')
+    APPLE_TEAM_ID = os.environ.get('APPLE_TEAM_ID')
+    APPLE_KEY_ID = os.environ.get('APPLE_KEY_ID')
+    APPLE_PRIVATE_KEY = os.environ.get('APPLE_PRIVATE_KEY')
+    APPLE_REDIRECT_URI = os.environ.get('APPLE_REDIRECT_URI',
+                                        'http://localhost:5252/api/auth/oauth/apple/callback')
+    
+    # OAuth Settings
+    OAUTH_STATE_TTL = 600  # 10 minutes
+    OAUTH_PKCE_ENABLED = True
+    
     
 class DevelopmentConfig(Config):
     """Конфигурация для разработки"""

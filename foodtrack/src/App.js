@@ -21,6 +21,7 @@ import Settings from './pages/Settings';
 
 import Auth from './pages/Auth';
 import Onboarding from './pages/Onboarding';
+import OAuthCallback from './pages/OAuthCallback';
 
 // Публичный роут — если уже авторизован, кидаем либо в приложение, либо в онбординг
 const PublicRoute = ({ children }) => {
@@ -165,6 +166,9 @@ function App() {
                 </PublicRoute>
               }
             />
+
+            {/* OAuth Callback */}
+            <Route path="/oauth/callback" element={<OAuthCallback />} />
 
             {/* Onboarding */}
             <Route

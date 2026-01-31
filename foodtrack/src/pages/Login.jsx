@@ -5,6 +5,7 @@ import Button from '../components/common/Button';
 import Card from '../components/common/Card';
 import Toast from '../components/common/Toast';
 import Loader from '../components/common/Loader';
+import OAuthButtons from '../components/auth/OAuthButtons';
 import { Mail, Lock, Eye, EyeOff } from 'lucide-react';
 
 const Login = () => {
@@ -127,15 +128,11 @@ const Login = () => {
             </Button>
           </form>
 
-          {/* Разделитель */}
-          <div className="my-6 flex items-center">
-            <div className="flex-1 border-t border-gray-200"></div>
-            <span className="px-4 text-sm text-gray-400">или</span>
-            <div className="flex-1 border-t border-gray-200"></div>
-          </div>
+          {/* OAuth Кнопки */}
+          <OAuthButtons />
 
           {/* Ссылка на регистрацию */}
-          <p className="text-center text-secondary">
+          <p className="text-center text-secondary mt-6">
             Нет аккаунта?{' '}
             <Link to="/register" className="text-black font-semibold hover:underline">
               Зарегистрируйтесь
