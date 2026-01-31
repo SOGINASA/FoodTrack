@@ -1,4 +1,4 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { Camera, Upload, Receipt, Scan, X, Loader } from 'lucide-react';
 import Modal from '../common/Modal';
 import Button from '../common/Button';
@@ -17,22 +17,66 @@ const ProductScanner = ({ isOpen, onClose, onScanComplete }) => {
   // Определяем, мобильное ли устройство
   const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
 
+  // Очистка камеры при размонтировании или закрытии
+  useEffect(() => {
+    return () => {
+      stopCamera();
+    };
+  }, []);
+
+  // Остановка камеры при закрытии модалки
+  useEffect(() => {
+    if (!isOpen) {
+      stopCamera();
+    }
+  }, [isOpen]);
+
   // Запуск камеры
   const startCamera = async () => {
     try {
-      const stream = await navigator.mediaDevices.getUserMedia({
-        video: { facingMode: 'environment' },
+      // Проверяем поддержку getUserMedia
+      if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+        alert('Ваш браузер не поддерживает доступ к камере');
+        return;
+      }
+
+      const constraints = {
+        video: {
+          facingMode: 'environment',
+          width: { ideal: 1920 },
+          height: { ideal: 1080 }
+        },
         audio: false,
-      });
+      };
+
+      const stream = await navigator.mediaDevices.getUserMedia(constraints);
 
       if (videoRef.current) {
         videoRef.current.srcObject = stream;
         streamRef.current = stream;
         setIsCameraActive(true);
+
+        // Запускаем видео после загрузки метаданных
+        videoRef.current.onloadedmetadata = () => {
+          videoRef.current.play();
+        };
       }
     } catch (error) {
       console.error('Ошибка доступа к камере:', error);
-      alert('Не удалось получить доступ к камере');
+
+      let errorMessage = 'Не удалось получить доступ к камере. ';
+
+      if (error.name === 'NotAllowedError' || error.name === 'PermissionDeniedError') {
+        errorMessage += 'Пожалуйста, разрешите доступ к камере в настройках браузера.';
+      } else if (error.name === 'NotFoundError' || error.name === 'DevicesNotFoundError') {
+        errorMessage += 'Камера не найдена на вашем устройстве.';
+      } else if (error.name === 'NotReadableError' || error.name === 'TrackStartError') {
+        errorMessage += 'Камера уже используется другим приложением.';
+      } else {
+        errorMessage += 'Попробуйте загрузить фото из галереи.';
+      }
+
+      alert(errorMessage);
     }
   };
 
@@ -197,12 +241,14 @@ const ProductScanner = ({ isOpen, onClose, onScanComplete }) => {
 
           {/* Видео с камеры */}
           {isCameraActive && (
-            <div className="relative w-full h-full">
+            <div className="relative w-full h-full min-h-[400px]">
               <video
                 ref={videoRef}
                 autoPlay
                 playsInline
+                muted
                 className="w-full h-full object-cover"
+                style={{ transform: 'scaleX(-1)' }}
               />
 
               {/* Рамка для штрихкода */}
