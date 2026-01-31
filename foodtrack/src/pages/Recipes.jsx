@@ -19,7 +19,7 @@ const Recipes = () => {
   const [isAddingToPlan, setIsAddingToPlan] = useState(false);
   const [addSuccess, setAddSuccess] = useState(false);
 
-  // Функция добавления рецепта в план питания
+  // Функция добавления рецепта в план питанияs
   const handleAddToMealPlan = async () => {
     if (!selectedRecipe) return;
 
