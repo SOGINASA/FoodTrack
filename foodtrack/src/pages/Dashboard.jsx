@@ -1,4 +1,4 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 
 import DashboardStats from '../components/dashboard/DashboardStats';
@@ -52,15 +52,54 @@ const QuickIconFridge = ({ className = '' }) => (
 
 const Dashboard = () => {
   const navigate = useNavigate();
+  const [selectedDate, setSelectedDate] = useState(new Date());
+  const dateInputRef = React.useRef(null);
 
-  const { meals, loading, error, fetchToday } = useMeals();
-  const { streak, fetchStreak, weeklyStats, fetchWeeklyStats } = useAnalytics();
+  const { meals, loading, error, fetchMeals } = useMeals();
+  const { streak, fetchStreak, weeklyStats, fetchWeeklyStats, fetchDailyStats } = useAnalytics();
 
   useEffect(() => {
-    fetchToday();
+    const dateStr = selectedDate.toISOString().split('T')[0];
+    fetchMeals(dateStr);
+    fetchDailyStats(dateStr);
     fetchStreak();
     fetchWeeklyStats();
-  }, [fetchToday, fetchStreak, fetchWeeklyStats]);
+  }, [selectedDate, fetchMeals, fetchDailyStats, fetchStreak, fetchWeeklyStats]);
+
+  const handlePrevDay = () => {
+    const newDate = new Date(selectedDate);
+    newDate.setDate(newDate.getDate() - 1);
+    setSelectedDate(newDate);
+  };
+
+  const handleNextDay = () => {
+    const newDate = new Date(selectedDate);
+    newDate.setDate(newDate.getDate() + 1);
+    setSelectedDate(newDate);
+  };
+
+  const handleToday = () => {
+    setSelectedDate(new Date());
+  };
+
+  const handleDateChange = (e) => {
+    const newDate = new Date(e.target.value + 'T00:00:00');
+    setSelectedDate(newDate);
+  };
+
+  const formatDateDisplay = (date) => {
+    const today = new Date();
+    const yesterday = new Date(today);
+    yesterday.setDate(yesterday.getDate() - 1);
+
+    if (date.toDateString() === today.toDateString()) {
+      return 'Сегодня';
+    } else if (date.toDateString() === yesterday.toDateString()) {
+      return 'Вчера';
+    } else {
+      return date.toLocaleDateString('ru-RU', { day: 'numeric', month: 'long' });
+    }
+  };
 
   const totalCalories = meals.reduce((sum, meal) => sum + (meal.calories || 0), 0);
   const totalProtein = meals.reduce((sum, meal) => sum + (meal.protein || 0), 0);
@@ -95,12 +134,69 @@ const Dashboard = () => {
 
   return (
     <div className="space-y-6 pb-6">
+      {/* Date Navigation */}
+      <div className="flex items-center justify-between gap-2">
+        <button
+          type="button"
+          onClick={handlePrevDay}
+          className="flex-shrink-0 w-10 h-10 flex items-center justify-center rounded-lg bg-white border border-gray-200 hover:bg-gray-100 active:bg-gray-200 transition cursor-pointer"
+          aria-label="Предыдущий день"
+        >
+          <svg className="w-5 h-5 text-black" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M15 19l-7-7 7-7" />
+          </svg>
+        </button>
+
+        <button
+          type="button"
+          onClick={() => dateInputRef.current?.click()}
+          className="flex-1 min-w-0 text-center hover:bg-gray-100 py-2 rounded-lg transition cursor-pointer"
+        >
+          <h1 className="text-3xl lg:text-4xl font-bold">
+            {formatDateDisplay(selectedDate)}
+          </h1>
+          <p className="text-sm text-secondary mt-1">
+            {selectedDate.toLocaleDateString('ru-RU', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })}
+          </p>
+        </button>
+
+        <button
+          type="button"
+          onClick={handleNextDay}
+          disabled={selectedDate.toDateString() === new Date().toDateString()}
+          className="flex-shrink-0 w-10 h-10 flex items-center justify-center rounded-lg bg-white border border-gray-200 hover:bg-gray-100 active:bg-gray-200 transition cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"
+          aria-label="Следующий день"
+        >
+          <svg className="w-5 h-5 text-black" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M9 5l7 7-7 7" />
+          </svg>
+        </button>
+
+        <input
+          ref={dateInputRef}
+          type="date"
+          value={selectedDate.toISOString().split('T')[0]}
+          onChange={handleDateChange}
+          className="hidden"
+        />
+      </div>
+
+      {selectedDate.toDateString() !== new Date().toDateString() && (
+        <button
+          type="button"
+          onClick={handleToday}
+          className="w-full py-2 px-4 rounded-lg bg-black text-white font-medium hover:bg-black/90 transition text-sm"
+        >
+          Вернуться на сегодня
+        </button>
+      )}
+
       <div className="flex items-center justify-between gap-4 flex-wrap">
-        <h1 className="text-3xl lg:text-4xl font-bold">Сегодня</h1>
+        <div></div>
         <StreakBadge streak={streak?.current_streak || 0} />
       </div>
 
-      <WeeklyChart />
+      <WeeklyChart selectedDate={selectedDate} onDateSelect={setSelectedDate} />
 
       {/* ✅ Видно ТОЛЬКО на мобильных (скрыто на lg и выше) */}
       <div className="grid grid-cols-2 gap-3 lg:hidden">
