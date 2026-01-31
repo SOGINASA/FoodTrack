@@ -1,20 +1,25 @@
 import React, { useState, useEffect } from 'react';
 import DiaryList from '../components/diary/DiaryList';
 import EditMealModal from '../components/diary/EditMealModal';
+import RecipePlanModal from '../components/diary/RecipePlanModal';
 import Card from '../components/common/Card';
 import Toast from '../components/common/Toast';
 import Loader from '../components/common/Loader';
-import { Calendar, ChevronLeft, ChevronRight } from 'lucide-react';
+import { Calendar, ChevronLeft, ChevronRight, Trash2, ChefHat } from 'lucide-react';
 import { format, addDays, subDays } from 'date-fns';
 import { ru } from 'date-fns/locale';
 import { useNavigate } from 'react-router-dom';
 import { useMeals } from '../hooks/useMeals';
+import { mealPlansAPI } from '../services/api';
 
 const Diary = () => {
   const navigate = useNavigate();
   const [currentDate, setCurrentDate] = useState(new Date());
   const [showToast, setShowToast] = useState(null);
   const [editingMeal, setEditingMeal] = useState(null);
+  const [mealPlans, setMealPlans] = useState([]);
+  const [loadingPlans, setLoadingPlans] = useState(false);
+  const [selectedPlan, setSelectedPlan] = useState(null);
   
   const { meals, loading, error, fetchMeals, updateMeal, deleteMeal, addMeal } = useMeals();
 
@@ -22,7 +27,20 @@ const Diary = () => {
   useEffect(() => {
     const dateStr = format(currentDate, 'yyyy-MM-dd');
     fetchMeals(dateStr);
+    fetchMealPlans(dateStr);
   }, [currentDate, fetchMeals]);
+
+  const fetchMealPlans = async (dateStr) => {
+    setLoadingPlans(true);
+    try {
+      const response = await mealPlansAPI.getAll({ date: dateStr });
+      setMealPlans(response.data.meal_plans || []);
+    } catch (error) {
+      console.error('Ошибка загрузки плана питания:', error);
+    } finally {
+      setLoadingPlans(false);
+    }
+  };
 
   const totalCalories = meals.reduce((sum, meal) => sum + (meal.calories || 0), 0);
   const totalProtein = meals.reduce((sum, meal) => sum + (meal.protein || 0), 0);
@@ -49,6 +67,18 @@ const Diary = () => {
       setShowToast({ type: 'success', message: `Удалено: ${meal.name}` });
     } else {
       setShowToast({ type: 'error', message: result.error || 'Ошибка удаления' });
+    }
+  };
+
+  const handleDeleteMealPlan = async (planId) => {
+    try {
+      await mealPlansAPI.delete(planId);
+      setShowToast({ type: 'success', message: 'Рецепт удален из плана' });
+      const dateStr = format(currentDate, 'yyyy-MM-dd');
+      await fetchMealPlans(dateStr);
+    } catch (error) {
+      console.error('Ошибка удаления:', error);
+      setShowToast({ type: 'error', message: 'Ошибка удаления рецепта' });
     }
   };
 
@@ -143,6 +173,72 @@ const Diary = () => {
         </Card>
       </div>
 
+      {/* Сохраненные рецепты из плана питания */}
+      {loadingPlans ? (
+        <div className="flex justify-center py-4">
+          <Loader size="md" />
+        </div>
+      ) : mealPlans.length > 0 ? (
+        <div className="space-y-4">
+          <div className="flex items-center gap-3">
+            <ChefHat className="w-6 h-6" />
+            <h3 className="text-lg font-bold">Сохраненные рецепты</h3>
+            <span className="text-sm bg-black text-white px-3 py-1 rounded-full">{mealPlans.length}</span>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {mealPlans.map(plan => (
+              <Card key={plan.id} padding="lg" className="relative cursor-pointer hover:shadow-md transition-shadow"
+                onClick={() => setSelectedPlan(plan)}>
+                <div className="flex gap-4">
+                  {plan.image_url && (
+                    <img
+                      src={plan.image_url}
+                      alt={plan.name}
+                      className="w-20 h-20 object-cover rounded-lg flex-shrink-0"
+                    />
+                  )}
+
+                  <div className="flex-1 min-w-0">
+                    <h4 className="font-bold text-base mb-2">{plan.name}</h4>
+
+                    <div className="grid grid-cols-2 gap-2 text-xs">
+                      <div>
+                        <span className="text-secondary">Калории:</span>
+                        <div className="font-bold">{plan.calories}</div>
+                      </div>
+                      <div>
+                        <span className="text-secondary">Белки:</span>
+                        <div className="font-bold text-[#FF6B6B]">{plan.protein}г</div>
+                      </div>
+                      <div>
+                        <span className="text-secondary">Углеводы:</span>
+                        <div className="font-bold text-[#FFB84D]">{plan.carbs}г</div>
+                      </div>
+                      <div>
+                        <span className="text-secondary">Жиры:</span>
+                        <div className="font-bold text-[#4D9FFF]">{plan.fats}г</div>
+                      </div>
+                    </div>
+                  </div>
+
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      handleDeleteMealPlan(plan.id);
+                    }}
+                    className="p-2 hover:bg-red-50 rounded-lg transition-colors text-red-600 flex-shrink-0 h-fit"
+                    title="Удалить из плана"
+                  >
+                    <Trash2 className="w-5 h-5" />
+                  </button>
+                </div>
+              </Card>
+            ))}
+          </div>
+        </div>
+      ) : null}
+
       <DiaryList
         meals={meals}
         date={currentDate}
@@ -157,6 +253,13 @@ const Diary = () => {
         onClose={() => setEditingMeal(null)}
         meal={editingMeal}
         onSave={handleSaveEdit}
+      />
+
+      <RecipePlanModal
+        isOpen={!!selectedPlan}
+        onClose={() => setSelectedPlan(null)}
+        plan={selectedPlan}
+        onDelete={handleDeleteMealPlan}
       />
 
       {showToast && (

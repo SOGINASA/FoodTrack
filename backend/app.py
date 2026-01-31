@@ -54,6 +54,7 @@ def create_app():
     from routes.progress import progress_bp
     from routes.groups import groups_bp
     from routes.meal_plans import meal_plans_bp
+    from routes.recipes import recipes_bp
 
     # Регистрация всех блюпринтов
     app.register_blueprint(auth_bp, url_prefix='/api/auth')
@@ -63,6 +64,7 @@ def create_app():
     app.register_blueprint(progress_bp, url_prefix='/api/progress')
     app.register_blueprint(groups_bp, url_prefix='/api/groups')
     app.register_blueprint(meal_plans_bp, url_prefix='/api/meal-plans')
+    app.register_blueprint(recipes_bp, url_prefix='/api/recipes')
 
     # Главная страница API
     @app.route('/api')
@@ -79,6 +81,7 @@ def create_app():
                 'progress': '/api/progress - отслеживание прогресса и изменения веса',
                 'groups': '/api/groups - управление группами и социальные функции',
                 'meal_plans': '/api/meal-plans - планы питания и рецепты',
+                'recipes': '/api/recipes - каталог рецептов',
             }
         })
 

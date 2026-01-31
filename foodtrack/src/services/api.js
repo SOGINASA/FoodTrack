@@ -180,6 +180,15 @@ export const mealPlansAPI = {
   toggleComplete: (id) => api.post(`/meal-plans/${id}/complete`),
 };
 
+// === RECIPES API ===
+export const recipesAPI = {
+  // Получить все рецепты (с фильтрами)
+  getAll: (params = {}) => api.get('/recipes', { params }),
+
+  // Получить конкретный рецепт
+  getById: (id) => api.get(`/recipes/${id}`),
+};
+
 // === GROUPS API ===
 export const groupsAPI = {
   // Группы

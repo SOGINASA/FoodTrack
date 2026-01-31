@@ -535,3 +535,38 @@ class MealPlan(db.Model):
             'isCompleted': self.is_completed,
             'createdAt': self.created_at.isoformat() if self.created_at else None,
         }
+
+
+class Recipe(db.Model):
+    """Рецепты для каталога"""
+    __tablename__ = 'recipes'
+    id = db.Column(db.Integer, primary_key=True)
+    name = db.Column(db.String(200), nullable=False)
+    image = db.Column(db.String(500))
+    time = db.Column(db.Integer)  # время приготовления в минутах
+    calories = db.Column(db.Integer, default=0)
+    protein = db.Column(db.Float, default=0)
+    carbs = db.Column(db.Float, default=0)
+    fats = db.Column(db.Float, default=0)
+    difficulty = db.Column(db.String(20))  # easy, medium, hard
+    category = db.Column(db.String(20))  # breakfast, lunch, dinner, snack
+    tags = db.Column(db.Text)  # JSON массив
+    ingredients = db.Column(db.Text)  # JSON массив
+    steps = db.Column(db.Text)  # JSON массив
+
+    def to_dict(self):
+        return {
+            'id': self.id,
+            'name': self.name,
+            'image': self.image,
+            'time': self.time,
+            'calories': self.calories,
+            'protein': self.protein,
+            'carbs': self.carbs,
+            'fats': self.fats,
+            'difficulty': self.difficulty,
+            'category': self.category,
+            'tags': json.loads(self.tags) if self.tags else [],
+            'ingredients': json.loads(self.ingredients) if self.ingredients else [],
+            'steps': json.loads(self.steps) if self.steps else [],
+        }
