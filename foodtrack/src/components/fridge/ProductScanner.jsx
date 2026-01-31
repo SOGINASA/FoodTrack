@@ -333,14 +333,15 @@ const ProductScanner = ({ isOpen, onClose, onScanComplete }) => {
               Отмена
             </Button>
             <Button
-              variant="primary"
-              onClick={capturePhoto}
-              disabled={!cameraReady}
-              className="bg-white text-black hover:bg-gray-100"
-            >
-              <Camera className="w-5 h-5 mr-2" />
-              Сделать фото
-            </Button>
+  variant="secondary"
+  onClick={capturePhoto}
+  disabled={!cameraReady}
+  className="bg-white/20 text-white border border-white/30 hover:bg-white/30 active:bg-white/40 transition-colors"
+>
+  <Camera className="w-5 h-5 mr-2" />
+  Сделать фото
+</Button>
+
           </div>
         </div>
 
