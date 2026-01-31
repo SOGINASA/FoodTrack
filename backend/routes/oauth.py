@@ -115,7 +115,8 @@ def oauth_callback(provider):
                 is_active=True,
                 is_verified=True,  # OAuth провайдеры верифицируют
                 email_verified_at=datetime.utcnow(),
-                last_login=datetime.utcnow()
+                last_login=datetime.utcnow(),
+                onboarding_completed=False  # Новые пользователи должны пройти onboarding
             )
             
             # Генерируем уникальный nickname если занят

@@ -43,6 +43,12 @@ const OAuthCallback = () => {
         // Сохраняем токены и данные в localStorage
         localStorage.setItem('accessToken', access_token);
         localStorage.setItem('refreshToken', refresh_token);
+        
+        // Для новых OAuth пользователей отмечаем что они не завершили onboarding
+        if (is_new_user) {
+          user.onboarding_completed = false;
+        }
+        
         localStorage.setItem('user', JSON.stringify(user));
 
         // Если это новый пользователь - редирект на онбординг
