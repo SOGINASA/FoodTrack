@@ -99,11 +99,14 @@ def oauth_callback(provider):
             )
         else:
             # Новый пользователь - создаем аккаунт
-            name = oauth_user.get('name') or oauth_user.get('login') or oauth_user['email'].split('@')[0]
+            name = oauth_user.get('name') or oauth_user.get('login') or ''
+            email = oauth_user.get('email') or f"{oauth_user.get('login', oauth_user['id'])}@{provider}.oauth"
+            email_part = (email or '').split('@')[0] if email else ''
+            
             user = User(
-                email=oauth_user['email'],
-                nickname=(name or '').replace(' ', '_').lower() or oauth_user['id'],
-                full_name=name or oauth_user['email'],
+                email=email,
+                nickname=(name or email_part or '').replace(' ', '_').lower() or oauth_user['id'],
+                full_name=name or email_part or oauth_user['id'],
                 oauth_provider=provider,
                 oauth_id=oauth_user['id'],
                 oauth_access_token=access_token,
