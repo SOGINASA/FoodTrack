@@ -3,9 +3,10 @@ import RecipeCard from '../components/recipes/RecipeCard';
 import Modal from '../components/common/Modal';
 import Button from '../components/common/Button';
 import { ChefHat, Search, Filter, Clock, Flame, Calendar, Check } from 'lucide-react';
-import { mealPlansAPI, recipesAPI } from '../services/api';
+import { mealPlansAPI } from '../services/api';
 
 const Recipes = () => {
+  const navigate = useNavigate();
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('all');
   const [selectedDifficulty, setSelectedDifficulty] = useState('all');
@@ -126,9 +127,20 @@ const Recipes = () => {
 
   return (
     <div className="space-y-6 pb-6">
-      <div className="flex items-center gap-3">
-        <ChefHat className="w-8 h-8" />
-        <h1 className="text-3xl lg:text-4xl font-bold">Рецепты</h1>
+      <div className="flex items-center justify-between gap-3">
+        <div className="flex items-center gap-3">
+          <ChefHat className="w-8 h-8" />
+          <h1 className="text-3xl lg:text-4xl font-bold">Рецепты</h1>
+        </div>
+
+        {/* Кнопка Холодильник для мобильных */}
+        <button
+          onClick={() => navigate('/fridge')}
+          className="lg:hidden flex items-center gap-2 px-4 py-2.5 bg-gradient-to-r from-blue-500 to-indigo-500 text-white rounded-xl font-semibold shadow-lg hover:shadow-xl transition-all active:scale-95"
+        >
+          <Refrigerator className="w-5 h-5" />
+          <span className="text-sm">Холодильник</span>
+        </button>
       </div>
 
       <div className="space-y-4">
