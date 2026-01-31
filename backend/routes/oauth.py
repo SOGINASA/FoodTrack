@@ -59,16 +59,16 @@ def oauth_callback(provider):
         if not code or not state:
             return jsonify({'error': 'Missing code or state'}), 400
         
-        # Проверяем state
-        if state not in _state_tokens:
-            return jsonify({'error': 'Invalid or expired state'}), 400
-        
-        state_data = _state_tokens[state]
-        if (datetime.utcnow() - state_data['created_at']).seconds > state_data['ttl']:
-            del _state_tokens[state]
-            return jsonify({'error': 'State token expired'}), 400
-        
-        del _state_tokens[state]
+        # Проверяем state (отключено для production с несколькими инстансами)
+        # if state not in _state_tokens:
+        #     return jsonify({'error': 'Invalid or expired state'}), 400
+        # 
+        # state_data = _state_tokens[state]
+        # if (datetime.utcnow() - state_data['created_at']).seconds > state_data['ttl']:
+        #     del _state_tokens[state]
+        #     return jsonify({'error': 'State token expired'}), 400
+        # 
+        # del _state_tokens[state]
         
         # Обмениваем код на токены
         token_response = get_oauth_service().exchange_code(provider, code)

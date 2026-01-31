@@ -24,13 +24,13 @@ class Config:
     GOOGLE_CLIENT_ID = os.environ.get('GOOGLE_CLIENT_ID')
     GOOGLE_CLIENT_SECRET = os.environ.get('GOOGLE_CLIENT_SECRET')
     GOOGLE_REDIRECT_URI = os.environ.get('GOOGLE_REDIRECT_URI', 
-                                         'https://korolevst.supertest.beast-inside.kz/foodtrack_api/auth/oauth/google/callback')
+                                         'https://korolevst.supertest.beast-inside.kz/foodtrack_api/api/auth/oauth/callback/google')
     
     # OAuth GitHub
     GITHUB_CLIENT_ID = os.environ.get('GITHUB_CLIENT_ID')
     GITHUB_CLIENT_SECRET = os.environ.get('GITHUB_CLIENT_SECRET')
     GITHUB_REDIRECT_URI = os.environ.get('GITHUB_REDIRECT_URI',
-                                         'https://korolevst.supertest.beast-inside.kz/foodtrack_api/auth/oauth/github/callback')
+                                         'https://korolevst.supertest.beast-inside.kz/foodtrack_api/api/auth/oauth/callback/github')
     
     # OAuth Apple
     APPLE_CLIENT_ID = os.environ.get('APPLE_CLIENT_ID')
