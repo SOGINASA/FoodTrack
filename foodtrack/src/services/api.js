@@ -208,3 +208,42 @@ export const groupsAPI = {
   togglePinTopic: (groupId, topicId) => api.post(`/groups/${groupId}/topics/${topicId}/pin`),
   addReply: (groupId, topicId, data) => api.post(`/groups/${groupId}/topics/${topicId}/replies`, data),
 };
+
+// === FRIDGE API ===
+export const fridgeAPI = {
+  // Получить все продукты в холодильнике
+  getAll: () => api.get('/fridge'),
+
+  // Добавить продукт
+  addProduct: (data) => api.post('/fridge', data),
+
+  // Обновить продукт
+  updateProduct: (id, data) => api.put(`/fridge/${id}`, data),
+
+  // Удалить продукт
+  deleteProduct: (id) => api.delete(`/fridge/${id}`),
+
+  // Сканировать чек
+  scanReceipt: (file) => {
+    const formData = new FormData();
+    formData.append('file', file);
+    return api.post('/fridge/scan-receipt', formData, {
+      headers: { 'Content-Type': 'multipart/form-data' },
+    });
+  },
+
+  // Сканировать штрихкод
+  scanBarcode: (file) => {
+    const formData = new FormData();
+    formData.append('file', file);
+    return api.post('/fridge/scan-barcode', formData, {
+      headers: { 'Content-Type': 'multipart/form-data' },
+    });
+  },
+
+  // Генерировать рецепты на основе продуктов
+  generateRecipes: () => api.get('/fridge/generate-recipes'),
+
+  // Получить продукты с истекающим сроком годности
+  getExpiringSoon: (days = 7) => api.get('/fridge/expiring-soon', { params: { days } }),
+};

@@ -42,6 +42,14 @@ const QuickIconProgress = ({ className = '' }) => (
   </svg>
 );
 
+const QuickIconFridge = ({ className = '' }) => (
+  <svg viewBox="0 0 24 24" className={className} fill="none" aria-hidden="true">
+    <rect x="5" y="2" width="14" height="20" rx="2" stroke="currentColor" strokeWidth="2" />
+    <path d="M5 10h14" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+    <path d="M8 5v3M8 13v3" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+  </svg>
+);
+
 const Dashboard = () => {
   const navigate = useNavigate();
 
@@ -62,6 +70,7 @@ const Dashboard = () => {
   const quickLinks = [
     { label: 'Советы', path: '/tips', Icon: QuickIconTips },
     { label: 'Рецепты', path: '/recipes', Icon: QuickIconRecipes },
+    { label: 'Холодильник', path: '/fridge', Icon: QuickIconFridge },
     { label: 'Прогресс', path: '/progress', Icon: QuickIconProgress },
   ];
 
@@ -94,7 +103,7 @@ const Dashboard = () => {
       <WeeklyChart />
 
       {/* ✅ Видно ТОЛЬКО на мобильных (скрыто на lg и выше) */}
-      <div className="grid grid-cols-3 gap-3 lg:hidden">
+      <div className="grid grid-cols-2 gap-3 lg:hidden">
         {quickLinks.map(({ label, path, Icon }) => (
           <button
             key={path}

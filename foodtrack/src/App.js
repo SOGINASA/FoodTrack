@@ -14,6 +14,7 @@ import Diary from './pages/Diary';
 import Analytics from './pages/Analytics';
 import Tips from './pages/Tips';
 import Recipes from './pages/Recipes';
+import Fridge from './pages/Fridge';
 import Progress from './pages/Progress';
 import Groups from './pages/Groups';
 import Settings from './pages/Settings';
@@ -106,6 +107,7 @@ const AppLayout = ({ guestMode = false }) => {
             <Routes>
               {/* Публичные страницы - доступны всем */}
               <Route path="/recipes" element={<Recipes />} />
+              <Route path="/fridge" element={<Fridge />} />
               <Route path="/add-meal" element={<AddMeal />} />
 
               {/* Приватные страницы - только авторизованным */}
