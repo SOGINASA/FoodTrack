@@ -17,6 +17,8 @@ const Groups = () => {
   const [showSettingsModal, setShowSettingsModal] = useState(false);
   const [showEditModal, setShowEditModal] = useState(false);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [showMembersModal, setShowMembersModal] = useState(false);
+  const [friendStatusById, setFriendStatusById] = useState({});
   const [loading, setLoading] = useState(true);
   const [newGroupData, setNewGroupData] = useState({
     name: '',
@@ -108,6 +110,46 @@ const Groups = () => {
       }
     }
   };
+
+  const handleAddFriend = async (userId) => {
+  // оптимистично
+  setFriendStatusById(prev => ({ ...prev, [userId]: 'pending' }));
+
+  try {
+    // TODO: подключи свой реальный API
+    // await friendsAPI.sendRequest(userId);
+
+    setShowToast({ type: 'success', message: 'Запрос в друзья отправлен' });
+  } catch (e) {
+    setFriendStatusById(prev => ({ ...prev, [userId]: 'none' }));
+    setShowToast({ type: 'error', message: 'Не удалось отправить запрос' });
+  }
+};
+
+const handleCancelFriendRequest = async (userId) => {
+  setFriendStatusById(prev => ({ ...prev, [userId]: 'none' }));
+
+  try {
+    // TODO: await friendsAPI.cancelRequest(userId);
+    setShowToast({ type: 'info', message: 'Запрос отменён' });
+  } catch (e) {
+    setFriendStatusById(prev => ({ ...prev, [userId]: 'pending' }));
+    setShowToast({ type: 'error', message: 'Не удалось отменить запрос' });
+  }
+};
+
+const handleRemoveFriend = async (userId) => {
+  setFriendStatusById(prev => ({ ...prev, [userId]: 'none' }));
+
+  try {
+    // TODO: await friendsAPI.removeFriend(userId);
+    setShowToast({ type: 'info', message: 'Удалено из друзей' });
+  } catch (e) {
+    setFriendStatusById(prev => ({ ...prev, [userId]: 'friends' }));
+    setShowToast({ type: 'error', message: 'Не удалось удалить из друзей' });
+  }
+};
+
 
   const handleOpenEditModal = () => {
     setEditGroupData({
@@ -286,6 +328,23 @@ const Groups = () => {
           </button>
         </div>
 
+        <Modal
+  isOpen={showMembersModal}
+  onClose={() => setShowMembersModal(false)}
+  title={`Участники (${members.length})`}
+  size="md"
+>
+  <GroupMembers
+    members={members}
+    currentUserId={currentUser?.id}
+    friendStatusById={friendStatusById}
+    onAddFriend={handleAddFriend}
+    onCancelFriendRequest={handleCancelFriendRequest}
+    onRemoveFriend={handleRemoveFriend}
+  />
+</Modal>
+
+
         <div className="flex items-center gap-4">
           <div className="w-16 h-16 bg-gradient-to-br from-purple-500 to-pink-500 rounded-2xl flex items-center justify-center text-4xl flex-shrink-0">
             {selectedGroup.emoji}
@@ -294,12 +353,22 @@ const Groups = () => {
             <h1 className="text-2xl sm:text-3xl font-bold truncate">{selectedGroup.name}</h1>
             <p className="text-secondary">{selectedGroup.membersCount} участников</p>
           </div>
-          <button
-            onClick={() => setShowSettingsModal(true)}
-            className="px-4 py-2 bg-black text-white rounded-xl font-semibold hover:bg-gray-800 transition-colors text-sm"
-          >
-            Настройки
-          </button>
+          <div className="flex items-center gap-2">
+  <button
+    onClick={() => setShowMembersModal(true)}
+    className="px-4 py-2 bg-gray-100 text-black rounded-xl font-semibold hover:bg-gray-200 transition-colors text-sm lg:hidden"
+  >
+    Участники
+  </button>
+
+  <button
+    onClick={() => setShowSettingsModal(true)}
+    className="px-4 py-2 bg-black text-white rounded-xl font-semibold hover:bg-gray-800 transition-colors text-sm"
+  >
+    Настройки
+  </button>
+</div>
+
         </div>
 
         <div className="flex gap-2 border-b border-divider pb-2">
@@ -328,31 +397,43 @@ const Groups = () => {
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          <div className="lg:col-span-2">
-            {activeTab === 'feed' ? (
-              <GroupFeed
-                posts={posts}
-                currentUser={currentUser}
-                onAddPost={handleAddPost}
-                onLikePost={handleLikePost}
-                onCommentPost={handleCommentPost}
-                onSharePost={handleSharePost}
-              />
-            ) : (
-              <GroupForum
-                topics={topics}
-                currentUser={currentUser}
-                onCreateTopic={handleCreateTopic}
-                onAddReply={handleAddReply}
-                onPinTopic={handlePinTopic}
-              />
-            )}
-          </div>
+  {/* LEFT SIDEBAR */}
+  <aside className="hidden lg:block">
+    <div className="sticky top-6">
+      <GroupMembers
+        members={members}
+        currentUserId={currentUser?.id}
+        friendStatusById={friendStatusById}
+        onAddFriend={handleAddFriend}
+        onCancelFriendRequest={handleCancelFriendRequest}
+        onRemoveFriend={handleRemoveFriend}
+      />
+    </div>
+  </aside>
 
-          <div className="hidden lg:block">
-            <GroupMembers members={members} />
-          </div>
-        </div>
+  {/* MAIN */}
+  <div className="lg:col-span-2">
+    {activeTab === 'feed' ? (
+      <GroupFeed
+        posts={posts}
+        currentUser={currentUser}
+        onAddPost={handleAddPost}
+        onLikePost={handleLikePost}
+        onCommentPost={handleCommentPost}
+        onSharePost={handleSharePost}
+      />
+    ) : (
+      <GroupForum
+        topics={topics}
+        currentUser={currentUser}
+        onCreateTopic={handleCreateTopic}
+        onAddReply={handleAddReply}
+        onPinTopic={handlePinTopic}
+      />
+    )}
+  </div>
+</div>
+
 
         <Modal
           isOpen={showSettingsModal}
