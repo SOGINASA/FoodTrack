@@ -189,6 +189,12 @@ export const recipesAPI = {
   getById: (id) => api.get(`/recipes/${id}`),
 };
 
+// === TIPS API ===
+export const tipsAPI = {
+  // Получить персонализированные советы
+  getAll: (params = {}) => api.get('/tips', { params }),
+};
+
 // === GROUPS API ===
 export const groupsAPI = {
   // Группы
