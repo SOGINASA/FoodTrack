@@ -11,7 +11,7 @@ class User(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     email = db.Column(db.String(120), unique=True, nullable=True, index=True)
     nickname = db.Column(db.String(50), unique=True, nullable=True, index=True)
-    password_hash = db.Column(db.String(255), nullable=False)
+    password_hash = db.Column(db.String(255), nullable=True)  # Nullable для OAuth пользователей
 
     full_name = db.Column(db.String(100))
     user_type = db.Column(db.String(20), default='user')  # user, admin
@@ -63,6 +63,8 @@ class User(db.Model):
         self.password_hash = generate_password_hash(password)
 
     def check_password(self, password):
+        if not self.password_hash:  # OAuth пользователи не имеют пароля
+            return False
         return check_password_hash(self.password_hash, password)
 
     def to_dict(self, include_sensitive=False):
