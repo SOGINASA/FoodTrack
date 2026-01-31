@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { Camera, Upload, Receipt, Scan, X, Loader } from 'lucide-react';
 import Modal from '../common/Modal';
 import Button from '../common/Button';
@@ -43,16 +43,21 @@ const ProductScanner = ({ isOpen, onClose, onScanComplete }) => {
   // Retry mechanism for video playback (from AddMeal.jsx)
   useEffect(() => {
     if (activeMode === 'camera' && videoRef.current && !cameraReady) {
+      console.log('Starting play retry interval...');
       playIntervalRef.current = setInterval(() => {
         if (videoRef.current && videoRef.current.readyState >= 2) {
+          console.log('Video ready state:', videoRef.current.readyState, 'Attempting play...');
           videoRef.current.play().then(() => {
+            console.log('Video play SUCCESS');
             setCameraReady(true);
             if (playIntervalRef.current) {
               clearInterval(playIntervalRef.current);
             }
           }).catch(err => {
-            console.log('Video play retry...', err);
+            console.log('Video play retry failed:', err);
           });
+        } else {
+          console.log('Video not ready yet, readyState:', videoRef.current?.readyState);
         }
       }, 500);
 
@@ -65,7 +70,8 @@ const ProductScanner = ({ isOpen, onClose, onScanComplete }) => {
   }, [activeMode, cameraReady]);
 
   // Запуск камеры (replicated from AddMeal.jsx)
-  const startCamera = async () => {
+  const startCamera = useCallback(async () => {
+    console.log('startCamera called');
     setCameraError(null);
     setCameraReady(false);
 
@@ -73,11 +79,13 @@ const ProductScanner = ({ isOpen, onClose, onScanComplete }) => {
       // Проверяем поддержку getUserMedia
       if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
         const errorMsg = 'Ваш браузер не поддерживает доступ к камере';
+        console.error(errorMsg);
         setCameraError(errorMsg);
         alert(errorMsg);
         return;
       }
 
+      console.log('Requesting camera access...');
       const constraints = {
         video: {
           facingMode: 'environment',
@@ -88,35 +96,13 @@ const ProductScanner = ({ isOpen, onClose, onScanComplete }) => {
       };
 
       const stream = await navigator.mediaDevices.getUserMedia(constraints);
+      console.log('Camera stream obtained:', stream);
 
-      if (videoRef.current) {
-        videoRef.current.srcObject = stream;
-        streamRef.current = stream;
-        setActiveMode('camera');
+      // Save stream first
+      streamRef.current = stream;
 
-        // Event handlers for video playback
-        videoRef.current.onloadedmetadata = () => {
-          console.log('Video metadata loaded');
-        };
-
-        videoRef.current.oncanplay = () => {
-          console.log('Video can play');
-        };
-
-        videoRef.current.onplaying = () => {
-          console.log('Video is playing');
-          setCameraReady(true);
-        };
-
-        // Try to play immediately
-        try {
-          await videoRef.current.play();
-          setCameraReady(true);
-        } catch (playError) {
-          console.log('Initial play failed, will retry...', playError);
-          // Retry interval will handle this
-        }
-      }
+      // Set activeMode to trigger render of video element
+      setActiveMode('camera');
     } catch (error) {
       console.error('Ошибка доступа к камере:', error);
 
@@ -136,7 +122,40 @@ const ProductScanner = ({ isOpen, onClose, onScanComplete }) => {
       alert(errorMessage);
       setActiveMode('select');
     }
-  };
+  }, []);
+
+  // Assign stream to video element when it becomes available
+  useEffect(() => {
+    if (activeMode === 'camera' && videoRef.current && streamRef.current) {
+      console.log('Assigning stream to video element in useEffect');
+      videoRef.current.srcObject = streamRef.current;
+
+      // Event handlers for video playback
+      videoRef.current.onloadedmetadata = () => {
+        console.log('Video metadata loaded');
+      };
+
+      videoRef.current.oncanplay = () => {
+        console.log('Video can play');
+      };
+
+      videoRef.current.onplaying = () => {
+        console.log('Video is playing');
+        setCameraReady(true);
+      };
+
+      // Try to play immediately
+      videoRef.current.play()
+        .then(() => {
+          console.log('Initial play SUCCESS');
+          setCameraReady(true);
+        })
+        .catch(playError => {
+          console.log('Initial play failed, will retry...', playError);
+          // Retry interval will handle this
+        });
+    }
+  }, [activeMode]);
 
   // Остановка камеры
   const stopCamera = () => {
