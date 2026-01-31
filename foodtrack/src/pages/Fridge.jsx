@@ -1,10 +1,12 @@
 import React, { useState, useEffect } from 'react';
-import { Refrigerator, Plus, Scan, ChefHat } from 'lucide-react';
+import { Refrigerator, Plus, Scan, ChefHat, Users } from 'lucide-react';
 import Button from '../components/common/Button';
 import ProductScanner from '../components/fridge/ProductScanner';
 import AddProductModal from '../components/fridge/AddProductModal';
 import ProductCard from '../components/fridge/ProductCard';
 import RecipeGeneratorModal from '../components/fridge/RecipeGeneratorModal';
+import ShareProductsModal from '../components/fridge/ShareProductsModal';
+import { ShareRequestsList } from '../components/fridge/ShareRequestNotification';
 import { fridgeAPI } from '../services/api';
 
 const Fridge = () => {
@@ -13,13 +15,48 @@ const Fridge = () => {
   const [isScannerOpen, setIsScannerOpen] = useState(false);
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [isRecipeModalOpen, setIsRecipeModalOpen] = useState(false);
+  const [isShareModalOpen, setIsShareModalOpen] = useState(false);
   const [editingProduct, setEditingProduct] = useState(null);
   const [filterCategory, setFilterCategory] = useState('all');
+  const [shareRequests, setShareRequests] = useState([]);
 
   // Загрузка продуктов при монтировании
   useEffect(() => {
     fetchProducts();
+    loadShareRequests();
   }, []);
+
+  // Загрузка входящих запросов на sharing (заглушка)
+  const loadShareRequests = () => {
+    // TODO: Заменить на реальный API запрос
+    // Временные тестовые данные для демонстрации
+    const mockRequests = [
+      // {
+      //   id: 1,
+      //   senderName: 'Анна К.',
+      //   products: [
+      //     { name: 'Молоко', quantity: 1, unit: 'л' },
+      //     { name: 'Хлеб', quantity: 1, unit: 'шт' },
+      //   ],
+      // },
+    ];
+    setShareRequests(mockRequests);
+  };
+
+  // Принять запрос на sharing
+  const handleAcceptShareRequest = async (requestId) => {
+    // TODO: Отправить запрос на бэкенд
+    console.log('Принят запрос:', requestId);
+    setShareRequests(prev => prev.filter(req => req.id !== requestId));
+    alert('Запрос принят! Продукты добавлены в ваш холодильник');
+  };
+
+  // Отклонить запрос на sharing
+  const handleDeclineShareRequest = async (requestId) => {
+    // TODO: Отправить запрос на бэкенд
+    console.log('Отклонен запрос:', requestId);
+    setShareRequests(prev => prev.filter(req => req.id !== requestId));
+  };
 
   const fetchProducts = async () => {
     setIsLoading(true);
@@ -213,6 +250,22 @@ const Fridge = () => {
         </button>
       )}
 
+      {/* Поделиться продуктами - только если есть продукты */}
+      {products.length > 0 && (
+        <button
+          onClick={() => setIsShareModalOpen(true)}
+          className="w-full bg-gradient-to-r from-blue-500 to-purple-500 text-white rounded-2xl p-4 hover:shadow-lg transition-all active:scale-[0.99] flex items-center justify-center gap-3"
+        >
+          <Users className="w-6 h-6" />
+          <div className="text-left">
+            <div className="font-bold text-lg">Поделиться продуктами</div>
+            <div className="text-sm opacity-90">
+              Найти пользователей рядом с вами
+            </div>
+          </div>
+        </button>
+      )}
+
       {/* Фильтры */}
       <div className="flex gap-2 overflow-x-auto pb-2 scrollbar-hide">
         {categories.map(cat => (
@@ -297,6 +350,19 @@ const Fridge = () => {
         isOpen={isRecipeModalOpen}
         onClose={() => setIsRecipeModalOpen(false)}
         products={products}
+      />
+
+      <ShareProductsModal
+        isOpen={isShareModalOpen}
+        onClose={() => setIsShareModalOpen(false)}
+        products={products}
+      />
+
+      {/* Уведомления о входящих запросах */}
+      <ShareRequestsList
+        requests={shareRequests}
+        onAccept={handleAcceptShareRequest}
+        onDecline={handleDeclineShareRequest}
       />
     </div>
   );
