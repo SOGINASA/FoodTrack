@@ -41,7 +41,7 @@ def discover_groups():
     return jsonify([g.to_dict() for g in groups])
 
 
-@groups_bp.route('/', methods=['POST'])
+@groups_bp.route('/create', methods=['POST'])
 @jwt_required()
 def create_group():
     """Создать новую группу"""
