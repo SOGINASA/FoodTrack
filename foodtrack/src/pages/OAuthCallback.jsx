@@ -1,24 +1,22 @@
 import { useEffect, useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
-import { useAuth } from '../context/AuthContext';
 import Loader from '../components/common/Loader';
 import Toast from '../components/common/Toast';
 
 const OAuthCallback = () => {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
-  const { login } = useAuth();
   const [toast, setToast] = useState(null);
   const [isProcessing, setIsProcessing] = useState(true);
-
-  const API_BASE_URL = process.env.REACT_APP_API_URL || 'http://localhost:5252/api';
 
   useEffect(() => {
     const handleCallback = async () => {
       try {
-        const provider = searchParams.get('provider');
-        const code = searchParams.get('code');
-        const state = searchParams.get('state');
+        // Получаем токены и данные из URL параметров (приходят от Backend)
+        const access_token = searchParams.get('access_token');
+        const refresh_token = searchParams.get('refresh_token');
+        const user_data = searchParams.get('user');
+        const is_new_user = searchParams.get('is_new_user') === 'true';
         const error = searchParams.get('error');
 
         if (error) {
@@ -30,7 +28,7 @@ const OAuthCallback = () => {
           return;
         }
 
-        if (!provider || !code || !state) {
+        if (!access_token || !refresh_token || !user_data) {
           setToast({
             type: 'error',
             message: 'Недостаточно данных для авторизации',
@@ -39,50 +37,27 @@ const OAuthCallback = () => {
           return;
         }
 
-        // Проверяем state из sessionStorage
-        const savedState = sessionStorage.getItem(`oauth_state_${provider}`);
-        if (savedState !== state) {
+        // Парсим данные пользователя из JSON
+        const user = JSON.parse(decodeURIComponent(user_data));
+
+        // Сохраняем токены и данные в localStorage
+        localStorage.setItem('accessToken', access_token);
+        localStorage.setItem('refreshToken', refresh_token);
+        localStorage.setItem('user', JSON.stringify(user));
+
+        // Если это новый пользователь - редирект на онбординг
+        if (is_new_user) {
           setToast({
-            type: 'error',
-            message: 'Ошибка безопасности: state не совпадает',
+            type: 'success',
+            message: 'Добро пожаловать в FoodTrack!',
           });
-          setTimeout(() => navigate('/auth'), 3000);
-          return;
-        }
-
-        // Отправляем callback на бэк
-        const response = await fetch(`${API_BASE_URL}/auth/oauth/${provider}/callback?code=${code}&state=${state}`);
-        const data = await response.json();
-
-        if (response.ok && data.access_token) {
-          // Сохраняем токены
-          localStorage.setItem('accessToken', data.access_token);
-          localStorage.setItem('refreshToken', data.refresh_token);
-          localStorage.setItem('user', JSON.stringify(data.user));
-
-          // Очищаем sessionStorage
-          sessionStorage.removeItem(`oauth_state_${provider}`);
-
-          // Если это новый пользователь - редирект на онбординг
-          if (data.is_new_user) {
-            setToast({
-              type: 'success',
-              message: 'Добро пожаловать в FoodTrack!',
-            });
-            setTimeout(() => navigate('/onboarding'), 1500);
-          } else {
-            setToast({
-              type: 'success',
-              message: 'Успешный вход!',
-            });
-            setTimeout(() => navigate('/'), 1500);
-          }
+          setTimeout(() => navigate('/onboarding'), 1500);
         } else {
           setToast({
-            type: 'error',
-            message: data.error || 'Ошибка при обработке OAuth',
+            type: 'success',
+            message: 'Успешный вход!',
           });
-          setTimeout(() => navigate('/auth'), 3000);
+          setTimeout(() => navigate('/'), 1500);
         }
       } catch (error) {
         console.error('OAuth callback error:', error);

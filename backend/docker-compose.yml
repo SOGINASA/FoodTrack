@@ -8,6 +8,8 @@ services:
     container_name: foodtrack-backend
     ports:
       - "5252:5252"
+    env_file:
+      - .env
     environment:
       - FLASK_ENV=production
       - SECRET_KEY=${SECRET_KEY:-super-secret-key-change-me}

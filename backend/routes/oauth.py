@@ -1,6 +1,6 @@
 """OAuth Routes - endpoints для OAuth авторизации"""
 
-from flask import Blueprint, request, jsonify
+from flask import Blueprint, request, jsonify, redirect
 from flask_jwt_extended import create_access_token, create_refresh_token, jwt_required, get_jwt_identity
 from models import db, User, UserGoals
 from services.oauth_service import get_oauth_service
@@ -153,12 +153,23 @@ def oauth_callback(provider):
         
         refresh_token_jwt = create_refresh_token(identity=str(user.id))
         
-        return jsonify({
-            'user': user.to_dict(include_sensitive=True),
+        # Перенаправляем на фронтенд с токенами в URL параметрах
+        from urllib.parse import urlencode
+        import json
+        from flask import redirect
+        
+        # Подготавливаем данные для фронтенда
+        callback_params = {
             'access_token': access_token_jwt,
             'refresh_token': refresh_token_jwt,
-            'is_new_user': is_new_user
-        }), 200
+            'user': json.dumps(user.to_dict(include_sensitive=True)),
+            'is_new_user': 'true' if is_new_user else 'false'
+        }
+        
+        frontend_callback_url = f"https://food-track-beta.vercel.app/oauth/callback?{urlencode(callback_params)}"
+        
+        # Возвращаем редирект на фронтенд
+        return redirect(frontend_callback_url), 302
         
     except Exception as e:
         import traceback
