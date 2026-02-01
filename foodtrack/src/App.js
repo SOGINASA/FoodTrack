@@ -18,6 +18,7 @@ import Fridge from './pages/Fridge';
 import Progress from './pages/Progress';
 import Groups from './pages/Groups';
 import Settings from './pages/Settings';
+import NotFound from './pages/NotFound';
 
 import Auth from './pages/Auth';
 import Onboarding from './pages/Onboarding';
@@ -141,6 +142,9 @@ const AppLayout = ({ guestMode = false }) => {
                 !isAuthenticated ? <Navigate to="/auth" replace /> :
                 <Settings />
               } />
+
+              {/* 404 */}
+              <Route path="*" element={<NotFound />} />
             </Routes>
           </div>
         </main>
