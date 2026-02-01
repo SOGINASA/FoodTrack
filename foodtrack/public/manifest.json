@@ -1,39 +1,30 @@
 {
-  "background_color": "#ffffff",
+  "name": "FoodTrack — Snap it. Track it.",
+  "short_name": "FoodTrack",
   "description": "Интеллектуальная система анализа рациона и автоматического учета КБЖУ.",
-  "dir": "ltr",
-  "display": "standalone",
-  "name": "food-track-beta.vercel",
-  "orientation": "any",
-  "scope": "/",
-  "short_name": "food-track-beta.vercel",
   "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "orientation": "any",
+  "dir": "ltr",
   "theme_color": "#4CAF50",
+  "background_color": "#ffffff",
   "icons": [
     {
-      "src": "https://food-track-beta.vercel.app/imgs/logo.png",
+      "src": "/logo192.png",
       "type": "image/png",
-      "sizes": "1024x1024",
-      "isSquare": true,
-      "isPng": true,
-      "isWebp": false,
-      "isJpg": false,
-      "width": 1024,
-      "is512x512": false,
-      "is256x256": false,
-      "is192x192": false
+      "sizes": "192x192"
     },
     {
-      "src": "https://food-track-beta.vercel.app/logo.png",
-      "type": "image/x-icon",
-      "isSquare": false,
-      "isPng": false,
-      "isWebp": false,
-      "isJpg": false,
-      "width": 0,
-      "is512x512": false,
-      "is256x256": false,
-      "is192x192": false
+      "src": "/logo512.png",
+      "type": "image/png",
+      "sizes": "512x512"
+    },
+    {
+      "src": "/imgs/logo.png",
+      "type": "image/png",
+      "sizes": "1024x1024",
+      "purpose": "any"
     }
   ]
 }
