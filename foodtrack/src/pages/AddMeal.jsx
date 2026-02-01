@@ -23,6 +23,8 @@ const AddMeal = () => {
   const [cameraReady, setCameraReady] = useState(false);
   const [facingMode, setFacingMode] = useState('environment');
   const [selectedMealType, setSelectedMealType] = useState('snack');
+  const [retryMessage, setRetryMessage] = useState(null);
+  const lastInputModeRef = useRef(null); // 'camera' | 'file'
 
   const mealTypes = [
     { value: 'breakfast', label: 'Завтрак' },
@@ -202,18 +204,19 @@ const AddMeal = () => {
     const canvas = canvasRef.current || document.createElement('canvas');
     canvas.width = video.videoWidth;
     canvas.height = video.videoHeight;
-    
+
     if (canvas.width === 0 || canvas.height === 0) {
       setShowToast({ type: 'error', message: 'Не удалось захватить изображение' });
       return;
     }
-    
+
     const ctx = canvas.getContext('2d');
     ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
-    
+
     const imageData = canvas.toDataURL('image/jpeg', 0.9);
     console.log('Image captured, data length:', imageData.length);
-    
+
+    lastInputModeRef.current = 'camera';
     setCapturedImage(imageData);
     stopCamera();
     analyzeImage(imageData);
@@ -222,6 +225,7 @@ const AddMeal = () => {
   const handleFileUpload = (e) => {
     const file = e.target.files[0];
     if (file) {
+      lastInputModeRef.current = 'file';
       const reader = new FileReader();
       reader.onloadend = () => {
         setCapturedImage(reader.result);
@@ -229,6 +233,8 @@ const AddMeal = () => {
       };
       reader.readAsDataURL(file);
     }
+    // Сброс value чтобы повторный выбор того же файла тоже срабатывал
+    e.target.value = '';
   };
 
   // Сжатие изображения для уменьшения размера файла
@@ -257,8 +263,23 @@ const AddMeal = () => {
     });
   };
 
+  const retryAfterError = (message) => {
+    if (lastInputModeRef.current === 'camera' && isMobile) {
+      setRetryMessage(message);
+      startCamera();
+    } else {
+      setRetryMessage(message);
+      // Для файлового режима — остаёмся на главном экране с баннером
+    }
+  };
+
+  const dismissRetry = () => {
+    setRetryMessage(null);
+  };
+
   const analyzeImage = async (imageData) => {
     setAnalyzing(true);
+    setRetryMessage(null);
 
     try {
       // Сжимаем изображение перед отправкой
@@ -284,11 +305,8 @@ const AddMeal = () => {
 
       // Проверяем, что модель что-то нашла
       if (!result.top_prediction || result.confidence === 0) {
-        setShowToast({
-          type: 'warning',
-          message: 'Не удалось распознать еду на фото. Попробуйте сделать более чёткое фото блюда.'
-        });
         setCapturedImage(null);
+        retryAfterError('Не удалось распознать блюдо. Попробуйте сделать более чёткое фото.');
         return;
       }
 
@@ -322,8 +340,8 @@ const AddMeal = () => {
         errorMessage = 'Нет подключения к интернету';
       }
 
-      setShowToast({ type: 'error', message: errorMessage });
       setCapturedImage(null);
+      retryAfterError(errorMessage);
     } finally {
       setAnalyzing(false);
     }
@@ -364,6 +382,7 @@ const AddMeal = () => {
     setCapturedImage(null);
     setAnalysisResult(null);
     setShowResultModal(false);
+    setRetryMessage(null);
   };
 
   const handleCloseResult = () => {
@@ -371,6 +390,7 @@ const AddMeal = () => {
     setAnalysisResult(null);
     setShowResultModal(false);
     setSelectedMealType('snack');
+    setRetryMessage(null);
   };
 
   if (analyzing) {
@@ -437,7 +457,7 @@ const AddMeal = () => {
             
             <div className="absolute top-4 left-4 right-4 flex justify-between items-center z-10">
               <button
-                onClick={stopCamera}
+                onClick={() => { stopCamera(); setRetryMessage(null); }}
                 className="p-3 bg-black/60 backdrop-blur-sm text-white rounded-full hover:bg-black/80 transition-colors"
               >
                 <X className="w-6 h-6" />
@@ -452,6 +472,26 @@ const AddMeal = () => {
                 <RotateCw className="w-6 h-6" />
               </button>
             </div>
+
+            {retryMessage && (
+              <div className="absolute top-20 left-4 right-4 z-10 animate-slide-up">
+                <div className="bg-white/95 backdrop-blur-md rounded-2xl px-4 py-3 shadow-xl flex items-start gap-3">
+                  <div className="w-10 h-10 rounded-full bg-orange-100 flex items-center justify-center flex-shrink-0">
+                    <Camera className="w-5 h-5 text-orange-600" />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="font-semibold text-sm text-black">Попробуйте ещё раз</p>
+                    <p className="text-xs text-gray-600 mt-0.5">{retryMessage}</p>
+                  </div>
+                  <button
+                    onClick={dismissRetry}
+                    className="p-1 text-gray-400 hover:text-gray-600 flex-shrink-0"
+                  >
+                    <X className="w-4 h-4" />
+                  </button>
+                </div>
+              </div>
+            )}
 
             <div className="absolute bottom-8 left-0 right-0 flex justify-center z-10">
               <button
@@ -488,6 +528,26 @@ const AddMeal = () => {
           </div>
         </div>
       </Card>
+
+      {retryMessage && (
+        <Card padding="lg" className="bg-orange-50 border border-orange-200 animate-slide-up">
+          <div className="flex items-start gap-3">
+            <div className="w-10 h-10 rounded-full bg-orange-100 flex items-center justify-center flex-shrink-0">
+              <Camera className="w-5 h-5 text-orange-600" />
+            </div>
+            <div className="flex-1 min-w-0">
+              <p className="font-bold text-base text-black">Попробуйте ещё раз</p>
+              <p className="text-sm text-gray-700 mt-1">{retryMessage}</p>
+            </div>
+            <button
+              onClick={dismissRetry}
+              className="p-1 text-gray-400 hover:text-gray-600 flex-shrink-0"
+            >
+              <X className="w-5 h-5" />
+            </button>
+          </div>
+        </Card>
+      )}
 
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
         {isMobile && (
