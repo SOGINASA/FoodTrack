@@ -63,9 +63,13 @@ const OAuthButtons = () => {
   );
 
   return (
-    <div className="mt-6 pt-6 border-t border-gray-200 space-y-3 w-full">
+    <div className="mt-6 space-y-3 w-full">
       {/* Разделитель */}
-      <p className="text-center text-sm text-gray-500 font-medium">Или войдите через</p>
+      <div className="flex items-center gap-3">
+        <div className="flex-1 h-px bg-gray-200" />
+        <p className="text-sm text-gray-400 font-medium flex-shrink-0">или</p>
+        <div className="flex-1 h-px bg-gray-200" />
+      </div>
 
       {/* Google */}
       <OAuthButton

@@ -98,31 +98,24 @@ export default function Auth() {
   return (
     <div className="min-h-screen bg-white flex items-center justify-center px-4 py-8">
       <div className="w-full max-w-md">
-        {/* Брендинг */}
-        <div className="flex items-center justify-center gap-3 mb-6">
+        {/* Брендинг — центрировано, стекается вертикально */}
+        <div className="flex flex-col items-center text-center mb-8">
           <img
             src="/imgs/logo.png"
             alt="FoodTrack logo"
-            className="h-14 w-14 rounded-2xl object-contain"
+            className="h-16 w-16 rounded-2xl object-contain mb-3"
             draggable="false"
           />
-          <div className="leading-tight">
-            <div className="text-2xl font-bold text-black tracking-tight">
-              FoodTrack
-            </div>
-            <div className="text-sm text-gray-500 font-medium tracking-wide">
-              Snap it. Track it.
-            </div>
-          </div>
-        </div>
-
-        {/* OAuth Кнопки */}
-        <div className="mb-8">
-          <OAuthButtons />
+          <h2 className="text-2xl font-bold text-black tracking-tight">
+            FoodTrack
+          </h2>
+          <p className="text-sm text-gray-500 font-medium tracking-wide mt-0.5">
+            Snap it. Track it.
+          </p>
         </div>
 
         {/* Переключатель режима */}
-        <div className="flex bg-gray-100 rounded-2xl p-1 mb-8">
+        <div className="flex bg-gray-100 rounded-2xl p-1 mb-6">
           <button
             type="button"
             onClick={() => switchMode('login')}
@@ -152,7 +145,7 @@ export default function Auth() {
           <h1 className="text-2xl font-semibold text-black tracking-tight">
             {mode === 'login' ? 'Добро пожаловать!' : 'Создать аккаунт'}
           </h1>
-          <p className="text-sm text-gray-500 mt-2">
+          <p className="text-sm text-gray-500 mt-1">
             {mode === 'login'
               ? 'Войдите в свой аккаунт'
               : 'Зарегистрируйтесь для доступа ко всем функциям'}
@@ -262,8 +255,8 @@ export default function Auth() {
           </div>
         )}
 
-        {/* Кнопка */}
-        <div className="mt-8">
+        {/* Кнопка отправки */}
+        <div className="mt-6">
           <button
             type="button"
             onClick={handleSubmit}
@@ -273,6 +266,9 @@ export default function Auth() {
             {isLoading ? 'Загрузка...' : mode === 'login' ? 'Войти' : 'Зарегистрироваться'}
           </button>
         </div>
+
+        {/* OAuth кнопки — под формой */}
+        <OAuthButtons />
 
         {/* Нижний текст */}
         <div className="mt-6 text-center text-xs text-gray-500 leading-relaxed">
@@ -301,7 +297,7 @@ export default function Auth() {
           )}
         </div>
 
-        <div className="mt-4 text-center text-xs text-gray-400 leading-relaxed">
+        <div className="mt-3 text-center text-xs text-gray-400 leading-relaxed">
           Продолжая, вы соглашаетесь с условиями и политикой конфиденциальности.
         </div>
       </div>
