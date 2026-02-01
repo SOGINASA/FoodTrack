@@ -3,14 +3,14 @@ import SwiftUI
 struct MainTabView: View {
     var body: some View {
         TabView {
+            DashboardView()
+                .tabItem {
+                    Label("Главная", systemImage: "house")
+                }
+
             DiaryView()
                 .tabItem {
                     Label("Дневник", systemImage: "list.bullet.rectangle")
-                }
-
-            RecipesView()
-                .tabItem {
-                    Label("Рецепты", systemImage: "book")
                 }
 
             AnalyzeView()
@@ -18,13 +18,18 @@ struct MainTabView: View {
                     Label("Анализ", systemImage: "camera")
                 }
 
+            RecipesView()
+                .tabItem {
+                    Label("Рецепты", systemImage: "book")
+                }
+
             ProfileView()
                 .tabItem {
                     Label("Профиль", systemImage: "person.crop.circle")
                 }
         }
-        .tint(.black) // цвет выбранной вкладки
+        .tint(.black)
         .toolbarBackground(.visible, for: .tabBar)
-        .toolbarBackground(.ultraThinMaterial, for: .tabBar) // iOS-стиль (blur)
+        .toolbarBackground(.ultraThinMaterial, for: .tabBar)
     }
 }

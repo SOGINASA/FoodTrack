@@ -6,6 +6,7 @@ struct OnboardingFlowView: View {
     @State private var stepIndex: Int = 0
     @State private var draft = OnboardingDraft()
     @State private var error: String = ""
+    @State private var isSubmitting = false
 
     private let total = 8
 
@@ -15,7 +16,8 @@ struct OnboardingFlowView: View {
             total: total,
             onBack: stepIndex == 0 ? nil : { stepIndex -= 1; error = "" },
             onContinue: handleContinue,
-            error: error
+            error: error,
+            isLoading: isSubmitting
         ) {
             currentStepView()
         }
@@ -38,7 +40,6 @@ struct OnboardingFlowView: View {
     private func handleContinue() {
         error = ""
 
-        // минимальные проверки “для вида”, чтобы UX был похож на реальный
         switch stepIndex {
         case 0:
             if draft.gender.isEmpty { error = "Выберите вариант"; return }
@@ -58,7 +59,20 @@ struct OnboardingFlowView: View {
         if stepIndex < total - 1 {
             stepIndex += 1
         } else {
-            appState.finishOnboarding()
+            submitOnboarding()
+        }
+    }
+
+    private func submitOnboarding() {
+        isSubmitting = true
+        Task {
+            do {
+                try await appState.completeOnboarding(draft)
+            } catch {
+                // Even if server fails, proceed
+                appState.route = .main
+            }
+            isSubmitting = false
         }
     }
 }

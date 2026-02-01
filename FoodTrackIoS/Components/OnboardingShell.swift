@@ -6,11 +6,11 @@ struct OnboardingShell<Content: View>: View {
     let onBack: (() -> Void)?
     let onContinue: () -> Void
     let error: String?
+    var isLoading: Bool = false
     let content: () -> Content
 
     var body: some View {
         VStack(spacing: 0) {
-            // Верхняя панель
             HStack {
                 if let onBack {
                     Button("Назад", action: onBack)
@@ -46,8 +46,12 @@ struct OnboardingShell<Content: View>: View {
                     .padding(.top, 10)
             }
 
-            PrimaryButton(title: "Продолжить", action: onContinue)
-                .padding(.top, 18)
+            PrimaryButton(
+                title: isLoading ? "Сохранение..." : (step == total ? "Завершить" : "Продолжить"),
+                disabled: isLoading,
+                action: onContinue
+            )
+            .padding(.top, 18)
 
             Text("Это можно будет изменить позже в настройках.")
                 .font(.system(size: 12))
@@ -57,7 +61,7 @@ struct OnboardingShell<Content: View>: View {
 
             Spacer()
         }
-        .padding(.horizontal, 18)
+        .padding(.horizontal, FTTheme.hPad)
         .padding(.vertical, 16)
         .background(FTTheme.bg)
     }

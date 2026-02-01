@@ -20,7 +20,7 @@ struct FTHeader: View {
                     Text("FoodTrack")
                         .font(.system(size: 16, weight: .semibold))
                         .foregroundColor(.black)
-                    Text("Бета • прототип интерфейса")
+                    Text("Snap it. Track it.")
                         .font(.system(size: 11))
                         .foregroundColor(FTTheme.muted)
                 }
