@@ -1,5 +1,5 @@
 import React from 'react';
-import { Home, Camera, BookOpen, TrendingUp, Image, Users, Settings, Lightbulb, ChefHat, Refrigerator, X, LogIn, Lock } from 'lucide-react';
+import { Home, Camera, BookOpen, TrendingUp, Image, Users, UserPlus, Settings, Lightbulb, ChefHat, Refrigerator, X, LogIn, Lock } from 'lucide-react';
 import { useNavigate, useLocation } from 'react-router-dom';
 
 const Sidebar = ({ isOpen, onClose, guestMode = false }) => {
@@ -24,6 +24,7 @@ const Sidebar = ({ isOpen, onClose, guestMode = false }) => {
     { icon: Refrigerator, label: 'Холодильник', path: '/fridge' },
     { icon: Image, label: 'Прогресс', path: '/progress' },
     { icon: Users, label: 'Группы', path: '/groups' },
+    { icon: UserPlus, label: 'Друзья', path: '/friends' },
     { icon: Settings, label: 'Настройки', path: '/settings' },
   ];
 

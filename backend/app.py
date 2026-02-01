@@ -57,6 +57,7 @@ def create_app():
     from routes.meal_plans import meal_plans_bp
     from routes.recipes import recipes_bp
     from routes.tips import tips_bp
+    from routes.friends import friends_bp
 
     # Регистрация всех блюпринтов
     app.register_blueprint(auth_bp, url_prefix='/api/auth')
@@ -69,6 +70,7 @@ def create_app():
     app.register_blueprint(meal_plans_bp, url_prefix='/api/meal-plans')
     app.register_blueprint(recipes_bp, url_prefix='/api/recipes')
     app.register_blueprint(tips_bp, url_prefix='/api/tips')
+    app.register_blueprint(friends_bp, url_prefix='/api/friends')
 
     # Главная страница API
     @app.route('/api')
@@ -86,6 +88,7 @@ def create_app():
                 'groups': '/api/groups - управление группами и социальные функции',
                 'meal_plans': '/api/meal-plans - планы питания и рецепты',
                 'recipes': '/api/recipes - каталог рецептов',
+                'friends': '/api/friends - управление друзьями',
             }
         })
 

@@ -17,6 +17,7 @@ import Recipes from './pages/Recipes';
 import Fridge from './pages/Fridge';
 import Progress from './pages/Progress';
 import Groups from './pages/Groups';
+import Friends from './pages/Friends';
 import Settings from './pages/Settings';
 import NotFound from './pages/NotFound';
 
@@ -137,6 +138,10 @@ const AppLayout = ({ guestMode = false }) => {
               <Route path="/groups" element={
                 !isAuthenticated ? <Navigate to="/auth" replace /> :
                 <Groups />
+              } />
+              <Route path="/friends" element={
+                !isAuthenticated ? <Navigate to="/auth" replace /> :
+                <Friends />
               } />
               <Route path="/settings" element={
                 !isAuthenticated ? <Navigate to="/auth" replace /> :

@@ -650,3 +650,39 @@ class AuditLog(db.Model):
             'created_at': self.created_at.isoformat() if self.created_at else None,
             'duration_ms': self.duration_ms,
         }
+
+
+# === Друзья ===
+
+class Friendship(db.Model):
+    """Дружба / запрос в друзья между двумя пользователями"""
+    __tablename__ = 'friendships'
+    id = db.Column(db.Integer, primary_key=True)
+    requester_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False, index=True)
+    addressee_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False, index=True)
+    status = db.Column(db.String(20), default='pending')  # pending, accepted, rejected, blocked
+
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+    # Связи
+    requester = db.relationship('User', foreign_keys=[requester_id], backref='sent_friend_requests')
+    addressee = db.relationship('User', foreign_keys=[addressee_id], backref='received_friend_requests')
+
+    __table_args__ = (
+        db.UniqueConstraint('requester_id', 'addressee_id', name='unique_friendship_request'),
+    )
+
+    def to_dict(self):
+        return {
+            'id': self.id,
+            'requesterId': self.requester_id,
+            'addresseeId': self.addressee_id,
+            'requesterName': self.requester.full_name or self.requester.nickname,
+            'addresseeName': self.addressee.full_name or self.addressee.nickname,
+            'requesterAvatar': None,
+            'addresseeAvatar': None,
+            'status': self.status,
+            'createdAt': self.created_at.isoformat() if self.created_at else None,
+            'updatedAt': self.updated_at.isoformat() if self.updated_at else None,
+        }

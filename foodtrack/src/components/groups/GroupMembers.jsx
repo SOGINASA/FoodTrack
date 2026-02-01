@@ -153,12 +153,6 @@ const GroupMembers = ({
           </div>
         )}
       </div>
-
-      {/* tiny hint */}
-      <div className="mt-4 text-xs text-secondary flex items-center gap-2">
-        <UserX className="w-4 h-4" />
-        Кнопки “В друзья” — UI готов. Подключи свой API в `Groups.jsx`.
-      </div>
     </Card>
   );
 };

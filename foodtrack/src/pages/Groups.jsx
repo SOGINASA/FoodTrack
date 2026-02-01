@@ -6,8 +6,8 @@ import GroupForum from '../components/groups/GroupForum';
 import Button from '../components/common/Button';
 import Modal from '../components/common/Modal';
 import Toast from '../components/common/Toast';
-import { groupsAPI, authAPI } from '../services/api';
-import { Users, Plus, ArrowLeft, UserPlus, Edit3, Trash2, LogOut, MessageSquare, Newspaper, Loader2 } from 'lucide-react';
+import { groupsAPI, authAPI, friendsAPI } from '../services/api';
+import { Users, Plus, ArrowLeft, UserPlus, Edit3, Trash2, LogOut, MessageSquare, Newspaper, Loader2, Search, X, Check, Clock, UserCheck, Send } from 'lucide-react';
 
 const Groups = () => {
   const [showToast, setShowToast] = useState(null);
@@ -19,6 +19,15 @@ const Groups = () => {
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [showMembersModal, setShowMembersModal] = useState(false);
   const [friendStatusById, setFriendStatusById] = useState({});
+  const [showFriendsModal, setShowFriendsModal] = useState(false);
+  const [friendsTab, setFriendsTab] = useState('search');
+  const [friendSearchQuery, setFriendSearchQuery] = useState('');
+  const [friendSearchResults, setFriendSearchResults] = useState([]);
+  const [friendSearchLoading, setFriendSearchLoading] = useState(false);
+  const [friendsList, setFriendsList] = useState([]);
+  const [incomingRequests, setIncomingRequests] = useState([]);
+  const [outgoingRequests, setOutgoingRequests] = useState([]);
+  const [friendsDataLoading, setFriendsDataLoading] = useState(false);
   const [loading, setLoading] = useState(true);
   const [newGroupData, setNewGroupData] = useState({
     name: '',
@@ -74,6 +83,108 @@ const Groups = () => {
     loadGroups();
   }, [loadGroups]);
 
+  // Загрузка входящих запросов для бейджа
+  useEffect(() => {
+    friendsAPI.getIncomingRequests()
+      .then(res => setIncomingRequests(res.data))
+      .catch(() => {});
+  }, []);
+
+  // Загрузка данных друзей для модалки
+  const loadFriendsData = useCallback(async () => {
+    try {
+      setFriendsDataLoading(true);
+      const [friendsRes, inRes, outRes] = await Promise.all([
+        friendsAPI.getAll(),
+        friendsAPI.getIncomingRequests(),
+        friendsAPI.getOutgoingRequests(),
+      ]);
+      setFriendsList(friendsRes.data);
+      setIncomingRequests(inRes.data);
+      setOutgoingRequests(outRes.data);
+    } catch (error) {
+      console.error('Error loading friends data:', error);
+    } finally {
+      setFriendsDataLoading(false);
+    }
+  }, []);
+
+  // Поиск пользователей (debounce)
+  useEffect(() => {
+    if (friendSearchQuery.trim().length < 2) {
+      setFriendSearchResults([]);
+      return;
+    }
+    const timeout = setTimeout(async () => {
+      try {
+        setFriendSearchLoading(true);
+        const res = await friendsAPI.search(friendSearchQuery.trim());
+        setFriendSearchResults(res.data);
+      } catch (error) {
+        console.error('Search error:', error);
+      } finally {
+        setFriendSearchLoading(false);
+      }
+    }, 400);
+    return () => clearTimeout(timeout);
+  }, [friendSearchQuery]);
+
+  // Открытие модалки друзей
+  const openFriendsModal = () => {
+    setShowFriendsModal(true);
+    setFriendsTab('search');
+    setFriendSearchQuery('');
+    setFriendSearchResults([]);
+    loadFriendsData();
+  };
+
+  // Отправить запрос из модалки
+  const handleFriendRequest = async (userId) => {
+    try {
+      await friendsAPI.sendRequest(userId);
+      setFriendSearchResults(prev => prev.filter(u => u.id !== userId));
+      setShowToast({ type: 'success', message: 'Запрос отправлен' });
+      loadFriendsData();
+    } catch (e) {
+      const msg = e.response?.data?.error || 'Не удалось отправить запрос';
+      setShowToast({ type: 'error', message: msg });
+    }
+  };
+
+  // Принять запрос из модалки
+  const handleAcceptRequest = async (friendshipId) => {
+    try {
+      await friendsAPI.acceptRequest(friendshipId);
+      setShowToast({ type: 'success', message: 'Запрос принят' });
+      loadFriendsData();
+    } catch (e) {
+      const msg = e.response?.data?.error || 'Не удалось принять запрос';
+      setShowToast({ type: 'error', message: msg });
+    }
+  };
+
+  // Отклонить запрос из модалки
+  const handleRejectRequest = async (friendshipId) => {
+    try {
+      await friendsAPI.rejectRequest(friendshipId);
+      setIncomingRequests(prev => prev.filter(r => r.id !== friendshipId));
+      setShowToast({ type: 'info', message: 'Запрос отклонён' });
+    } catch (e) {
+      setShowToast({ type: 'error', message: 'Не удалось отклонить запрос' });
+    }
+  };
+
+  // Отменить исходящий запрос из модалки
+  const handleCancelOutgoing = async (friendshipId) => {
+    try {
+      await friendsAPI.remove(friendshipId);
+      setOutgoingRequests(prev => prev.filter(r => r.id !== friendshipId));
+      setShowToast({ type: 'info', message: 'Запрос отменён' });
+    } catch (e) {
+      setShowToast({ type: 'error', message: 'Не удалось отменить запрос' });
+    }
+  };
+
   // Загрузка данных выбранной группы
   const loadGroupData = useCallback(async (groupId) => {
     try {
@@ -85,6 +196,23 @@ const Groups = () => {
       setMembers(membersRes.data);
       setPosts(postsRes.data.posts || []);
       setTopics(topicsRes.data);
+
+      // Загружаем статусы дружбы для участников группы
+      const statusMap = {};
+      await Promise.all(
+        membersRes.data.map(async (m) => {
+          try {
+            const res = await friendsAPI.getStatus(m.id);
+            const s = res.data.status;
+            if (s === 'accepted') statusMap[m.id] = 'friends';
+            else if (s === 'pending') statusMap[m.id] = 'pending';
+            else statusMap[m.id] = 'none';
+          } catch {
+            statusMap[m.id] = 'none';
+          }
+        })
+      );
+      setFriendStatusById(statusMap);
     } catch (error) {
       console.error('Error loading group data:', error);
       setShowToast({ type: 'error', message: 'Ошибка загрузки данных группы' });
@@ -112,43 +240,47 @@ const Groups = () => {
   };
 
   const handleAddFriend = async (userId) => {
-  // оптимистично
-  setFriendStatusById(prev => ({ ...prev, [userId]: 'pending' }));
-
-  try {
-    // TODO: подключи свой реальный API
-    // await friendsAPI.sendRequest(userId);
-
-    setShowToast({ type: 'success', message: 'Запрос в друзья отправлен' });
-  } catch (e) {
-    setFriendStatusById(prev => ({ ...prev, [userId]: 'none' }));
-    setShowToast({ type: 'error', message: 'Не удалось отправить запрос' });
-  }
-};
-
-const handleCancelFriendRequest = async (userId) => {
-  setFriendStatusById(prev => ({ ...prev, [userId]: 'none' }));
-
-  try {
-    // TODO: await friendsAPI.cancelRequest(userId);
-    setShowToast({ type: 'info', message: 'Запрос отменён' });
-  } catch (e) {
     setFriendStatusById(prev => ({ ...prev, [userId]: 'pending' }));
-    setShowToast({ type: 'error', message: 'Не удалось отменить запрос' });
-  }
-};
+    try {
+      await friendsAPI.sendRequest(userId);
+      setShowToast({ type: 'success', message: 'Запрос в друзья отправлен' });
+    } catch (e) {
+      setFriendStatusById(prev => ({ ...prev, [userId]: 'none' }));
+      const msg = e.response?.data?.error || 'Не удалось отправить запрос';
+      setShowToast({ type: 'error', message: msg });
+    }
+  };
 
-const handleRemoveFriend = async (userId) => {
-  setFriendStatusById(prev => ({ ...prev, [userId]: 'none' }));
+  const handleCancelFriendRequest = async (userId) => {
+    const prev = friendStatusById[userId];
+    setFriendStatusById(s => ({ ...s, [userId]: 'none' }));
+    try {
+      // Находим friendshipId по userId
+      const statusRes = await friendsAPI.getStatus(userId);
+      if (statusRes.data.friendshipId) {
+        await friendsAPI.remove(statusRes.data.friendshipId);
+      }
+      setShowToast({ type: 'info', message: 'Запрос отменён' });
+    } catch (e) {
+      setFriendStatusById(s => ({ ...s, [userId]: prev || 'pending' }));
+      setShowToast({ type: 'error', message: 'Не удалось отменить запрос' });
+    }
+  };
 
-  try {
-    // TODO: await friendsAPI.removeFriend(userId);
-    setShowToast({ type: 'info', message: 'Удалено из друзей' });
-  } catch (e) {
-    setFriendStatusById(prev => ({ ...prev, [userId]: 'friends' }));
-    setShowToast({ type: 'error', message: 'Не удалось удалить из друзей' });
-  }
-};
+  const handleRemoveFriend = async (userId) => {
+    const prev = friendStatusById[userId];
+    setFriendStatusById(s => ({ ...s, [userId]: 'none' }));
+    try {
+      const statusRes = await friendsAPI.getStatus(userId);
+      if (statusRes.data.friendshipId) {
+        await friendsAPI.remove(statusRes.data.friendshipId);
+      }
+      setShowToast({ type: 'info', message: 'Удалено из друзей' });
+    } catch (e) {
+      setFriendStatusById(s => ({ ...s, [userId]: prev || 'friends' }));
+      setShowToast({ type: 'error', message: 'Не удалось удалить из друзей' });
+    }
+  };
 
 
   const handleOpenEditModal = () => {
@@ -421,6 +553,8 @@ const handleRemoveFriend = async (userId) => {
         onLikePost={handleLikePost}
         onCommentPost={handleCommentPost}
         onSharePost={handleSharePost}
+        onAddFriend={handleAddFriend}
+        friendStatusById={friendStatusById}
       />
     ) : (
       <GroupForum
@@ -617,10 +751,21 @@ const handleRemoveFriend = async (userId) => {
           <h1 className="text-3xl lg:text-4xl font-bold">Группы</h1>
         </div>
 
-        <Button variant="primary" onClick={() => setShowCreateModal(true)}>
-          <Plus className="w-5 h-5" />
-          <span className="hidden sm:inline">Создать группу</span>
-        </Button>
+        <div className="flex items-center gap-2">
+          <Button variant="secondary" onClick={openFriendsModal}>
+            <UserPlus className="w-5 h-5" />
+            <span className="hidden sm:inline">Друзья</span>
+            {incomingRequests.length > 0 && (
+              <span className="bg-red-500 text-white text-xs w-5 h-5 rounded-full flex items-center justify-center">
+                {incomingRequests.length}
+              </span>
+            )}
+          </Button>
+          <Button variant="primary" onClick={() => setShowCreateModal(true)}>
+            <Plus className="w-5 h-5" />
+            <span className="hidden sm:inline">Создать группу</span>
+          </Button>
+        </div>
       </div>
 
       <GroupList
@@ -719,6 +864,211 @@ const handleRemoveFriend = async (userId) => {
               Создать
             </Button>
           </div>
+        </div>
+      </Modal>
+
+      {/* Модалка друзей */}
+      <Modal
+        isOpen={showFriendsModal}
+        onClose={() => setShowFriendsModal(false)}
+        title="Друзья"
+        size="md"
+      >
+        <div className="space-y-4">
+          {/* Табы */}
+          <div className="flex gap-2 overflow-x-auto pb-1">
+            {[
+              { id: 'search', label: 'Поиск', icon: Search },
+              { id: 'incoming', label: 'Входящие', icon: UserPlus, count: incomingRequests.length },
+              { id: 'outgoing', label: 'Исходящие', icon: Send, count: outgoingRequests.length },
+              { id: 'friends', label: 'Друзья', icon: UserCheck, count: friendsList.length },
+            ].map((tab) => {
+              const Icon = tab.icon;
+              return (
+                <button
+                  key={tab.id}
+                  onClick={() => setFriendsTab(tab.id)}
+                  className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-sm font-semibold transition-colors whitespace-nowrap ${
+                    friendsTab === tab.id
+                      ? 'bg-black text-white'
+                      : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                  }`}
+                >
+                  <Icon className="w-4 h-4" />
+                  <span>{tab.label}</span>
+                  {tab.count > 0 && (
+                    <span className={`text-xs px-1.5 py-0.5 rounded-full ${
+                      friendsTab === tab.id ? 'bg-white/20' : 'bg-gray-200'
+                    }`}>
+                      {tab.count}
+                    </span>
+                  )}
+                </button>
+              );
+            })}
+          </div>
+
+          {/* Таб: Поиск */}
+          {friendsTab === 'search' && (
+            <div className="space-y-3">
+              <div className="relative">
+                <Search className="w-4 h-4 text-gray-400 absolute left-4 top-1/2 -translate-y-1/2" />
+                <input
+                  value={friendSearchQuery}
+                  onChange={(e) => setFriendSearchQuery(e.target.value)}
+                  placeholder="Поиск по имени или нику..."
+                  className="w-full pl-11 pr-10 py-3 bg-gray-50 border-none rounded-xl text-sm focus:ring-2 focus:ring-black outline-none"
+                  autoFocus
+                />
+                {friendSearchQuery && (
+                  <button
+                    onClick={() => setFriendSearchQuery('')}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 p-1 hover:bg-gray-200 rounded-full"
+                  >
+                    <X className="w-4 h-4 text-gray-400" />
+                  </button>
+                )}
+              </div>
+
+              {friendSearchLoading && (
+                <div className="flex justify-center py-6">
+                  <Loader2 className="w-5 h-5 animate-spin text-gray-400" />
+                </div>
+              )}
+
+              {!friendSearchLoading && friendSearchQuery.length >= 2 && friendSearchResults.length === 0 && (
+                <div className="text-center py-6 text-secondary text-sm">Никого не найдено</div>
+              )}
+
+              {!friendSearchLoading && friendSearchResults.length > 0 && (
+                <div className="space-y-2 max-h-[40vh] overflow-y-auto">
+                  {friendSearchResults.map((user) => (
+                    <div key={user.id} className="flex items-center gap-3 p-2 rounded-xl hover:bg-gray-50">
+                      <div className="w-10 h-10 rounded-full bg-gray-200 flex items-center justify-center text-lg flex-shrink-0">👤</div>
+                      <div className="flex-1 min-w-0">
+                        <div className="font-semibold text-sm truncate">{user.fullName || user.nickname}</div>
+                        <div className="text-xs text-secondary">@{user.nickname}</div>
+                      </div>
+                      <button
+                        onClick={() => handleFriendRequest(user.id)}
+                        className="px-3 py-1.5 rounded-xl bg-black text-white hover:bg-gray-800 transition-colors text-xs font-semibold flex items-center gap-1.5"
+                      >
+                        <UserPlus className="w-3.5 h-3.5" />
+                        В друзья
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              )}
+
+              {friendSearchQuery.length < 2 && !friendSearchLoading && (
+                <div className="text-center py-6 text-secondary text-sm">Введите минимум 2 символа</div>
+              )}
+            </div>
+          )}
+
+          {/* Таб: Входящие */}
+          {friendsTab === 'incoming' && (
+            <div className="space-y-2 max-h-[50vh] overflow-y-auto">
+              {friendsDataLoading && (
+                <div className="flex justify-center py-6">
+                  <Loader2 className="w-5 h-5 animate-spin text-gray-400" />
+                </div>
+              )}
+              {!friendsDataLoading && incomingRequests.length === 0 && (
+                <div className="text-center py-6 text-secondary text-sm">Нет входящих запросов</div>
+              )}
+              {!friendsDataLoading && incomingRequests.map((req) => (
+                <div key={req.id} className="flex items-center gap-3 p-2 rounded-xl hover:bg-gray-50">
+                  <div className="w-10 h-10 rounded-full bg-gray-200 flex items-center justify-center text-lg flex-shrink-0">👤</div>
+                  <div className="flex-1 min-w-0">
+                    <div className="font-semibold text-sm truncate">{req.requesterName}</div>
+                    <div className="text-xs text-secondary">Хочет добавить вас</div>
+                  </div>
+                  <div className="flex items-center gap-1.5 flex-shrink-0">
+                    <button
+                      onClick={() => handleAcceptRequest(req.id)}
+                      className="px-2.5 py-1.5 rounded-xl bg-black text-white hover:bg-gray-800 transition-colors text-xs font-semibold flex items-center gap-1"
+                    >
+                      <Check className="w-3.5 h-3.5" />
+                      Принять
+                    </button>
+                    <button
+                      onClick={() => handleRejectRequest(req.id)}
+                      className="px-2.5 py-1.5 rounded-xl bg-gray-100 hover:bg-gray-200 transition-colors text-xs font-semibold flex items-center gap-1"
+                    >
+                      <X className="w-3.5 h-3.5" />
+                    </button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+
+          {/* Таб: Исходящие */}
+          {friendsTab === 'outgoing' && (
+            <div className="space-y-2 max-h-[50vh] overflow-y-auto">
+              {friendsDataLoading && (
+                <div className="flex justify-center py-6">
+                  <Loader2 className="w-5 h-5 animate-spin text-gray-400" />
+                </div>
+              )}
+              {!friendsDataLoading && outgoingRequests.length === 0 && (
+                <div className="text-center py-6 text-secondary text-sm">Нет исходящих запросов</div>
+              )}
+              {!friendsDataLoading && outgoingRequests.map((req) => (
+                <div key={req.id} className="flex items-center gap-3 p-2 rounded-xl hover:bg-gray-50">
+                  <div className="w-10 h-10 rounded-full bg-gray-200 flex items-center justify-center text-lg flex-shrink-0">👤</div>
+                  <div className="flex-1 min-w-0">
+                    <div className="font-semibold text-sm truncate">{req.addresseeName}</div>
+                    <div className="text-xs text-secondary flex items-center gap-1">
+                      <Clock className="w-3 h-3" />
+                      Ожидает ответа
+                    </div>
+                  </div>
+                  <button
+                    onClick={() => handleCancelOutgoing(req.id)}
+                    className="px-2.5 py-1.5 rounded-xl bg-gray-100 hover:bg-gray-200 transition-colors text-xs font-semibold flex items-center gap-1"
+                  >
+                    <X className="w-3.5 h-3.5" />
+                    Отменить
+                  </button>
+                </div>
+              ))}
+            </div>
+          )}
+
+          {/* Таб: Друзья */}
+          {friendsTab === 'friends' && (
+            <div className="space-y-2 max-h-[50vh] overflow-y-auto">
+              {friendsDataLoading && (
+                <div className="flex justify-center py-6">
+                  <Loader2 className="w-5 h-5 animate-spin text-gray-400" />
+                </div>
+              )}
+              {!friendsDataLoading && friendsList.length === 0 && (
+                <div className="text-center py-6">
+                  <div className="text-secondary text-sm">Пока нет друзей</div>
+                  <button
+                    onClick={() => setFriendsTab('search')}
+                    className="mt-2 text-sm font-semibold text-black underline"
+                  >
+                    Найти друзей
+                  </button>
+                </div>
+              )}
+              {!friendsDataLoading && friendsList.map((friend) => (
+                <div key={friend.friendshipId} className="flex items-center gap-3 p-2 rounded-xl hover:bg-gray-50">
+                  <div className="w-10 h-10 rounded-full bg-gray-200 flex items-center justify-center text-lg flex-shrink-0">👤</div>
+                  <div className="flex-1 min-w-0">
+                    <div className="font-semibold text-sm truncate">{friend.fullName || friend.nickname}</div>
+                    <div className="text-xs text-secondary">@{friend.nickname}</div>
+                  </div>
+                  <UserCheck className="w-4 h-4 text-green-600 flex-shrink-0" />
+                </div>
+              ))}
+            </div>
+          )}
         </div>
       </Modal>
 

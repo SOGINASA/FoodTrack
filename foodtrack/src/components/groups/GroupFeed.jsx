@@ -2,11 +2,11 @@ import React, { useState } from 'react';
 import Card from '../common/Card';
 import Button from '../common/Button';
 import Modal from '../common/Modal';
-import { Heart, MessageCircle, Share2, MoreVertical, Camera, Send, Reply } from 'lucide-react';
+import { Heart, MessageCircle, Share2, MoreVertical, Camera, Send, Reply, UserPlus, UserCheck, Clock } from 'lucide-react';
 import { format } from 'date-fns';
 import { ru } from 'date-fns/locale';
 
-const GroupFeed = ({ posts, currentUser, onAddPost, onLikePost, onCommentPost, onSharePost }) => {
+const GroupFeed = ({ posts, currentUser, onAddPost, onLikePost, onCommentPost, onSharePost, onAddFriend, friendStatusById = {} }) => {
   const [showAddPostModal, setShowAddPostModal] = useState(false);
   const [newPost, setNewPost] = useState({
     text: '',
@@ -51,7 +51,10 @@ const GroupFeed = ({ posts, currentUser, onAddPost, onLikePost, onCommentPost, o
     const [showComments, setShowComments] = useState(false);
     const [commentText, setCommentText] = useState('');
     const [replyingTo, setReplyingTo] = useState(null);
+    const [showMenu, setShowMenu] = useState(false);
     const isLiked = post.likes.includes(currentUser.id);
+    const isOwnPost = post.userId === currentUser?.id;
+    const friendStatus = friendStatusById[post.userId] || 'none';
 
     const handleAddComment = () => {
       if (commentText.trim()) {
@@ -176,9 +179,56 @@ const GroupFeed = ({ posts, currentUser, onAddPost, onLikePost, onCommentPost, o
               </div>
             </div>
           </div>
-          <button className="p-2 hover:bg-gray-100 rounded-lg transition-colors">
-            <MoreVertical className="w-5 h-5 text-gray-400" />
-          </button>
+          <div className="relative">
+            <button
+              onClick={() => setShowMenu(!showMenu)}
+              className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
+            >
+              <MoreVertical className="w-5 h-5 text-gray-400" />
+            </button>
+
+            {showMenu && (
+              <>
+                <div className="fixed inset-0 z-10" onClick={() => setShowMenu(false)} />
+                <div className="absolute right-0 top-full mt-1 bg-white rounded-xl shadow-lg border border-gray-100 py-1 z-20 min-w-[200px]">
+                  {!isOwnPost && friendStatus === 'none' && (
+                    <button
+                      onClick={() => {
+                        onAddFriend?.(post.userId);
+                        setShowMenu(false);
+                      }}
+                      className="w-full flex items-center gap-3 px-4 py-2.5 hover:bg-gray-50 transition-colors text-left text-sm"
+                    >
+                      <UserPlus className="w-4 h-4" />
+                      <span className="font-semibold">Добавить в друзья</span>
+                    </button>
+                  )}
+                  {!isOwnPost && friendStatus === 'pending' && (
+                    <div className="flex items-center gap-3 px-4 py-2.5 text-sm text-yellow-700">
+                      <Clock className="w-4 h-4" />
+                      <span className="font-semibold">Запрос отправлен</span>
+                    </div>
+                  )}
+                  {!isOwnPost && friendStatus === 'friends' && (
+                    <div className="flex items-center gap-3 px-4 py-2.5 text-sm text-green-700">
+                      <UserCheck className="w-4 h-4" />
+                      <span className="font-semibold">Уже в друзьях</span>
+                    </div>
+                  )}
+                  <button
+                    onClick={() => {
+                      onSharePost(post);
+                      setShowMenu(false);
+                    }}
+                    className="w-full flex items-center gap-3 px-4 py-2.5 hover:bg-gray-50 transition-colors text-left text-sm"
+                  >
+                    <Share2 className="w-4 h-4" />
+                    <span className="font-semibold">Поделиться</span>
+                  </button>
+                </div>
+              </>
+            )}
+          </div>
         </div>
 
         {post.text && (

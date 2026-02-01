@@ -262,3 +262,33 @@ export const fridgeAPI = {
   // Получить продукты с истекающим сроком годности
   getExpiringSoon: (days = 7) => api.get('/fridge/expiring-soon', { params: { days } }),
 };
+
+// === FRIENDS API ===
+export const friendsAPI = {
+  // Получить список друзей
+  getAll: () => api.get('/friends'),
+
+  // Входящие запросы в друзья
+  getIncomingRequests: () => api.get('/friends/requests/incoming'),
+
+  // Исходящие запросы в друзья
+  getOutgoingRequests: () => api.get('/friends/requests/outgoing'),
+
+  // Отправить запрос в друзья
+  sendRequest: (userId) => api.post('/friends/request', { userId }),
+
+  // Принять запрос в друзья
+  acceptRequest: (friendshipId) => api.post(`/friends/accept/${friendshipId}`),
+
+  // Отклонить запрос в друзья
+  rejectRequest: (friendshipId) => api.post(`/friends/reject/${friendshipId}`),
+
+  // Удалить друга / отменить запрос
+  remove: (friendshipId) => api.delete(`/friends/${friendshipId}`),
+
+  // Поиск пользователей
+  search: (query) => api.get('/friends/search', { params: { q: query } }),
+
+  // Получить статус дружбы с пользователем
+  getStatus: (userId) => api.get(`/friends/status/${userId}`),
+};
