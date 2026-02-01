@@ -49,16 +49,19 @@ const Sidebar = ({ isOpen, onClose, guestMode = false }) => {
         ${isOpen ? 'translate-x-0' : '-translate-x-full'}
       `}>
         <div className="p-4 border-b border-divider flex items-center justify-between">
-          <div 
+          <div
             onClick={() => handleNavigate('/')}
             className="flex items-center gap-2 cursor-pointer"
           >
-            <img 
-              src="/imgs/logo.png" 
-              alt="FoodTrack" 
+            <img
+              src="/imgs/logo.png"
+              alt="FoodTrack"
               className="w-10 h-10 object-contain"
             />
-            <h2 className="text-lg font-bold">FoodTrack</h2>
+            <div className="flex flex-col">
+              <h2 className="text-lg font-bold">FoodTrack</h2>
+              <p className="text-xs text-gray-500 font-medium tracking-wide">Snap it. Track it.</p>
+            </div>
           </div>
           <button 
             onClick={onClose}

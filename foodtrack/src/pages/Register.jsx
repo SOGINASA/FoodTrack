@@ -80,7 +80,8 @@ const Register = () => {
       <div className="w-full max-w-md">
         {/* Логотип */}
         <div className="text-center mb-8">
-          <h1 className="text-4xl font-bold mb-2">FoodTrack</h1>
+          <h1 className="text-4xl font-bold mb-1">FoodTrack</h1>
+          <p className="text-lg text-gray-500 font-medium tracking-wide mb-2">Snap it. Track it.</p>
           <p className="text-secondary">Создайте аккаунт</p>
         </div>
 

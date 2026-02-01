@@ -18,7 +18,10 @@ const Header = ({ guestMode = false }) => {
             className="w-14 h-14 lg:w-15 lg:h-15 object-contain"
             style={{ marginTop: '2px' }}
           />
-          <h1 className="text-lg lg:text-xl font-bold tracking-tight">FoodTrack</h1>
+          <div className="flex flex-col">
+            <h1 className="text-lg lg:text-xl font-bold tracking-tight">FoodTrack</h1>
+            <p className="text-xs lg:text-sm text-gray-500 font-medium tracking-wide">Snap it. Track it.</p>
+          </div>
         </div>
 
         <div className="flex items-center gap-4">

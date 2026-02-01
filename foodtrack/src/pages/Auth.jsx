@@ -110,8 +110,8 @@ export default function Auth() {
             <div className="text-2xl font-bold text-black tracking-tight">
               FoodTrack
             </div>
-            <div className="text-sm text-gray-500">
-              Трекер питания и прогресса
+            <div className="text-sm text-gray-500 font-medium tracking-wide">
+              Snap it. Track it.
             </div>
           </div>
         </div>
