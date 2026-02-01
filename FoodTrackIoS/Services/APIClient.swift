@@ -5,7 +5,7 @@ actor APIClient {
     static let shared = APIClient()
 
     // Change this to your backend URL
-    private let baseURL = "http://localhost:5252/api"
+    private let baseURL = "https://korolevst.supertest.beast-inside.kz/foodtrack_api/api"
     private let predictionURL = "https://korolevst.supertest.beast-inside.kz/food_predict/predict/with-nutrition"
 
     private let decoder: JSONDecoder = {
@@ -176,11 +176,22 @@ actor APIClient {
     }
 
     private func perform<T: Decodable>(_ request: URLRequest) async throws -> T {
+        #if DEBUG
+        print("[API] \(request.httpMethod ?? "?") \(request.url?.absoluteString ?? "?")")
+        #endif
+
         let (data, response) = try await URLSession.shared.data(for: request)
 
         guard let http = response as? HTTPURLResponse else {
             throw APIError.serverError
         }
+
+        #if DEBUG
+        print("[API] Status: \(http.statusCode)")
+        if let body = String(data: data, encoding: .utf8)?.prefix(500) {
+            print("[API] Body: \(body)")
+        }
+        #endif
 
         if http.statusCode == 401 {
             // Try refresh
@@ -200,7 +211,8 @@ actor APIClient {
             if let msg = try? decoder.decode(MessageResponse.self, from: data) {
                 throw APIError.message(msg.error ?? msg.message ?? "Unknown error")
             }
-            throw APIError.serverError
+            let bodyStr = String(data: data, encoding: .utf8) ?? ""
+            throw APIError.message("HTTP \(http.statusCode): \(bodyStr.prefix(200))")
         }
 
         return try decoder.decode(T.self, from: data)
