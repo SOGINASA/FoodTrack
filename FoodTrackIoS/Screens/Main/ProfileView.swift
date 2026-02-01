@@ -2,14 +2,10 @@ import SwiftUI
 
 struct ProfileView: View {
     @EnvironmentObject private var appState: AppState
+    @State private var showLogoutConfirm = false
 
-    // мок-профиль
-    private let name = "Тони"
-    private let plan = "Поддержание формы"
-    private let kcal = 2100
-    private let p = 140
-    private let f = 70
-    private let c = 220
+    private var user: UserDTO? { appState.user }
+    private var goals: GoalsDTO { appState.goals ?? GoalsDTO(calories_goal: nil, protein_goal: nil, carbs_goal: nil, fats_goal: nil, target_weight: nil, activity_level: nil, goal_type: nil, diet_type: nil) }
 
     var body: some View {
         NavigationStack {
@@ -18,35 +14,37 @@ struct ProfileView: View {
 
                     FTHeader(
                         title: "Профиль",
-                        subtitle: "Цели, настройки и то самое место, где приложения обычно прячут “Выход”. Мы — не прячем."
+                        subtitle: "Цели, настройки и выход из аккаунта"
                     )
                     .padding(.top, 10)
 
-                    // Карточка пользователя
+                    // User card
                     FTCard {
                         HStack(spacing: 14) {
                             Circle()
                                 .fill(Color.gray.opacity(0.15))
                                 .frame(width: 54, height: 54)
-                                .overlay(Text("TS").font(.system(size: 14, weight: .bold)).foregroundColor(.black.opacity(0.75)))
+                                .overlay(
+                                    Text(user?.initials ?? "FT")
+                                        .font(.system(size: 14, weight: .bold))
+                                        .foregroundColor(.black.opacity(0.75))
+                                )
 
                             VStack(alignment: .leading, spacing: 4) {
-                                Text(name)
+                                Text(user?.displayName ?? "User")
                                     .font(.system(size: 16, weight: .semibold))
-                                Text(plan)
-                                    .font(.system(size: 12))
-                                    .foregroundColor(FTTheme.muted)
+                                if let email = user?.email {
+                                    Text(email)
+                                        .font(.system(size: 12))
+                                        .foregroundColor(FTTheme.muted)
+                                } else if let nick = user?.nickname {
+                                    Text("@\(nick)")
+                                        .font(.system(size: 12))
+                                        .foregroundColor(FTTheme.muted)
+                                }
                             }
 
                             Spacer()
-
-                            Text("PRO")
-                                .font(.system(size: 10, weight: .bold))
-                                .foregroundColor(.black.opacity(0.75))
-                                .padding(.horizontal, 10)
-                                .padding(.vertical, 6)
-                                .background(Color.gray.opacity(0.12))
-                                .cornerRadius(999)
                         }
 
                         Divider().opacity(0.35).padding(.top, 8)
@@ -56,33 +54,57 @@ struct ProfileView: View {
                             .padding(.top, 4)
 
                         HStack(spacing: 10) {
-                            StatChip(title: "Калории", value: "\(kcal)")
-                            StatChip(title: "Белки", value: "\(p) г")
-                            StatChip(title: "Жиры", value: "\(f) г")
-                            StatChip(title: "Углеводы", value: "\(c) г")
+                            ProfileStatChip(title: "Калории", value: "\(goals.caloriesGoal)")
+                            ProfileStatChip(title: "Белки", value: "\(goals.proteinGoal) г")
+                            ProfileStatChip(title: "Жиры", value: "\(goals.fatsGoal) г")
+                            ProfileStatChip(title: "Углеводы", value: "\(goals.carbsGoal) г")
                         }
                         .padding(.top, 8)
 
-                        Text("Эти значения берутся из онбординга. В будущем можно будет тонко настраивать режим (сушка/масса/поддержание).")
-                            .font(.system(size: 12))
+                        if let diet = user?.diet, diet != "none" {
+                            HStack(spacing: 6) {
+                                Image(systemName: "leaf")
+                                    .font(.system(size: 12))
+                                Text("Диета: \(diet)")
+                                    .font(.system(size: 12))
+                            }
                             .foregroundColor(FTTheme.muted)
                             .padding(.top, 8)
+                        }
                     }
 
-                    // Настройки (пока статично)
+                    // Body info
+                    if let weight = user?.weight_kg, let height = user?.height_cm {
+                        FTCard {
+                            Text("Параметры тела")
+                                .font(.system(size: 15, weight: .semibold))
+
+                            HStack(spacing: 10) {
+                                ProfileStatChip(title: "Рост", value: "\(Int(height)) см")
+                                ProfileStatChip(title: "Вес", value: "\(Int(weight)) кг")
+                                if let target = user?.target_weight_kg {
+                                    ProfileStatChip(title: "Цель", value: "\(Int(target)) кг")
+                                }
+                                if let workouts = user?.workouts_per_week {
+                                    ProfileStatChip(title: "Тренировки", value: "\(workouts)/нед")
+                                }
+                            }
+                        }
+                    }
+
+                    // Settings
                     FTCard {
                         Text("Настройки")
                             .font(.system(size: 16, weight: .semibold))
 
-                        SettingRow(icon: "bell", title: "Уведомления", subtitle: "Напоминания про воду и приёмы пищи")
-                        SettingRow(icon: "lock", title: "Приватность", subtitle: "Фото и данные не видны другим пользователям")
-                        SettingRow(icon: "globe", title: "Язык", subtitle: "Русский")
-                        SettingRow(icon: "wand.and.stars", title: "Точность анализа", subtitle: "Скоро: уточнение порции и ингредиентов")
+                        ProfileSettingRow(icon: "bell", title: "Уведомления", subtitle: "Напоминания про воду и приёмы пищи")
+                        ProfileSettingRow(icon: "lock", title: "Приватность", subtitle: "Данные не видны другим пользователям")
+                        ProfileSettingRow(icon: "globe", title: "Язык", subtitle: "Русский")
 
                         Divider().opacity(0.35).padding(.top, 8)
 
                         Button {
-                            appState.logout()
+                            showLogoutConfirm = true
                         } label: {
                             HStack {
                                 Image(systemName: "rectangle.portrait.and.arrow.right")
@@ -96,26 +118,26 @@ struct ProfileView: View {
                         .buttonStyle(.plain)
                     }
 
-                    // О продукте
+                    // About
                     FTCard {
                         Text("О FoodTrack")
                             .font(.system(size: 16, weight: .semibold))
 
-                        Text("FoodTrack — это дневник питания + быстрый анализ по фото. Наша цель — сделать контроль питания простым, без чувства вины и без необходимости жить с кухонными весами в обнимку.")
+                        Text("FoodTrack — дневник питания + анализ по фото. Контроль питания без чувства вины.")
                             .font(.system(size: 13))
                             .foregroundColor(.black.opacity(0.78))
                             .padding(.top, 4)
 
                         HStack(spacing: 10) {
-                            MiniTag(text: "Дневник")
-                            MiniTag(text: "Рецепты")
-                            MiniTag(text: "Фото-анализ")
-                            MiniTag(text: "Цели")
+                            ProfileMiniTag(text: "Дневник")
+                            ProfileMiniTag(text: "Рецепты")
+                            ProfileMiniTag(text: "Фото-анализ")
+                            ProfileMiniTag(text: "Цели")
                             Spacer()
                         }
                         .padding(.top, 8)
 
-                        Text("Версия: 0.1 (UI Prototype)")
+                        Text("Версия: 1.0")
                             .font(.system(size: 12))
                             .foregroundColor(FTTheme.muted)
                             .padding(.top, 8)
@@ -123,18 +145,25 @@ struct ProfileView: View {
 
                     Spacer(minLength: 18)
                 }
-                .padding(.horizontal, 18)
+                .padding(.horizontal, FTTheme.hPad)
                 .padding(.bottom, 18)
             }
             .background(FTTheme.bg)
             .navigationBarHidden(true)
         }
+        .alert("Выйти из аккаунта?", isPresented: $showLogoutConfirm) {
+            Button("Отмена", role: .cancel) {}
+            Button("Выйти", role: .destructive) { appState.logout() }
+        } message: {
+            Text("Вы сможете войти снова в любой момент")
+        }
+        .task { await appState.refreshUser() }
     }
 }
 
-// MARK: - Bits
+// MARK: - Sub-views
 
-private struct StatChip: View {
+private struct ProfileStatChip: View {
     let title: String
     let value: String
 
@@ -154,7 +183,7 @@ private struct StatChip: View {
     }
 }
 
-private struct SettingRow: View {
+private struct ProfileSettingRow: View {
     let icon: String
     let title: String
     let subtitle: String
@@ -167,11 +196,8 @@ private struct SettingRow: View {
                 .overlay(Image(systemName: icon).font(.system(size: 18, weight: .semibold)).foregroundColor(.black.opacity(0.75)))
 
             VStack(alignment: .leading, spacing: 4) {
-                Text(title)
-                    .font(.system(size: 15, weight: .semibold))
-                Text(subtitle)
-                    .font(.system(size: 12))
-                    .foregroundColor(FTTheme.muted)
+                Text(title).font(.system(size: 15, weight: .semibold))
+                Text(subtitle).font(.system(size: 12)).foregroundColor(FTTheme.muted)
             }
             Spacer()
             Image(systemName: "chevron.right")
@@ -183,7 +209,7 @@ private struct SettingRow: View {
     }
 }
 
-private struct MiniTag: View {
+private struct ProfileMiniTag: View {
     let text: String
     var body: some View {
         Text(text)

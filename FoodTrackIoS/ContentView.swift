@@ -1,24 +1,8 @@
-//
-//  ContentView.swift
-//  FoodTrack
-//
-//  Created by Артем on 17.01.2026.
-//
-
+// ContentView.swift — unused, app uses RootView as entry point
 import SwiftUI
 
 struct ContentView: View {
     var body: some View {
-        VStack {
-            Image(systemName: "globe")
-                .imageScale(.large)
-                .foregroundStyle(.tint)
-            Text("Hello, world!")
-        }
-        .padding()
+        RootView()
     }
-}
-
-#Preview {
-    ContentView()
 }

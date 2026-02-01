@@ -29,7 +29,7 @@ struct FoodTrackApp: App {
     var body: some Scene {
         WindowGroup {
             RootView()
-                .environmentObject(appState)   // ✅ ВОТ ЭТОГО НЕ ХВАТАЛО
+                .environmentObject(appState)
         }
     }
 }

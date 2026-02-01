@@ -3,12 +3,16 @@ import SwiftUI
 struct RecipeDetailView: View {
     let recipe: Recipe
     @Environment(\.dismiss) private var dismiss
+    @State private var showMealTypeSheet = false
+    @State private var selectedMealType: MealType = .lunch
+    @State private var isSaving = false
+    @State private var saved = false
 
     var body: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 16) {
 
-                // Верх: "картинка"
+                // Image area
                 ZStack {
                     RoundedRectangle(cornerRadius: 22)
                         .fill(Color.gray.opacity(0.12))
@@ -36,7 +40,7 @@ struct RecipeDetailView: View {
                     .padding(14)
                 }
 
-                // Заголовок
+                // Title
                 VStack(alignment: .leading, spacing: 6) {
                     Text(recipe.title)
                         .font(.system(size: 26, weight: .semibold))
@@ -45,7 +49,7 @@ struct RecipeDetailView: View {
                         .foregroundColor(FTTheme.muted)
                 }
 
-                // Короткие метрики
+                // Metrics
                 HStack(spacing: 10) {
                     metricChip("\(recipe.kcal) ккал")
                     metricChip("Б \(recipe.protein)")
@@ -55,7 +59,7 @@ struct RecipeDetailView: View {
                     metricChip("\(recipe.timeMin) мин", icon: "clock")
                 }
 
-                // Ингредиенты
+                // Ingredients
                 sectionTitle("Ингредиенты")
                 FTCard {
                     VStack(alignment: .leading, spacing: 10) {
@@ -70,7 +74,7 @@ struct RecipeDetailView: View {
                     }
                 }
 
-                // Шаги
+                // Steps
                 sectionTitle("Приготовление")
                 FTCard {
                     VStack(alignment: .leading, spacing: 12) {
@@ -94,25 +98,68 @@ struct RecipeDetailView: View {
                     }
                 }
 
-                // Кнопка (статично)
-                PrimaryButton(title: "Добавить в дневник") {
-                    // Пока заглушка: позже откроем sheet и выберем приём пищи
+                // Add to diary
+                if saved {
+                    HStack {
+                        Image(systemName: "checkmark.circle.fill")
+                            .foregroundColor(FTTheme.success)
+                        Text("Добавлено в дневник!")
+                            .font(.system(size: 15, weight: .semibold))
+                            .foregroundColor(FTTheme.success)
+                    }
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, 14)
+                    .background(FTTheme.success.opacity(0.1))
+                    .cornerRadius(FTTheme.corner)
+                    .padding(.top, 6)
+                } else {
+                    PrimaryButton(
+                        title: isSaving ? "Сохранение..." : "Добавить в дневник",
+                        disabled: isSaving
+                    ) {
+                        showMealTypeSheet = true
+                    }
+                    .padding(.top, 6)
                 }
-                .padding(.top, 6)
-
-                Text("Пока это статичный фронт. Позже подключим реальное добавление и расчёты.")
-                    .font(.system(size: 12))
-                    .foregroundColor(FTTheme.muted)
-                    .frame(maxWidth: .infinity, alignment: .center)
-                    .padding(.top, 10)
 
                 Spacer(minLength: 20)
             }
-            .padding(.horizontal, 18)
+            .padding(.horizontal, FTTheme.hPad)
             .padding(.top, 14)
         }
         .background(FTTheme.bg)
         .navigationBarHidden(true)
+        .confirmationDialog("Тип приёма пищи", isPresented: $showMealTypeSheet) {
+            ForEach(MealType.allCases, id: \.self) { type in
+                Button(type.title) {
+                    selectedMealType = type
+                    addToDiary()
+                }
+            }
+            Button("Отмена", role: .cancel) {}
+        }
+    }
+
+    private func addToDiary() {
+        isSaving = true
+        Task {
+            let req = CreateMealRequest(
+                name: recipe.title,
+                meal_type: selectedMealType.rawValue,
+                calories: Double(recipe.kcal),
+                protein: Double(recipe.protein),
+                carbs: Double(recipe.carbs),
+                fats: Double(recipe.fat),
+                portions: 1,
+                ai_confidence: nil,
+                health_score: nil,
+                ai_advice: nil,
+                tags: nil
+            )
+            _ = try? await APIClient.shared.createMeal(req)
+            isSaving = false
+            saved = true
+        }
     }
 
     private func sectionTitle(_ text: String) -> some View {
