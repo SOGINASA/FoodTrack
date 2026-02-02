@@ -4,7 +4,7 @@ from typing import Dict, List, Tuple
 import torch
 
 # Загрузка модели (глобально, чтобы не загружать каждый раз)
-model = YOLO('model/model2.pt')
+model = YOLO('model/best.pt')
 
 
 def detect_food(image_path: str, top_n: int = 5) -> Dict:
@@ -34,13 +34,13 @@ def detect_food(image_path: str, top_n: int = 5) -> Dict:
     for result in results:
         # Проверяем, это модель классификации или детекции
         if hasattr(result, 'probs') and result.probs is not None:
-            # Модель классификации (старая логика)
+            # Модель классификации
             top_indices = result.probs.top5[:top_n] if top_n <= 5 else result.probs.top5
             top_conf = result.probs.top5conf.tolist()[:top_n] if top_n <= 5 else result.probs.top5conf.tolist()
 
             predictions = []
             for idx, conf in zip(top_indices, top_conf):
-                class_name = model.names[idx]
+                class_name = model.names[idx].lower()
                 confidence_percent = conf * 100
                 predictions.append((class_name, confidence_percent))
 
@@ -50,19 +50,22 @@ def detect_food(image_path: str, top_n: int = 5) -> Dict:
                 result_dict['top_predictions'] = predictions
 
         elif hasattr(result, 'boxes') and result.boxes is not None and len(result.boxes) > 0:
-            # Модель детекции объектов (model2.pt)
+            # Модель детекции объектов (best.pt)
             boxes = result.boxes
 
-            # Получаем все обнаруженные объекты с их уверенностью
-            detections = []
+            # Собираем лучший confidence для каждого класса (дедупликация)
+            best_per_class = {}
             for i in range(len(boxes)):
                 cls_id = int(boxes.cls[i].item())
                 conf = boxes.conf[i].item()
-                class_name = model.names[cls_id]
+                class_name = model.names[cls_id].lower()
                 confidence_percent = conf * 100
-                detections.append((class_name, confidence_percent))
 
-            # Сортируем по уверенности (от большей к меньшей)
+                if class_name not in best_per_class or confidence_percent > best_per_class[class_name]:
+                    best_per_class[class_name] = confidence_percent
+
+            # Преобразуем в список и сортируем по уверенности
+            detections = [(name, conf) for name, conf in best_per_class.items()]
             detections.sort(key=lambda x: x[1], reverse=True)
 
             # Берем топ N

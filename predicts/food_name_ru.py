@@ -3,6 +3,32 @@
 """
 
 FOOD_NAME_RU = {
+    # === Классы новой модели (best.pt, 33 класса) ===
+    'bell pepper': 'Болгарский перец',
+    'bread': 'Хлеб',
+    'broccoli': 'Брокколи',
+    'cake': 'Торт',
+    'carrot': 'Морковь',
+    'cheese': 'Сыр',
+    'cookie': 'Печенье',
+    'cucumber': 'Огурец',
+    'doughnut': 'Пончик',
+    'french fries': 'Картофель фри',
+    'grape': 'Виноград',
+    'hamburger': 'Гамбургер',
+    'ice cream': 'Мороженое',
+    'muffin': 'Маффин',
+    'pancake': 'Блин',
+    'pasta': 'Паста',
+    'pizza': 'Пицца',
+    'potato': 'Картофель',
+    'salad': 'Салат',
+    'strawberry': 'Клубника',
+    'sushi': 'Суши',
+    'tomato': 'Помидор',
+    'waffle': 'Вафля',
+    'watermelon': 'Арбуз',
+
     # Хлеб и выпечка
     'bread-5-grain': 'Мультизерновой хлеб',
     'bread-black': 'Чёрный хлеб',
