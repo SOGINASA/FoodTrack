@@ -36,7 +36,10 @@ actor APIClient {
 
     func getMe() async throws -> UserDTO {
         let resp: MeResponse = try await get("/auth/me")
-        return resp.user
+        guard let user = resp.resolvedUser else {
+            throw APIError.invalidData
+        }
+        return user
     }
 
     func completeOnboarding(_ req: OnboardingRequest) async throws {
@@ -44,9 +47,11 @@ actor APIClient {
     }
 
     func updateProfile(_ req: ProfileUpdateRequest) async throws -> UserDTO {
-        struct Resp: Decodable { let user: UserDTO }
-        let resp: Resp = try await put("/auth/profile", body: req)
-        return resp.user
+        let resp: MeResponse = try await put("/auth/profile", body: req)
+        guard let user = resp.resolvedUser else {
+            throw APIError.invalidData
+        }
+        return user
     }
 
     // MARK: - Meals
@@ -69,6 +74,12 @@ actor APIClient {
         return resp.meal
     }
 
+    func updateMeal(_ id: Int, _ req: UpdateMealRequest) async throws -> MealDTO {
+        struct Resp: Decodable { let meal: MealDTO }
+        let resp: Resp = try await put("/meals/\(id)", body: req)
+        return resp.meal
+    }
+
     func deleteMeal(_ id: Int) async throws {
         let _: MessageResponse = try await delete("/meals/\(id)")
     }
@@ -80,21 +91,50 @@ actor APIClient {
         return resp.goals
     }
 
+    func updateGoals(_ req: UpdateGoalsRequest) async throws -> GoalsDTO {
+        struct Resp: Decodable { let goals: GoalsDTO }
+        let resp: Resp = try await put("/goals", body: req)
+        return resp.goals
+    }
+
+    // MARK: - Weight Tracking
+
+    func getWeightHistory(days: Int = 90) async throws -> WeightHistoryResponse {
+        try await get("/goals/weight?days=\(days)")
+    }
+
+    func addWeight(_ req: AddWeightRequest) async throws -> WeightEntryDTO {
+        let resp: AddWeightResponse = try await post("/goals/weight", body: req)
+        return resp.entry
+    }
+
+    func deleteWeight(_ id: Int) async throws {
+        let _: MessageResponse = try await delete("/goals/weight/\(id)")
+    }
+
     // MARK: - Analytics
 
     func getDailyStats(date: String) async throws -> DailyStatsDTO {
-        let resp: DailyStatsResponse = try await get("/analytics/daily?date=\(date)")
-        return resp.stats
+        try await get("/analytics/daily?date=\(date)")
     }
 
     func getWeeklyStats() async throws -> WeeklyStatsDTO {
-        let resp: WeeklyStatsResponse = try await get("/analytics/weekly")
-        return resp.stats
+        try await get("/analytics/weekly")
     }
 
-    func getStreak() async throws -> Int {
-        let resp: StreakResponse = try await get("/analytics/streak")
-        return resp.streak.current_streak ?? 0
+    func getStreak() async throws -> StreakDTO {
+        try await get("/analytics/streak")
+    }
+
+    func getTopFoods(days: Int = 30, limit: Int = 5) async throws -> [TopFoodDTO] {
+        let resp: TopFoodsResponse = try await get("/analytics/top-foods?days=\(days)&limit=\(limit)")
+        return resp.top_foods
+    }
+
+    // MARK: - Password
+
+    func changePassword(_ req: ChangePasswordRequest) async throws {
+        let _: MessageResponse = try await post("/auth/change-password", body: req)
     }
 
     // MARK: - Recipes

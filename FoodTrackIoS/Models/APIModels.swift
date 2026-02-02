@@ -57,17 +57,37 @@ struct UserDTO: Decodable, Identifiable {
 }
 
 struct MeResponse: Decodable {
-    let user: UserDTO
+    let data: MeResponseData?
+    let user: UserDTO?
+
+    struct MeResponseData: Decodable {
+        let user: UserDTO
+    }
+
+    var resolvedUser: UserDTO? {
+        data?.user ?? user
+    }
 }
 
 struct ProfileUpdateRequest: Encodable {
-    let full_name: String?
-    let nickname: String?
+    var full_name: String?
+    var nickname: String?
+    var gender: String?
+    var birth_year: Int?
+    var height_cm: Double?
+    var weight_kg: Double?
+    var target_weight_kg: Double?
+    var workouts_per_week: Int?
+    var diet: String?
+    var diet_notes: String?
+    var meals_per_day: Int?
+    var health_flags: [String]?
+    var health_notes: String?
+}
 
-    init(full_name: String? = nil, nickname: String? = nil) {
-        self.full_name = full_name
-        self.nickname = nickname
-    }
+struct ChangePasswordRequest: Encodable {
+    let current_password: String
+    let new_password: String
 }
 
 // MARK: - Onboarding
@@ -171,6 +191,16 @@ struct CreateMealRequest: Encodable {
     let tags: [String]?
 }
 
+struct UpdateMealRequest: Encodable {
+    var name: String?
+    var type: String?
+    var calories: Double?
+    var protein: Double?
+    var carbs: Double?
+    var fats: Double?
+    var portions: Double?
+}
+
 struct MealsResponse: Decodable {
     let meals: [MealDTO]
 }
@@ -197,21 +227,82 @@ struct GoalsResponse: Decodable {
     let goals: GoalsDTO
 }
 
+struct UpdateGoalsRequest: Encodable {
+    var calories_goal: Int?
+    var protein_goal: Int?
+    var carbs_goal: Int?
+    var fats_goal: Int?
+    var target_weight: Double?
+    var activity_level: String?
+    var diet_type: String?
+}
+
+// MARK: - Weight Tracking
+
+struct WeightEntryDTO: Decodable, Identifiable {
+    let id: Int
+    let weight: Double
+    let date: String?
+    let notes: String?
+    let created_at: String?
+}
+
+struct WeightHistoryResponse: Decodable {
+    let entries: [WeightEntryDTO]
+    let stats: WeightStats?
+    let count: Int?
+
+    struct WeightStats: Decodable {
+        let current: Double?
+        let min: Double?
+        let max: Double?
+        let avg: Double?
+        let change: Double?
+    }
+}
+
+struct AddWeightRequest: Encodable {
+    let weight: Double
+    let date: String?
+    let notes: String?
+}
+
+struct AddWeightResponse: Decodable {
+    let message: String?
+    let entry: WeightEntryDTO
+}
+
 // MARK: - Analytics
 
+// Backend returns: {date, totals: {calories, protein, carbs, fats, meals_count}, goals, progress, remaining}
 struct DailyStatsDTO: Decodable {
     let date: String?
-    let total_calories: Double?
-    let total_protein: Double?
-    let total_carbs: Double?
-    let total_fats: Double?
-    let meals_count: Int?
+    let totals: DailyTotals?
+    let progress: DailyProgress?
+
+    struct DailyTotals: Decodable {
+        let calories: Double?
+        let protein: Double?
+        let carbs: Double?
+        let fats: Double?
+        let meals_count: Int?
+    }
+
+    struct DailyProgress: Decodable {
+        let calories: Double?
+        let protein: Double?
+        let carbs: Double?
+        let fats: Double?
+    }
+
+    var total_calories: Double { totals?.calories ?? 0 }
+    var total_protein: Double { totals?.protein ?? 0 }
+    var total_carbs: Double { totals?.carbs ?? 0 }
+    var total_fats: Double { totals?.fats ?? 0 }
+    var meals_count: Int { totals?.meals_count ?? 0 }
 }
 
-struct DailyStatsResponse: Decodable {
-    let stats: DailyStatsDTO
-}
-
+// Backend returns: {start_date, end_date, daily: [...], summary: {...}}
 struct WeeklyStatsDTO: Decodable {
     let daily: [DailyEntry]?
     let summary: WeeklySummary?
@@ -230,16 +321,23 @@ struct WeeklyStatsDTO: Decodable {
     }
 }
 
-struct WeeklyStatsResponse: Decodable {
-    let stats: WeeklyStatsDTO
-}
-
+// Backend returns flat: {current_streak, longest_streak, total_days_tracked}
 struct StreakDTO: Decodable {
     let current_streak: Int?
+    let longest_streak: Int?
+    let total_days_tracked: Int?
 }
 
-struct StreakResponse: Decodable {
-    let streak: StreakDTO
+struct TopFoodDTO: Decodable {
+    let name: String
+    let count: Int
+    let avg_calories: Double?
+    let total_calories: Double?
+}
+
+struct TopFoodsResponse: Decodable {
+    let top_foods: [TopFoodDTO]
+    let period_days: Int?
 }
 
 // MARK: - Recipes
@@ -282,23 +380,27 @@ struct RecipesResponse: Decodable {
 
 // MARK: - Photo Analysis
 
+// ML service returns: {top_prediction, top_prediction_ru, confidence, nutrition: {calories, protein, carbs, fat}}
 struct FoodPrediction: Decodable {
-    let dish_name: String?
+    let top_prediction: String?
+    let top_prediction_ru: String?
     let confidence: Double?
-    let calories: Double?
-    let protein: Double?
-    let fat: Double?
-    let carbs: Double?
-    let portion_size: String?
-    let health_score: Double?
-    let advice: String?
-    let tags: [String]?
-    let ingredients: [PredictionIngredient]?
+    let nutrition: PredictionNutrition?
 
-    struct PredictionIngredient: Decodable {
-        let name: String
-        let amount: String?
+    struct PredictionNutrition: Decodable {
+        let calories: Double?
+        let protein: Double?
+        let carbs: Double?
+        let fat: Double?
     }
+
+    // Convenience accessors
+    var dishName: String { top_prediction_ru ?? top_prediction ?? "Блюдо" }
+    var calories: Double { nutrition?.calories ?? 0 }
+    var protein: Double { nutrition?.protein ?? 0 }
+    var carbs: Double { nutrition?.carbs ?? 0 }
+    var fat: Double { nutrition?.fat ?? 0 }
+    var confidencePercent: Int { Int((confidence ?? 0) * 100) }
 }
 
 // MARK: - Generic
