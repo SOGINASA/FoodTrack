@@ -3,6 +3,7 @@ import { Users, MapPin, Package, Send, Loader } from 'lucide-react';
 import Modal from '../common/Modal';
 import Button from '../common/Button';
 import ShareProductsMap from './ShareProductsMap';
+import { fridgeAPI } from '../../services/api';
 
 const ShareProductsModal = ({ isOpen, onClose, products }) => {
   const [step, setStep] = useState('location'); // location, selectUser, selectProducts
@@ -74,53 +75,18 @@ const ShareProductsModal = ({ isOpen, onClose, products }) => {
     );
   }, []);
 
-  // Получение списка пользователей в радиусе 1 км (заглушка - в реальности это API запрос)
-  const fetchNearbyUsers = (location) => {
-    // TODO: Заменить на реальный API запрос
-    // Временные тестовые данные
-    const mockUsers = [
-      {
-        id: 1,
-        name: 'Анна К.',
-        location: {
-          lat: location.lat + 0.005,
-          lng: location.lng + 0.003,
-        },
-      },
-      {
-        id: 2,
-        name: 'Иван П.',
-        location: {
-          lat: location.lat - 0.004,
-          lng: location.lng + 0.006,
-        },
-      },
-      {
-        id: 3,
-        name: 'Мария С.',
-        location: {
-          lat: location.lat + 0.007,
-          lng: location.lng - 0.002,
-        },
-      },
-    ];
-
-    // Фильтруем пользователей в радиусе 1 км и добавляем расстояние
-    const usersWithDistance = mockUsers
-      .map((user) => ({
-        ...user,
-        distance: calculateDistance(
-          location.lat,
-          location.lng,
-          user.location.lat,
-          user.location.lng
-        ),
-      }))
-      .filter((user) => user.distance <= 1000)
-      .sort((a, b) => a.distance - b.distance);
-
-    setNearbyUsers(usersWithDistance);
-    setStep('selectUser');
+  // Получение списка пользователей в радиусе 1 км через API
+  const fetchNearbyUsers = async (location) => {
+    try {
+      const response = await fridgeAPI.getNearbyUsers(location.lat, location.lng, 1000);
+      const users = response.data || [];
+      setNearbyUsers(users);
+      setStep('selectUser');
+    } catch (error) {
+      console.error('Ошибка загрузки пользователей:', error);
+      setNearbyUsers([]);
+      setStep('selectUser');
+    }
   };
 
   // Открытие модалки - получаем геолокацию
@@ -160,18 +126,18 @@ const ShareProductsModal = ({ isOpen, onClose, products }) => {
       return;
     }
 
-    // TODO: Отправка запроса на бэкенд
-    const request = {
-      recipientId: selectedUser.id,
-      productIds: selectedProducts,
-      senderLocation: userLocation,
-    };
-
-    console.log('Отправка запроса на sharing:', request);
-
-    // Показываем уведомление
-    alert(`Запрос отправлен пользователю ${selectedUser.name}!`);
-    onClose();
+    try {
+      await fridgeAPI.sendShareRequest({
+        recipientId: selectedUser.id,
+        productIds: selectedProducts,
+        senderLocation: userLocation,
+      });
+      alert(`Запрос отправлен пользователю ${selectedUser.name}!`);
+      onClose();
+    } catch (error) {
+      console.error('Ошибка отправки запроса:', error);
+      alert('Не удалось отправить запрос. Попробуйте ещё раз.');
+    }
   };
 
   const renderContent = () => {

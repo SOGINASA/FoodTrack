@@ -261,6 +261,25 @@ export const fridgeAPI = {
 
   // Получить продукты с истекающим сроком годности
   getExpiringSoon: (days = 7) => api.get('/fridge/expiring-soon', { params: { days } }),
+
+  // Обновить геолокацию
+  updateLocation: (lat, lng) => api.post('/fridge/update-location', { lat, lng }),
+
+  // Получить пользователей поблизости
+  getNearbyUsers: (lat, lng, radius = 1000) =>
+    api.get('/fridge/nearby-users', { params: { lat, lng, radius } }),
+
+  // Отправить запрос на передачу продуктов
+  sendShareRequest: (data) => api.post('/fridge/share/send', data),
+
+  // Получить входящие запросы
+  getShareRequests: () => api.get('/fridge/share/requests'),
+
+  // Принять запрос
+  acceptShareRequest: (id) => api.post(`/fridge/share/accept/${id}`),
+
+  // Отклонить запрос
+  rejectShareRequest: (id) => api.post(`/fridge/share/reject/${id}`),
 };
 
 // === FRIENDS API ===

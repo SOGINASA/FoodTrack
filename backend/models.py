@@ -49,10 +49,16 @@ class User(db.Model):
     oauth_linked_at = db.Column(db.DateTime, nullable=True)
     email_verified_at = db.Column(db.DateTime, nullable=True)
 
+    # Геолокация (для функции «поделиться продуктами рядом»)
+    latitude = db.Column(db.Float, nullable=True)
+    longitude = db.Column(db.Float, nullable=True)
+    location_updated_at = db.Column(db.DateTime, nullable=True)
+
     # Связи
     meals = db.relationship('Meal', backref='user', lazy='dynamic', cascade='all, delete-orphan')
     goals = db.relationship('UserGoals', backref='user', uselist=False, cascade='all, delete-orphan')
     weights = db.relationship('WeightEntry', backref='user', lazy='dynamic', cascade='all, delete-orphan')
+    fridge_products = db.relationship('FridgeProduct', backref='user', lazy='dynamic', cascade='all, delete-orphan')
     
     # Индекс для уникальности OAuth
     __table_args__ = (
@@ -685,4 +691,67 @@ class Friendship(db.Model):
             'status': self.status,
             'createdAt': self.created_at.isoformat() if self.created_at else None,
             'updatedAt': self.updated_at.isoformat() if self.updated_at else None,
+        }
+
+
+# === Холодильник ===
+
+class FridgeProduct(db.Model):
+    """Продукт в холодильнике пользователя"""
+    __tablename__ = 'fridge_products'
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False, index=True)
+
+    name = db.Column(db.String(200), nullable=False)
+    quantity = db.Column(db.Float, default=1)
+    unit = db.Column(db.String(20), default='шт')  # шт, кг, г, л, мл, упак
+    category = db.Column(db.String(30), default='other')  # dairy, meat, fish, vegetables, fruits, bakery, frozen, canned, other
+    expiry_date = db.Column(db.Date, nullable=True)
+    notes = db.Column(db.Text, nullable=True)
+
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+    def to_dict(self):
+        return {
+            'id': self.id,
+            'name': self.name,
+            'quantity': self.quantity,
+            'unit': self.unit,
+            'category': self.category,
+            'expiryDate': self.expiry_date.isoformat() if self.expiry_date else None,
+            'notes': self.notes,
+            'createdAt': self.created_at.isoformat() if self.created_at else None,
+        }
+
+
+class ProductShareRequest(db.Model):
+    """Запрос на передачу продуктов другому пользователю"""
+    __tablename__ = 'product_share_requests'
+    id = db.Column(db.Integer, primary_key=True)
+    sender_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False, index=True)
+    recipient_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False, index=True)
+
+    # JSON-список продуктов: [{name, quantity, unit}]
+    products_json = db.Column(db.Text, nullable=False)
+
+    status = db.Column(db.String(20), default='pending')  # pending, accepted, rejected
+    sender_lat = db.Column(db.Float, nullable=True)
+    sender_lng = db.Column(db.Float, nullable=True)
+
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+    sender = db.relationship('User', foreign_keys=[sender_id], backref='sent_share_requests')
+    recipient = db.relationship('User', foreign_keys=[recipient_id], backref='received_share_requests')
+
+    def to_dict(self):
+        return {
+            'id': self.id,
+            'senderId': self.sender_id,
+            'senderName': self.sender.full_name or self.sender.nickname or 'Пользователь',
+            'recipientId': self.recipient_id,
+            'products': json.loads(self.products_json) if self.products_json else [],
+            'status': self.status,
+            'createdAt': self.created_at.isoformat() if self.created_at else None,
         }

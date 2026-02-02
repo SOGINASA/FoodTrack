@@ -26,36 +26,43 @@ const Fridge = () => {
     loadShareRequests();
   }, []);
 
-  // Загрузка входящих запросов на sharing (заглушка)
-  const loadShareRequests = () => {
-    // TODO: Заменить на реальный API запрос
-    // Временные тестовые данные для демонстрации
-    const mockRequests = [
-      // {
-      //   id: 1,
-      //   senderName: 'Анна К.',
-      //   products: [
-      //     { name: 'Молоко', quantity: 1, unit: 'л' },
-      //     { name: 'Хлеб', quantity: 1, unit: 'шт' },
-      //   ],
-      // },
-    ];
-    setShareRequests(mockRequests);
+  // Загрузка входящих запросов на sharing
+  const loadShareRequests = async () => {
+    try {
+      const response = await fridgeAPI.getShareRequests();
+      const data = (response.data || []).map(r => ({
+        id: r.id,
+        senderName: r.senderName,
+        products: r.products,
+      }));
+      setShareRequests(data);
+    } catch (error) {
+      console.error('Ошибка загрузки запросов:', error);
+      setShareRequests([]);
+    }
   };
 
   // Принять запрос на sharing
   const handleAcceptShareRequest = async (requestId) => {
-    // TODO: Отправить запрос на бэкенд
-    console.log('Принят запрос:', requestId);
-    setShareRequests(prev => prev.filter(req => req.id !== requestId));
-    alert('Запрос принят! Продукты добавлены в ваш холодильник');
+    try {
+      await fridgeAPI.acceptShareRequest(requestId);
+      setShareRequests(prev => prev.filter(req => req.id !== requestId));
+      alert('Запрос принят! Продукты добавлены в ваш холодильник');
+      fetchProducts(); // обновляем список продуктов
+    } catch (error) {
+      console.error('Ошибка принятия запроса:', error);
+      alert('Не удалось принять запрос');
+    }
   };
 
   // Отклонить запрос на sharing
   const handleDeclineShareRequest = async (requestId) => {
-    // TODO: Отправить запрос на бэкенд
-    console.log('Отклонен запрос:', requestId);
-    setShareRequests(prev => prev.filter(req => req.id !== requestId));
+    try {
+      await fridgeAPI.rejectShareRequest(requestId);
+      setShareRequests(prev => prev.filter(req => req.id !== requestId));
+    } catch (error) {
+      console.error('Ошибка отклонения запроса:', error);
+    }
   };
 
   const fetchProducts = async () => {
@@ -65,34 +72,7 @@ const Fridge = () => {
       setProducts(response.data || []);
     } catch (error) {
       console.error('Ошибка загрузки продуктов:', error);
-      // Временные тестовые данные
-      setProducts([
-        {
-          id: 1,
-          name: 'Молоко 3.2%',
-          quantity: 1,
-          unit: 'л',
-          category: 'dairy',
-          expiryDate: new Date(Date.now() + 2 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
-          notes: 'Простоквашино'
-        },
-        {
-          id: 2,
-          name: 'Куриная грудка',
-          quantity: 500,
-          unit: 'г',
-          category: 'meat',
-          expiryDate: new Date(Date.now() + 5 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
-        },
-        {
-          id: 3,
-          name: 'Помидоры',
-          quantity: 5,
-          unit: 'шт',
-          category: 'vegetables',
-          expiryDate: new Date(Date.now() + 10 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
-        }
-      ]);
+      setProducts([]);
     } finally {
       setIsLoading(false);
     }
