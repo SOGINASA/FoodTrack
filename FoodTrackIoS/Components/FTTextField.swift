@@ -2,7 +2,7 @@ import SwiftUI
 
 struct FTTextField: View {
     let title: String
-    let placeholder: String
+    var placeholder: String = ""
     @Binding var text: String
     var isSecure: Bool = false
     var keyboard: UIKeyboardType = .default

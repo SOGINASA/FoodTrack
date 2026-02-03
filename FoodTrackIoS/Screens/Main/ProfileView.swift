@@ -45,13 +45,34 @@ struct ProfileView: View {
                             }
 
                             Spacer()
+
+                            NavigationLink(destination: EditProfileView().environmentObject(appState)) {
+                                Image(systemName: "pencil")
+                                    .font(.system(size: 14, weight: .semibold))
+                                    .foregroundColor(.black.opacity(0.7))
+                                    .padding(10)
+                                    .background(Color.gray.opacity(0.10))
+                                    .clipShape(Circle())
+                            }
                         }
+                    }
 
-                        Divider().opacity(0.35).padding(.top, 8)
-
-                        Text("Дневная цель")
-                            .font(.system(size: 15, weight: .semibold))
-                            .padding(.top, 4)
+                    // Goals card
+                    FTCard {
+                        HStack {
+                            Text("Дневная цель")
+                                .font(.system(size: 15, weight: .semibold))
+                            Spacer()
+                            NavigationLink(destination: EditGoalsView().environmentObject(appState)) {
+                                HStack(spacing: 4) {
+                                    Text("Изменить")
+                                        .font(.system(size: 13, weight: .medium))
+                                    Image(systemName: "chevron.right")
+                                        .font(.system(size: 11, weight: .semibold))
+                                }
+                                .foregroundColor(.black.opacity(0.6))
+                            }
+                        }
 
                         HStack(spacing: 10) {
                             ProfileStatChip(title: "Калории", value: "\(goals.caloriesGoal)")
@@ -59,7 +80,7 @@ struct ProfileView: View {
                             ProfileStatChip(title: "Жиры", value: "\(goals.fatsGoal) г")
                             ProfileStatChip(title: "Углеводы", value: "\(goals.carbsGoal) г")
                         }
-                        .padding(.top, 8)
+                        .padding(.top, 4)
 
                         if let diet = user?.diet, diet != "none" {
                             HStack(spacing: 6) {
@@ -73,21 +94,35 @@ struct ProfileView: View {
                         }
                     }
 
-                    // Body info
-                    if let weight = user?.weight_kg, let height = user?.height_cm {
-                        FTCard {
+                    // Body info + Weight tracking
+                    FTCard {
+                        HStack {
                             Text("Параметры тела")
                                 .font(.system(size: 15, weight: .semibold))
+                            Spacer()
+                            NavigationLink(destination: WeightTrackingView().environmentObject(appState)) {
+                                HStack(spacing: 4) {
+                                    Text("Трекер веса")
+                                        .font(.system(size: 13, weight: .medium))
+                                    Image(systemName: "chevron.right")
+                                        .font(.system(size: 11, weight: .semibold))
+                                }
+                                .foregroundColor(.black.opacity(0.6))
+                            }
+                        }
 
-                            HStack(spacing: 10) {
+                        HStack(spacing: 10) {
+                            if let height = user?.height_cm {
                                 ProfileStatChip(title: "Рост", value: "\(Int(height)) см")
+                            }
+                            if let weight = user?.weight_kg {
                                 ProfileStatChip(title: "Вес", value: "\(Int(weight)) кг")
-                                if let target = user?.target_weight_kg {
-                                    ProfileStatChip(title: "Цель", value: "\(Int(target)) кг")
-                                }
-                                if let workouts = user?.workouts_per_week {
-                                    ProfileStatChip(title: "Тренировки", value: "\(workouts)/нед")
-                                }
+                            }
+                            if let target = user?.target_weight_kg {
+                                ProfileStatChip(title: "Цель", value: "\(Int(target)) кг")
+                            }
+                            if let workouts = user?.workouts_per_week {
+                                ProfileStatChip(title: "Тренировки", value: "\(workouts)/нед")
                             }
                         }
                     }
@@ -97,8 +132,12 @@ struct ProfileView: View {
                         Text("Настройки")
                             .font(.system(size: 16, weight: .semibold))
 
+                        NavigationLink(destination: ChangePasswordView()) {
+                            ProfileSettingRow(icon: "lock.rotation", title: "Сменить пароль", subtitle: "Обновить пароль учётной записи")
+                        }
+                        .buttonStyle(.plain)
+
                         ProfileSettingRow(icon: "bell", title: "Уведомления", subtitle: "Напоминания про воду и приёмы пищи")
-                        ProfileSettingRow(icon: "lock", title: "Приватность", subtitle: "Данные не видны другим пользователям")
                         ProfileSettingRow(icon: "globe", title: "Язык", subtitle: "Русский")
 
                         Divider().opacity(0.35).padding(.top, 8)
@@ -157,7 +196,10 @@ struct ProfileView: View {
         } message: {
             Text("Вы сможете войти снова в любой момент")
         }
-        .task { await appState.refreshUser() }
+        .task {
+            await appState.refreshUser()
+            await appState.loadGoals()
+        }
     }
 }
 

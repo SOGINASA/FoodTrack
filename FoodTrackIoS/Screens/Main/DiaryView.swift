@@ -6,6 +6,8 @@ struct DiaryView: View {
     @State private var selectedDate = Date()
     @State private var meals: [MealDTO] = []
     @State private var isLoading = true
+    @State private var editingMeal: MealDTO?
+    @State private var showEditSheet = false
 
     private var goals: GoalsDTO { appState.goals ?? GoalsDTO(calories_goal: nil, protein_goal: nil, carbs_goal: nil, fats_goal: nil, target_weight: nil, activity_level: nil, goal_type: nil, diet_type: nil) }
 
@@ -66,6 +68,13 @@ struct DiaryView: View {
             .navigationBarHidden(true)
         }
         .task { await loadMeals() }
+        .sheet(isPresented: $showEditSheet) {
+            if let meal = editingMeal {
+                EditMealSheet(meal: meal) {
+                    Task { await loadMeals() }
+                }
+            }
+        }
     }
 
     // MARK: - Date Bar
@@ -222,6 +231,18 @@ struct DiaryView: View {
             Spacer()
 
             Button {
+                editingMeal = meal
+                showEditSheet = true
+            } label: {
+                Image(systemName: "pencil")
+                    .font(.system(size: 13))
+                    .foregroundColor(.black.opacity(0.5))
+                    .padding(8)
+                    .background(Color.gray.opacity(0.08))
+                    .clipShape(Circle())
+            }
+
+            Button {
                 Task {
                     try? await APIClient.shared.deleteMeal(meal.id)
                     await loadMeals()
@@ -266,6 +287,121 @@ struct DiaryView: View {
         let f = DateFormatter()
         f.dateFormat = "yyyy-MM-dd"
         return f.string(from: date)
+    }
+}
+
+// MARK: - Edit Meal Sheet
+
+private struct EditMealSheet: View {
+    let meal: MealDTO
+    let onSaved: () -> Void
+    @Environment(\.dismiss) private var dismiss
+
+    @State private var name: String = ""
+    @State private var calories: String = ""
+    @State private var protein: String = ""
+    @State private var carbs: String = ""
+    @State private var fats: String = ""
+    @State private var mealType: MealType = .lunch
+    @State private var isSaving = false
+    @State private var error: String?
+
+    var body: some View {
+        NavigationStack {
+            ScrollView {
+                VStack(alignment: .leading, spacing: 16) {
+                    if let error {
+                        Text(error)
+                            .font(.system(size: 13))
+                            .foregroundColor(.red)
+                            .padding(12)
+                            .frame(maxWidth: .infinity, alignment: .leading)
+                            .background(Color.red.opacity(0.06))
+                            .cornerRadius(12)
+                    }
+
+                    FTTextField(title: "Название", text: $name)
+
+                    HStack(spacing: 12) {
+                        FTTextField(title: "Калории", text: $calories, keyboard: .numberPad)
+                        FTTextField(title: "Белки (г)", text: $protein, keyboard: .decimalPad)
+                    }
+
+                    HStack(spacing: 12) {
+                        FTTextField(title: "Углеводы (г)", text: $carbs, keyboard: .decimalPad)
+                        FTTextField(title: "Жиры (г)", text: $fats, keyboard: .decimalPad)
+                    }
+
+                    VStack(alignment: .leading, spacing: 6) {
+                        Text("Тип приёма")
+                            .font(.system(size: 13, weight: .medium))
+                            .foregroundColor(FTTheme.muted)
+                        HStack(spacing: 8) {
+                            ForEach(MealType.allCases, id: \.self) { type in
+                                Button {
+                                    mealType = type
+                                } label: {
+                                    Text(type.title)
+                                        .font(.system(size: 13, weight: .semibold))
+                                        .foregroundColor(mealType == type ? .white : .black.opacity(0.7))
+                                        .padding(.horizontal, 12)
+                                        .padding(.vertical, 8)
+                                        .background(mealType == type ? Color.black : Color.gray.opacity(0.10))
+                                        .cornerRadius(999)
+                                }
+                            }
+                        }
+                    }
+
+                    PrimaryButton(
+                        title: isSaving ? "Сохранение..." : "Сохранить",
+                        disabled: isSaving || name.isEmpty
+                    ) {
+                        Task { await save() }
+                    }
+                }
+                .padding(.horizontal, FTTheme.hPad)
+                .padding(.top, 14)
+            }
+            .background(FTTheme.bg)
+            .navigationTitle("Редактировать")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .cancellationAction) {
+                    Button("Отмена") { dismiss() }
+                }
+            }
+        }
+        .onAppear {
+            name = meal.name
+            calories = String(meal.displayCalories)
+            protein = String(meal.displayProtein)
+            carbs = String(meal.displayCarbs)
+            fats = String(meal.displayFats)
+            mealType = meal.mealType
+        }
+    }
+
+    private func save() async {
+        isSaving = true
+        error = nil
+
+        var req = UpdateMealRequest()
+        req.name = name
+        req.type = mealType.rawValue
+        req.calories = Double(calories)
+        req.protein = Double(protein)
+        req.carbs = Double(carbs)
+        req.fats = Double(fats)
+
+        do {
+            _ = try await APIClient.shared.updateMeal(meal.id, req)
+            onSaved()
+            dismiss()
+        } catch {
+            self.error = error.localizedDescription
+        }
+        isSaving = false
     }
 }
 

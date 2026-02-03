@@ -12,6 +12,9 @@ struct AnalyzeView: View {
     @State private var errorMessage = ""
     @State private var selectedMealType: MealType = .lunch
     @State private var isSaving = false
+    @State private var showRetryAlert = false
+
+    private let minConfidence: Double = 0.25
 
     var body: some View {
         NavigationStack {
@@ -171,6 +174,16 @@ struct AnalyzeView: View {
                 analyzePhoto()
             }
         }
+        .alert("Не удалось распознать", isPresented: $showRetryAlert) {
+            Button("Сфотографировать заново") {
+                DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
+                    showCamera = true
+                }
+            }
+            Button("Отмена", role: .cancel) {}
+        } message: {
+            Text("Блюдо не распознано. Попробуйте сфотографировать ближе, с лучшим освещением и без лишних предметов в кадре.")
+        }
         .sheet(isPresented: $showResultSheet) {
             if let analysis {
                 AnalyzeResultSheet(
@@ -203,6 +216,20 @@ struct AnalyzeView: View {
         Task {
             do {
                 let result = try await APIClient.shared.analyzePhoto(image)
+
+                let conf = result.confidence ?? 0
+                let hasName = result.top_prediction != nil || result.top_prediction_ru != nil
+                let hasNutrition = result.nutrition != nil && result.calories > 0
+
+                if conf < minConfidence || !hasName || !hasNutrition {
+                    // Low confidence — ask to retake
+                    analysis = nil
+                    capturedImage = nil
+                    isAnalyzing = false
+                    showRetryAlert = true
+                    return
+                }
+
                 analysis = result
                 showResultSheet = true
             } catch {
@@ -218,17 +245,17 @@ struct AnalyzeView: View {
 
         Task {
             let req = CreateMealRequest(
-                name: a.dish_name ?? "Блюдо",
+                name: a.dishName,
                 meal_type: selectedMealType.rawValue,
-                calories: a.calories ?? 0,
-                protein: a.protein ?? 0,
-                carbs: a.carbs ?? 0,
-                fats: a.fat ?? 0,
+                calories: a.calories,
+                protein: a.protein,
+                carbs: a.carbs,
+                fats: a.fat,
                 portions: 1,
                 ai_confidence: a.confidence,
-                health_score: a.health_score,
-                ai_advice: a.advice,
-                tags: a.tags
+                health_score: nil,
+                ai_advice: nil,
+                tags: nil
             )
             _ = try? await APIClient.shared.createMeal(req)
             isSaving = false
@@ -276,11 +303,11 @@ private struct AnalyzeResultSheet: View {
                 }
 
                 HStack {
-                    Text(analysis.dish_name ?? "Блюдо")
+                    Text(analysis.dishName)
                         .font(.system(size: 22, weight: .semibold))
                     Spacer()
-                    if let conf = analysis.confidence {
-                        Text("\(Int(conf * 100))%")
+                    if analysis.confidence != nil {
+                        Text("\(analysis.confidencePercent)%")
                             .font(.system(size: 13, weight: .bold))
                             .foregroundColor(.white)
                             .padding(.horizontal, 10)
@@ -290,40 +317,17 @@ private struct AnalyzeResultSheet: View {
                     }
                 }
 
-                if let portion = analysis.portion_size {
-                    Text("Порция: \(portion)")
+                if let engName = analysis.top_prediction, analysis.top_prediction_ru != nil {
+                    Text(engName)
                         .font(.system(size: 13))
                         .foregroundColor(FTTheme.muted)
                 }
 
                 FTCard {
-                    AnalyzeNutritionRow(label: "Калории", value: "\(Int(analysis.calories ?? 0)) ккал", hint: "оценка")
-                    AnalyzeNutritionRow(label: "Белки", value: "\(Int(analysis.protein ?? 0)) г", hint: "ориентир")
-                    AnalyzeNutritionRow(label: "Жиры", value: "\(Int(analysis.fat ?? 0)) г", hint: "ориентир")
-                    AnalyzeNutritionRow(label: "Углеводы", value: "\(Int(analysis.carbs ?? 0)) г", hint: "ориентир")
-
-                    if let tags = analysis.tags, !tags.isEmpty {
-                        HStack(spacing: 8) {
-                            ForEach(tags.prefix(4), id: \.self) { t in
-                                Text(t)
-                                    .font(.system(size: 11, weight: .semibold))
-                                    .foregroundColor(.black.opacity(0.75))
-                                    .padding(.horizontal, 10)
-                                    .padding(.vertical, 6)
-                                    .background(Color.gray.opacity(0.10))
-                                    .cornerRadius(999)
-                            }
-                            Spacer()
-                        }
-                        .padding(.top, 10)
-                    }
-
-                    if let advice = analysis.advice, !advice.isEmpty {
-                        Text(advice)
-                            .font(.system(size: 12))
-                            .foregroundColor(FTTheme.muted)
-                            .padding(.top, 8)
-                    }
+                    AnalyzeNutritionRow(label: "Калории", value: "\(Int(analysis.calories)) ккал", hint: "оценка")
+                    AnalyzeNutritionRow(label: "Белки", value: "\(Int(analysis.protein)) г", hint: "ориентир")
+                    AnalyzeNutritionRow(label: "Жиры", value: "\(Int(analysis.fat)) г", hint: "ориентир")
+                    AnalyzeNutritionRow(label: "Углеводы", value: "\(Int(analysis.carbs)) г", hint: "ориентир")
                 }
 
                 // Meal type selector

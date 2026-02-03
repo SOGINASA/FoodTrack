@@ -8,6 +8,7 @@ struct DashboardView: View {
     @State private var dailyStats: DailyStatsDTO?
     @State private var weeklyStats: WeeklyStatsDTO?
     @State private var streak = 0
+    @State private var topFoods: [TopFoodDTO] = []
     @State private var isLoading = true
 
     private var isToday: Bool {
@@ -89,6 +90,11 @@ struct DashboardView: View {
 
                         // Recent meals
                         recentMealsCard
+
+                        // Top foods
+                        if !topFoods.isEmpty {
+                            topFoodsCard
+                        }
                     }
 
                     Spacer(minLength: 20)
@@ -316,6 +322,45 @@ struct DashboardView: View {
         }
     }
 
+    // MARK: - Top Foods
+
+    private var topFoodsCard: some View {
+        FTCard {
+            HStack {
+                Text("Топ блюд за 30 дней")
+                    .font(.system(size: 15, weight: .semibold))
+                Spacer()
+            }
+
+            VStack(spacing: 8) {
+                ForEach(Array(topFoods.prefix(5).enumerated()), id: \.offset) { idx, food in
+                    HStack(spacing: 12) {
+                        Text("\(idx + 1)")
+                            .font(.system(size: 12, weight: .bold))
+                            .foregroundColor(.white)
+                            .frame(width: 22, height: 22)
+                            .background(Color.black.opacity(0.8))
+                            .clipShape(Circle())
+
+                        Text(food.name)
+                            .font(.system(size: 14, weight: .medium))
+                            .lineLimit(1)
+
+                        Spacer()
+
+                        VStack(alignment: .trailing, spacing: 2) {
+                            Text("\(food.count)x")
+                                .font(.system(size: 12, weight: .semibold))
+                            Text("~\(Int(food.avg_calories ?? 0)) ккал")
+                                .font(.system(size: 11))
+                                .foregroundColor(FTTheme.muted)
+                        }
+                    }
+                }
+            }
+        }
+    }
+
     // MARK: - Data Loading
 
     private func loadData() async {
@@ -326,11 +371,13 @@ struct DashboardView: View {
         async let statsTask = APIClient.shared.getDailyStats(date: dateStr)
         async let weeklyTask = APIClient.shared.getWeeklyStats()
         async let streakTask = APIClient.shared.getStreak()
+        async let topFoodsTask = APIClient.shared.getTopFoods()
 
         meals = (try? await mealsTask) ?? []
         dailyStats = try? await statsTask
         weeklyStats = try? await weeklyTask
-        streak = (try? await streakTask) ?? 0
+        streak = (try? await streakTask)?.current_streak ?? 0
+        topFoods = (try? await topFoodsTask) ?? []
 
         isLoading = false
     }
