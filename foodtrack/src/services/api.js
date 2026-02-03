@@ -76,7 +76,7 @@ export const authAPI = {
 // === MEALS API ===
 export const mealsAPI = {
   // Получить все приёмы пищи (с фильтрами)
-  getAll: (params = {}) => api.get('/meals', { params }),
+  getAll: (params = {}) => api.get('/meals/get', { params }),
 
   // Получить приёмы пищи за сегодня
   getToday: () => api.get('/meals/today'),
@@ -85,7 +85,7 @@ export const mealsAPI = {
   getById: (id) => api.get(`/meals/${id}`),
 
   // Создать новый приём пищи
-  create: (data) => api.post('/meals', data),
+  create: (data) => api.post('/meals/post', data),
 
   // Обновить приём пищи
   update: (id, data) => api.put(`/meals/${id}`, data),
@@ -109,10 +109,10 @@ export const mealsAPI = {
 // === GOALS API ===
 export const goalsAPI = {
   // Получить цели пользователя
-  get: () => api.get('/goals'),
+  get: () => api.get('/goals/get'),
 
   // Обновить цели
-  update: (data) => api.put('/goals', data),
+  update: (data) => api.put('/goals/post', data),
 
   // Получить историю веса
   getWeightHistory: (days = 30) => api.get('/goals/weight', { params: { days } }),
@@ -159,7 +159,7 @@ export const progressAPI = {
 // === MEAL PLANS API ===
 export const mealPlansAPI = {
   // Получить все планы питания (с фильтрами)
-  getAll: (params = {}) => api.get('/meal-plans', { params }),
+  getAll: (params = {}) => api.get('/meal-plans/get', { params }),
 
   // Получить план на неделю
   getWeek: (startDate) => api.get('/meal-plans/week', { params: { start_date: startDate } }),
@@ -168,8 +168,7 @@ export const mealPlansAPI = {
   getById: (id) => api.get(`/meal-plans/${id}`),
 
   // Добавить рецепт в план питания
-  create: (data) => api.post('/meal-plans', data),
-
+  create: (data) => api.post('/meal-plans/post', data),
   // Обновить план
   update: (id, data) => api.put(`/meal-plans/${id}`, data),
 
@@ -183,7 +182,7 @@ export const mealPlansAPI = {
 // === RECIPES API ===
 export const recipesAPI = {
   // Получить все рецепты (с фильтрами)
-  getAll: (params = {}) => api.get('/recipes', { params }),
+  getAll: (params = {}) => api.get('/recipes/get', { params }),
 
   // Получить конкретный рецепт
   getById: (id) => api.get(`/recipes/${id}`),
@@ -192,7 +191,19 @@ export const recipesAPI = {
 // === TIPS API ===
 export const tipsAPI = {
   // Получить персонализированные советы
-  getAll: (params = {}) => api.get('/tips', { params }),
+  getAll: (params = {}) => api.get('/tips/get', { params }),
+};
+
+// === WATER API ===
+export const waterAPI = {
+  // Получить записи воды за дату
+  getByDate: (date) => api.get('/water/get', { params: { date } }),
+
+  // Добавить запись воды
+  add: (data) => api.post('/water/post', data),
+
+  // Удалить запись воды
+  delete: (id) => api.delete(`/water/${id}`),
 };
 
 // === GROUPS API ===
@@ -227,10 +238,10 @@ export const groupsAPI = {
 // === FRIDGE API ===
 export const fridgeAPI = {
   // Получить все продукты в холодильнике
-  getAll: () => api.get('/fridge'),
+  getAll: () => api.get('/fridge/get'),
 
   // Добавить продукт
-  addProduct: (data) => api.post('/fridge', data),
+  addProduct: (data) => api.post('/fridge/post', data),
 
   // Обновить продукт
   updateProduct: (id, data) => api.put(`/fridge/${id}`, data),
@@ -285,7 +296,7 @@ export const fridgeAPI = {
 // === FRIENDS API ===
 export const friendsAPI = {
   // Получить список друзей
-  getAll: () => api.get('/friends'),
+  getAll: () => api.get('/friends/get'),
 
   // Входящие запросы в друзья
   getIncomingRequests: () => api.get('/friends/requests/incoming'),

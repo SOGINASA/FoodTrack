@@ -59,6 +59,7 @@ def create_app():
     from routes.tips import tips_bp
     from routes.friends import friends_bp
     from routes.fridge import fridge_bp
+    from routes.water import water_bp
 
     # Регистрация всех блюпринтов
     app.register_blueprint(auth_bp, url_prefix='/api/auth')
@@ -73,6 +74,7 @@ def create_app():
     app.register_blueprint(tips_bp, url_prefix='/api/tips')
     app.register_blueprint(friends_bp, url_prefix='/api/friends')
     app.register_blueprint(fridge_bp, url_prefix='/api/fridge')
+    app.register_blueprint(water_bp, url_prefix='/api/water')
 
     # Главная страница API
     @app.route('/api')
@@ -92,6 +94,7 @@ def create_app():
                 'recipes': '/api/recipes - каталог рецептов',
                 'friends': '/api/friends - управление друзьями',
                 'fridge': '/api/fridge - холодильник и обмен продуктами',
+                'water': '/api/water - трекинг потребления воды',
             }
         })
 

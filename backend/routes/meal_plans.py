@@ -11,7 +11,7 @@ logger = logging.getLogger(__name__)
 meal_plans_bp = Blueprint('meal_plans', __name__)
 
 
-@meal_plans_bp.route('', methods=['GET'])
+@meal_plans_bp.route('get', methods=['GET'])
 @jwt_required()
 def get_meal_plans():
     """Получить план питания пользователя"""
@@ -71,7 +71,7 @@ def get_meal_plan(plan_id):
         return jsonify({'error': 'Ошибка получения данных'}), 500
 
 
-@meal_plans_bp.route('', methods=['POST'])
+@meal_plans_bp.route('post', methods=['POST'])
 @jwt_required()
 def create_meal_plan():
     """Добавить рецепт в план питания"""

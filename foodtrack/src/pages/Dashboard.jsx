@@ -10,6 +10,7 @@ import Card from '../components/common/Card';
 import Loader from '../components/common/Loader';
 import { useMeals } from '../hooks/useMeals';
 import { useAnalytics } from '../hooks/useAnalytics';
+import { useWater } from '../hooks/useWater';
 
 const QuickIconTips = ({ className = '' }) => (
   <svg viewBox="0 0 24 24" className={className} fill="none" aria-hidden="true">
@@ -57,6 +58,8 @@ const Dashboard = () => {
 
   const { meals, loading, error, fetchMeals } = useMeals();
   const { streak, fetchStreak, weeklyStats, fetchWeeklyStats, fetchDailyStats } = useAnalytics();
+  const { waterData, fetchWater, addWater } = useWater();
+  const [waterAdding, setWaterAdding] = useState(false);
 
   useEffect(() => {
     const dateStr = selectedDate.toISOString().split('T')[0];
@@ -64,7 +67,8 @@ const Dashboard = () => {
     fetchDailyStats(dateStr);
     fetchStreak();
     fetchWeeklyStats();
-  }, [selectedDate, fetchMeals, fetchDailyStats, fetchStreak, fetchWeeklyStats]);
+    fetchWater(dateStr);
+  }, [selectedDate, fetchMeals, fetchDailyStats, fetchStreak, fetchWeeklyStats, fetchWater]);
 
   const handlePrevDay = () => {
     const newDate = new Date(selectedDate);
@@ -100,6 +104,17 @@ const Dashboard = () => {
       return date.toLocaleDateString('ru-RU', { day: 'numeric', month: 'long' });
     }
   };
+
+  const handleAddWater = async (amount) => {
+    setWaterAdding(true);
+    const dateStr = selectedDate.toISOString().split('T')[0];
+    await addWater(amount, dateStr);
+    setWaterAdding(false);
+  };
+
+  const waterPercent = waterData.goal_ml > 0
+    ? Math.min(100, Math.round((waterData.total_ml / waterData.goal_ml) * 100))
+    : 0;
 
   const totalCalories = meals.reduce((sum, meal) => sum + (meal.calories || 0), 0);
   const totalProtein = meals.reduce((sum, meal) => sum + (meal.protein || 0), 0);
@@ -256,6 +271,73 @@ const Dashboard = () => {
           </div>
         </Card>
       </div>
+
+      {/* Water Tracker */}
+      <Card padding="lg">
+        <div className="flex items-center justify-between mb-4">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-xl bg-blue-100 flex items-center justify-center">
+              <svg className="w-5 h-5 text-blue-500" viewBox="0 0 24 24" fill="none">
+                <path d="M12 2.69l5.66 5.66a8 8 0 1 1-11.31 0L12 2.69z" fill="currentColor" opacity="0.2" stroke="currentColor" strokeWidth="2" strokeLinejoin="round" />
+              </svg>
+            </div>
+            <div>
+              <h3 className="font-semibold text-lg">Вода</h3>
+              <p className="text-sm text-secondary">
+                {waterData.total_ml} / {waterData.goal_ml} мл
+              </p>
+            </div>
+          </div>
+          <div className="text-2xl font-bold text-blue-500">
+            {waterPercent}%
+          </div>
+        </div>
+
+        {/* Progress bar */}
+        <div className="w-full bg-gray-100 rounded-full h-3 mb-4">
+          <div
+            className="h-3 rounded-full transition-all duration-500"
+            style={{
+              width: `${waterPercent}%`,
+              background: waterPercent >= 100
+                ? 'linear-gradient(90deg, #22c55e, #16a34a)'
+                : 'linear-gradient(90deg, #60a5fa, #3b82f6)',
+            }}
+          />
+        </div>
+
+        {/* Quick add buttons */}
+        <div className="flex gap-2 flex-wrap">
+          {[150, 250, 350, 500].map((amount) => (
+            <button
+              key={amount}
+              type="button"
+              onClick={() => handleAddWater(amount)}
+              disabled={waterAdding}
+              className="flex-1 min-w-[70px] py-2.5 px-3 rounded-xl border border-gray-200 bg-white hover:border-blue-400 hover:bg-blue-50 active:scale-[0.97] transition text-sm font-medium disabled:opacity-50 cursor-pointer"
+            >
+              <span className="block text-blue-500">{amount} мл</span>
+            </button>
+          ))}
+        </div>
+
+        {/* Water entries for today */}
+        {waterData.entries.length > 0 && (
+          <div className="mt-4 pt-3 border-t border-divider">
+            <div className="flex flex-wrap gap-2">
+              {waterData.entries.map((entry) => (
+                <span
+                  key={entry.id}
+                  className="inline-flex items-center gap-1 text-xs bg-blue-50 text-blue-600 px-2 py-1 rounded-lg"
+                >
+                  {entry.time && <span className="text-blue-400">{entry.time}</span>}
+                  {entry.amount_ml} мл
+                </span>
+              ))}
+            </div>
+          </div>
+        )}
+      </Card>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         <div>

@@ -11,7 +11,7 @@ fridge_bp = Blueprint('fridge', __name__)
 
 # ==================== CRUD продуктов ====================
 
-@fridge_bp.route('', methods=['GET'])
+@fridge_bp.route('get', methods=['GET'])
 @jwt_required()
 def get_products():
     """Получить все продукты в холодильнике текущего пользователя"""
@@ -23,7 +23,7 @@ def get_products():
     return jsonify([p.to_dict() for p in products])
 
 
-@fridge_bp.route('', methods=['POST'])
+@fridge_bp.route('post', methods=['POST'])
 @jwt_required()
 def add_product():
     """Добавить продукт в холодильник"""

@@ -132,7 +132,7 @@ def remove_friend(friendship_id):
     return jsonify({'message': 'Запись удалена'})
 
 
-@friends_bp.route('', methods=['GET'])
+@friends_bp.route('get', methods=['GET'])
 @jwt_required()
 def get_friends():
     """Получить список друзей"""

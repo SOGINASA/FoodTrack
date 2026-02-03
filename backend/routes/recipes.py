@@ -9,7 +9,7 @@ logger = logging.getLogger(__name__)
 recipes_bp = Blueprint('recipes', __name__)
 
 
-@recipes_bp.route('', methods=['GET'])
+@recipes_bp.route('get', methods=['GET'])
 @jwt_required()
 def get_recipes():
     """Получить список рецептов с фильтрацией"""

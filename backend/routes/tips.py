@@ -1,6 +1,6 @@
 from flask import Blueprint, request, jsonify
 from flask_jwt_extended import jwt_required, get_jwt_identity
-from models import db, User, Meal, UserGoals
+from models import db, User, Meal, UserGoals, WaterEntry
 from datetime import datetime, timedelta
 import json
 import logging
@@ -207,6 +207,33 @@ ALL_TIPS = [
         "condition": "low_water"
     },
     {
+        "id": 110,
+        "title": "Пейте воду перед едой",
+        "description": "Стакан воды за 30 минут до еды снижает аппетит и помогает контролировать порции. Вы пьёте меньше нормы - добавьте этот ритуал.",
+        "icon": "💧",
+        "category": "lifestyle",
+        "priority": "medium",
+        "condition": "low_water"
+    },
+    {
+        "id": 111,
+        "title": "Установите напоминания о воде",
+        "description": "Вы не достигаете дневной нормы воды. Пейте по стакану каждые 1-2 часа - поставьте напоминание на телефоне.",
+        "icon": "⏰",
+        "category": "lifestyle",
+        "priority": "high",
+        "condition": "low_water"
+    },
+    {
+        "id": 112,
+        "title": "Носите бутылку воды с собой",
+        "description": "Когда вода всегда под рукой, вы пьёте на 40% больше. Заведите многоразовую бутылку.",
+        "icon": "🧴",
+        "category": "lifestyle",
+        "priority": "medium",
+        "condition": "low_water"
+    },
+    {
         "id": 52,
         "title": "Спите достаточно",
         "description": "Недосып нарушает выработку гормонов голода и сытости. Спите минимум 7-8 часов в день.",
@@ -358,7 +385,8 @@ def check_condition(condition, user_stats):
         return user_stats.get('avg_protein', 0) < user_stats.get('target_protein', 150) * 0.8
     
     if condition == "low_water":
-        return user_stats.get('water_intake', 3) < 2.5
+        water_goal_liters = user_stats.get('water_goal_ml', 2000) / 1000
+        return user_stats.get('water_intake', 0) < water_goal_liters * 0.8
     
     return False
 
@@ -382,14 +410,16 @@ def get_priority(condition, user_stats):
         return "low"
     
     if condition == "low_water":
-        if user_stats.get('water_intake', 3) < 1.5:
+        water_goal_liters = user_stats.get('water_goal_ml', 2000) / 1000
+        intake = user_stats.get('water_intake', 0)
+        if intake < water_goal_liters * 0.5:
             return "high"
         return "medium"
     
     return "low"
 
 
-@tips_bp.route('', methods=['GET'])
+@tips_bp.route('get', methods=['GET'])
 @jwt_required()
 def get_tips():
     """Получить персонализированные советы для пользователя"""
@@ -419,6 +449,18 @@ def get_tips():
         
         days_with_meals = len(set(m.meal_date for m in meals_week)) or 1
         
+        # Вычисляем реальное потребление воды за последние 7 дней
+        water_entries = WaterEntry.query.filter(
+            WaterEntry.user_id == user_id,
+            WaterEntry.date >= week_ago
+        ).all()
+        total_water_ml = sum(w.amount_ml for w in water_entries)
+        days_with_water = len(set(w.date for w in water_entries)) or 1
+        avg_water_ml = total_water_ml / days_with_water
+        avg_water_liters = avg_water_ml / 1000
+
+        water_goal_ml = goals.water_goal if goals and goals.water_goal else 2000
+
         user_stats = {
             'avg_calories': total_cals / days_with_meals,
             'avg_protein': total_protein / days_with_meals,
@@ -428,7 +470,9 @@ def get_tips():
             'target_protein': goals.protein_goal if goals else 150,
             'target_carbs': goals.carbs_goal if goals else 200,
             'target_fats': goals.fats_goal if goals else 70,
-            'water_intake': 2,
+            'water_intake': avg_water_liters,
+            'water_goal_ml': water_goal_ml,
+            'avg_water_ml': avg_water_ml,
         }
         
         # Фильтруем советы по условиям

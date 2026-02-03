@@ -58,6 +58,7 @@ class User(db.Model):
     meals = db.relationship('Meal', backref='user', lazy='dynamic', cascade='all, delete-orphan')
     goals = db.relationship('UserGoals', backref='user', uselist=False, cascade='all, delete-orphan')
     weights = db.relationship('WeightEntry', backref='user', lazy='dynamic', cascade='all, delete-orphan')
+    water_entries = db.relationship('WaterEntry', backref='user', lazy='dynamic', cascade='all, delete-orphan')
     fridge_products = db.relationship('FridgeProduct', backref='user', lazy='dynamic', cascade='all, delete-orphan')
     
     # Индекс для уникальности OAuth
@@ -187,6 +188,7 @@ class UserGoals(db.Model):
     protein_goal = db.Column(db.Integer, default=150)
     carbs_goal = db.Column(db.Integer, default=200)
     fats_goal = db.Column(db.Integer, default=70)
+    water_goal = db.Column(db.Integer, default=2000)  # мл
 
     target_weight = db.Column(db.Float)
     activity_level = db.Column(db.String(20), default='moderate')  # sedentary, light, moderate, active, very_active
@@ -202,10 +204,33 @@ class UserGoals(db.Model):
             'protein_goal': self.protein_goal,
             'carbs_goal': self.carbs_goal,
             'fats_goal': self.fats_goal,
+            'water_goal': self.water_goal,
             'target_weight': self.target_weight,
             'activity_level': self.activity_level,
             'goal_type': self.goal_type,
             'diet_type': self.diet_type,
+        }
+
+
+class WaterEntry(db.Model):
+    """Запись о потреблении воды"""
+    __tablename__ = 'water_entries'
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False, index=True)
+
+    amount_ml = db.Column(db.Integer, nullable=False)  # мл
+    date = db.Column(db.Date, nullable=False, index=True)
+    time = db.Column(db.String(5))  # HH:MM
+
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+
+    def to_dict(self):
+        return {
+            'id': self.id,
+            'amount_ml': self.amount_ml,
+            'date': self.date.isoformat() if self.date else None,
+            'time': self.time,
+            'created_at': self.created_at.isoformat() if self.created_at else None,
         }
 
 

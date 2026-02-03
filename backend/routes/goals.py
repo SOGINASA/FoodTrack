@@ -6,7 +6,7 @@ from datetime import datetime, date, timedelta
 goals_bp = Blueprint('goals', __name__)
 
 
-@goals_bp.route('', methods=['GET'])
+@goals_bp.route('get', methods=['GET'])
 @jwt_required()
 def get_goals():
     """Получить цели пользователя"""
@@ -27,7 +27,7 @@ def get_goals():
         return jsonify({'error': 'Ошибка получения данных'}), 500
 
 
-@goals_bp.route('', methods=['PUT'])
+@goals_bp.route('post', methods=['PUT'])
 @jwt_required()
 def update_goals():
     """Обновить цели пользователя"""
