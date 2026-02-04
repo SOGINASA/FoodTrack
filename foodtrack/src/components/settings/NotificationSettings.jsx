@@ -18,6 +18,7 @@ const NotificationSettings = ({ notifications, onSave }) => {
   });
 
   const [hasChanges, setHasChanges] = useState(false);
+  const [pushError, setPushError] = useState(null);
 
   const {
     isSupported,
@@ -44,17 +45,22 @@ const NotificationSettings = ({ notifications, onSave }) => {
   };
 
   const handlePushToggle = async () => {
+    setPushError(null);
     if (isSubscribed) {
       const result = await unsubscribe();
       if (result.success) {
         setSettings((prev) => ({ ...prev, pushEnabled: false }));
         setHasChanges(true);
+      } else {
+        setPushError(result.error);
       }
     } else {
       const result = await subscribe();
       if (result.success) {
         setSettings((prev) => ({ ...prev, pushEnabled: true }));
         setHasChanges(true);
+      } else {
+        setPushError(result.error);
       }
     }
   };
@@ -126,6 +132,11 @@ const NotificationSettings = ({ notifications, onSave }) => {
                   : 'Включить'}
               </button>
             </div>
+            {pushError && (
+              <div className="mt-2 p-2 bg-red-50 text-red-600 text-sm rounded-lg">
+                {pushError}
+              </div>
+            )}
           </div>
         )}
 

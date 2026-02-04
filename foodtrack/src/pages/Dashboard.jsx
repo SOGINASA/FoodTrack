@@ -12,6 +12,9 @@ import { useMeals } from '../hooks/useMeals';
 import { useAnalytics } from '../hooks/useAnalytics';
 import { useWater } from '../hooks/useWater';
 
+// ✅ импорт из api.js
+import { notificationsAPI } from '../api'; // если путь другой — поправь на '../api.js' или '../services/api'
+
 const QuickIconTips = ({ className = '' }) => (
   <svg viewBox="0 0 24 24" className={className} fill="none" aria-hidden="true">
     <path d="M9.5 21h5M10 17h4" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
@@ -54,9 +57,19 @@ const QuickIconFridge = ({ className = '' }) => (
 const QuickIconGroups = ({ className = '' }) => (
   <svg viewBox="0 0 24 24" className={className} fill="none" aria-hidden="true">
     <circle cx="9" cy="7" r="3" stroke="currentColor" strokeWidth="2" />
-    <path d="M3 21v-2a4 4 0 0 1 4-4h4a4 4 0 0 1 4 4v2" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+    <path
+      d="M3 21v-2a4 4 0 0 1 4-4h4a4 4 0 0 1 4 4v2"
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinecap="round"
+    />
     <circle cx="17" cy="8" r="2.5" stroke="currentColor" strokeWidth="2" />
-    <path d="M17 13.5a3.5 3.5 0 0 1 3.5 3.5v1" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+    <path
+      d="M17 13.5a3.5 3.5 0 0 1 3.5 3.5v1"
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinecap="round"
+    />
   </svg>
 );
 
@@ -69,6 +82,10 @@ const Dashboard = () => {
   const { streak, fetchStreak, weeklyStats, fetchWeeklyStats, fetchDailyStats } = useAnalytics();
   const { waterData, fetchWater, addWater } = useWater();
   const [waterAdding, setWaterAdding] = useState(false);
+
+  // ✅ состояния для тестового уведомления
+  const [testSending, setTestSending] = useState(false);
+  const [testResult, setTestResult] = useState(null); // { type: 'success'|'error', text: string }
 
   useEffect(() => {
     const dateStr = selectedDate.toISOString().split('T')[0];
@@ -119,6 +136,25 @@ const Dashboard = () => {
     const dateStr = selectedDate.toISOString().split('T')[0];
     await addWater(amount, dateStr);
     setWaterAdding(false);
+  };
+
+  // ✅ функция, которая делает запрос на API (POST /notifications/test)
+  const handleSendTestNotification = async () => {
+    setTestSending(true);
+    setTestResult(null);
+
+    try {
+      await notificationsAPI.sendTest();
+      setTestResult({ type: 'success', text: 'Тестовое уведомление отправлено.' });
+    } catch (e) {
+      const message =
+        e?.response?.data?.message ||
+        e?.message ||
+        'Не удалось отправить тестовое уведомление.';
+      setTestResult({ type: 'error', text: message });
+    } finally {
+      setTestSending(false);
+    }
   };
 
   const waterPercent = waterData.goal_ml > 0
@@ -288,7 +324,14 @@ const Dashboard = () => {
           <div className="flex items-center gap-3">
             <div className="w-10 h-10 rounded-xl bg-blue-100 flex items-center justify-center">
               <svg className="w-5 h-5 text-blue-500" viewBox="0 0 24 24" fill="none">
-                <path d="M12 2.69l5.66 5.66a8 8 0 1 1-11.31 0L12 2.69z" fill="currentColor" opacity="0.2" stroke="currentColor" strokeWidth="2" strokeLinejoin="round" />
+                <path
+                  d="M12 2.69l5.66 5.66a8 8 0 1 1-11.31 0L12 2.69z"
+                  fill="currentColor"
+                  opacity="0.2"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                  strokeLinejoin="round"
+                />
               </svg>
             </div>
             <div>
@@ -391,6 +434,40 @@ const Dashboard = () => {
           </Card>
         </div>
       </div>
+
+      {/* ✅ Dev/Test: отправка тестового уведомления */}
+      <Card padding="lg">
+        <div className="flex items-center justify-between gap-3 flex-wrap">
+          <div>
+            <h3 className="text-lg font-semibold">Тест уведомлений</h3>
+            <p className="text-sm text-secondary">
+              Дёргает <span className="font-mono">POST /notifications/test</span>
+            </p>
+          </div>
+
+          <button
+            type="button"
+            onClick={handleSendTestNotification}
+            disabled={testSending}
+            className="py-2 px-4 rounded-lg bg-black text-white font-medium hover:bg-black/90 transition text-sm disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            {testSending ? 'Отправляю…' : 'Отправить тест'}
+          </button>
+        </div>
+
+        {testResult && (
+          <div
+            className={[
+              'mt-4 rounded-lg border px-3 py-2 text-sm',
+              testResult.type === 'success'
+                ? 'bg-green-50 border-green-200 text-green-800'
+                : 'bg-red-50 border-red-200 text-red-800',
+            ].join(' ')}
+          >
+            {testResult.text}
+          </div>
+        )}
+      </Card>
 
       <AddMealButton />
     </div>
