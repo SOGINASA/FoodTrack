@@ -176,12 +176,26 @@ def create_admin():
 @app.cli.command()
 def generate_vapid():
     """Генерировать VAPID ключи для Web Push"""
+    import base64
     from py_vapid import Vapid
     vapid = Vapid()
     vapid.generate_keys()
+
+    # Извлекаем публичный ключ в формате applicationServerKey (urlsafe base64)
+    pub_numbers = vapid.public_key.public_numbers()
+    x = pub_numbers.x.to_bytes(32, 'big')
+    y = pub_numbers.y.to_bytes(32, 'big')
+    app_server_key = b'\x04' + x + y
+    public_key_b64 = base64.urlsafe_b64encode(app_server_key).rstrip(b'=').decode()
+
+    # Приватный ключ в PEM формате
+    private_pem = vapid.private_pem()
+    if isinstance(private_pem, bytes):
+        private_pem = private_pem.decode()
+
     print("Добавьте в .env файл:")
-    print(f"VAPID_PRIVATE_KEY={vapid.private_pem().decode() if isinstance(vapid.private_pem(), bytes) else vapid.private_pem()}")
-    print(f"VAPID_PUBLIC_KEY={vapid.public_key_urlsafe_base64()}")
+    print(f"VAPID_PRIVATE_KEY={private_pem}")
+    print(f"VAPID_PUBLIC_KEY={public_key_b64}")
 
 
 if __name__ == '__main__':
