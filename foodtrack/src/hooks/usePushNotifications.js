@@ -43,8 +43,7 @@ export const usePushNotifications = () => {
 
     setLoading(true);
     try {
-      const registration = await navigator.serviceWorker.register('/sw.js');
-      await navigator.serviceWorker.ready;
+      const registration = await navigator.serviceWorker.ready;
 
       const perm = await Notification.requestPermission();
       setPermission(perm);

@@ -10,3 +10,10 @@ root.render(
     <App />
   </React.StrictMode>
 );
+
+// Регистрируем service worker заранее для push-уведомлений на мобильных
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('/sw.js').catch(() => {});
+  });
+}

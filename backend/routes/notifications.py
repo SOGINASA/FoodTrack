@@ -210,14 +210,25 @@ def send_test_notification():
     """Отправить тестовое уведомление (для отладки)"""
     user_id = int(get_jwt_identity())
 
+    # Диагностика
+    prefs = NotificationPreference.query.filter_by(user_id=user_id).first()
+    subs = PushSubscription.query.filter_by(user_id=user_id).all()
+    vapid_set = bool(current_app.config.get('VAPID_PRIVATE_KEY'))
+
     notification = create_and_push_notification(
         user_id=user_id,
         title='Тестовое уведомление',
-        body='Push-уведомления работают! 🎉',
+        body='Push-уведомления работают!',
         category='system',
     )
 
     return jsonify({
         'message': 'Тестовое уведомление отправлено',
         'notification': notification.to_dict(),
+        'debug': {
+            'vapid_configured': vapid_set,
+            'push_enabled': prefs.push_enabled if prefs else False,
+            'subscriptions_count': len(subs),
+            'is_pushed': notification.is_pushed,
+        },
     })
