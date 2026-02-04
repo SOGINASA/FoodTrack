@@ -177,24 +177,25 @@ def create_admin():
 def generate_vapid():
     """Генерировать VAPID ключи для Web Push"""
     import base64
-    from py_vapid import Vapid
-    vapid = Vapid()
-    vapid.generate_keys()
+    from cryptography.hazmat.primitives.asymmetric import ec
+    from cryptography.hazmat.backends import default_backend
 
-    # Извлекаем публичный ключ в формате applicationServerKey (urlsafe base64)
-    pub_numbers = vapid.public_key.public_numbers()
+    private_key = ec.generate_private_key(ec.SECP256R1(), default_backend())
+
+    # Приватный ключ — raw 32 байта в urlsafe base64
+    private_numbers = private_key.private_numbers()
+    private_bytes = private_numbers.private_value.to_bytes(32, 'big')
+    private_key_b64 = base64.urlsafe_b64encode(private_bytes).rstrip(b'=').decode()
+
+    # Публичный ключ — 0x04 + x + y в urlsafe base64
+    pub_numbers = private_key.public_key().public_numbers()
     x = pub_numbers.x.to_bytes(32, 'big')
     y = pub_numbers.y.to_bytes(32, 'big')
-    app_server_key = b'\x04' + x + y
-    public_key_b64 = base64.urlsafe_b64encode(app_server_key).rstrip(b'=').decode()
-
-    # Приватный ключ в PEM формате
-    private_pem = vapid.private_pem()
-    if isinstance(private_pem, bytes):
-        private_pem = private_pem.decode()
+    public_bytes = b'\x04' + x + y
+    public_key_b64 = base64.urlsafe_b64encode(public_bytes).rstrip(b'=').decode()
 
     print("Добавьте в .env файл:")
-    print(f"VAPID_PRIVATE_KEY={private_pem}")
+    print(f"VAPID_PRIVATE_KEY={private_key_b64}")
     print(f"VAPID_PUBLIC_KEY={public_key_b64}")
 
 
