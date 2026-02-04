@@ -1,7 +1,7 @@
 from flask import Blueprint, request, jsonify
 from flask_jwt_extended import jwt_required, get_jwt_identity
 from models import db, WaterEntry, UserGoals
-from datetime import datetime, date
+from datetime import datetime, date, timedelta
 from sqlalchemy import func
 
 water_bp = Blueprint('water', __name__)
@@ -57,7 +57,7 @@ def add_water():
             user_id=user_id,
             amount_ml=amount_ml,
             date=target_date,
-            time=datetime.now().strftime('%H:%M')
+            time = (datetime.now() + timedelta(hours=5)).strftime('%H:%M')
         )
         db.session.add(entry)
         db.session.commit()
