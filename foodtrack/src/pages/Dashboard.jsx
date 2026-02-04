@@ -51,6 +51,15 @@ const QuickIconFridge = ({ className = '' }) => (
   </svg>
 );
 
+const QuickIconGroups = ({ className = '' }) => (
+  <svg viewBox="0 0 24 24" className={className} fill="none" aria-hidden="true">
+    <circle cx="9" cy="7" r="3" stroke="currentColor" strokeWidth="2" />
+    <path d="M3 21v-2a4 4 0 0 1 4-4h4a4 4 0 0 1 4 4v2" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+    <circle cx="17" cy="8" r="2.5" stroke="currentColor" strokeWidth="2" />
+    <path d="M17 13.5a3.5 3.5 0 0 1 3.5 3.5v1" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+  </svg>
+);
+
 const Dashboard = () => {
   const navigate = useNavigate();
   const [selectedDate, setSelectedDate] = useState(new Date());
@@ -126,6 +135,7 @@ const Dashboard = () => {
     { label: 'Рецепты', path: '/recipes', Icon: QuickIconRecipes },
     { label: 'Холодильник', path: '/fridge', Icon: QuickIconFridge },
     { label: 'Прогресс', path: '/progress', Icon: QuickIconProgress },
+    { label: 'Группы', path: '/groups', Icon: QuickIconGroups },
   ];
 
   if (loading) {
