@@ -75,8 +75,8 @@ def send_friend_request():
             related_type='friendship',
             related_id=friendship.id,
         )
-    except Exception:
-        pass
+    except Exception as e:
+        print(f"[Notification error] friend request to user {addressee_id}: {e}")
 
     return jsonify(friendship.to_dict()), 201
 
@@ -112,8 +112,8 @@ def accept_friend_request(friendship_id):
             related_type='friendship',
             related_id=friendship.id,
         )
-    except Exception:
-        pass
+    except Exception as e:
+        print(f"[Notification error] friend accept to user {friendship.requester_id}: {e}")
 
     return jsonify(friendship.to_dict())
 

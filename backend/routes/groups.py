@@ -263,8 +263,8 @@ def create_post(group_id):
                 related_type='group_post',
                 related_id=post.id,
             )
-    except Exception:
-        pass
+    except Exception as e:
+        print(f"[Notification error] group post in {group_name}: {e}")
 
     return jsonify(post.to_dict(user_id)), 201
 
@@ -355,8 +355,8 @@ def add_comment(group_id, post_id):
                 related_type='comment',
                 related_id=comment.id,
             )
-    except Exception:
-        pass
+    except Exception as e:
+        print(f"[Notification error] group comment: {e}")
 
     return jsonify(comment.to_dict()), 201
 

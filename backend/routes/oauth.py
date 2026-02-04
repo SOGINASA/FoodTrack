@@ -128,10 +128,12 @@ def oauth_callback(provider):
             
             db.session.add(user)
             db.session.flush()
-            
-            # Создаем цели по умолчанию
-            goals = UserGoals(user_id=user.id)
-            db.session.add(goals)
+
+            # Создаем цели по умолчанию (если ещё нет)
+            existing_goals = UserGoals.query.filter_by(user_id=user.id).first()
+            if not existing_goals:
+                goals = UserGoals(user_id=user.id)
+                db.session.add(goals)
             db.session.commit()
             
             is_new_user = True
@@ -178,7 +180,8 @@ def oauth_callback(provider):
         
     except Exception as e:
         import traceback
-        
+        db.session.rollback()
+
         auth_logger.log_login(
             user=None,
             method='oauth',
@@ -187,7 +190,7 @@ def oauth_callback(provider):
             error=str(e),
             error_details=traceback.format_exc()
         )
-        
+
         print(f"[ERROR] OAuth callback error: {str(e)}")
         return jsonify({'error': 'OAuth callback failed'}), 400
 
