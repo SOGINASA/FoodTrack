@@ -3,6 +3,7 @@ from datetime import datetime, date, timedelta
 
 from flask import Blueprint, request, jsonify
 from flask_jwt_extended import jwt_required, get_jwt_identity
+from services.push_service import create_and_push_notification
 from models import db, User, FridgeProduct, ProductShareRequest
 import json
 
@@ -266,6 +267,23 @@ def send_share_request():
 
     db.session.add(share_req)
     db.session.commit()
+
+    try:
+        sender = User.query.get(user_id)
+        sender_name = sender.full_name or sender.nickname or 'Пользователь'
+        product_names = ', '.join(p['name'] for p in products_data[:3])
+        if len(products_data) > 3:
+            product_names += f' и ещё {len(products_data) - 3}'
+        create_and_push_notification(
+            user_id=int(recipient_id),
+            title='Запрос на передачу продуктов',
+            body=f'{sender_name} хочет передать вам: {product_names}',
+            category='fridge',
+            related_type='share_request',
+            related_id=share_req.id,
+        )
+    except Exception:
+        pass
 
     return jsonify(share_req.to_dict()), 201
 

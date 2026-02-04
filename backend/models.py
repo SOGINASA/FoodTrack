@@ -780,3 +780,113 @@ class ProductShareRequest(db.Model):
             'status': self.status,
             'createdAt': self.created_at.isoformat() if self.created_at else None,
         }
+
+
+class PushSubscription(db.Model):
+    """Подписка на push-уведомления (Web Push)"""
+    __tablename__ = 'push_subscriptions'
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False, index=True)
+
+    endpoint = db.Column(db.Text, nullable=False)
+    p256dh_key = db.Column(db.String(255), nullable=False)
+    auth_key = db.Column(db.String(255), nullable=False)
+
+    user_agent = db.Column(db.String(255), nullable=True)
+
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+    user = db.relationship('User', backref=db.backref('push_subscriptions', lazy='dynamic', cascade='all, delete-orphan'))
+
+    __table_args__ = (
+        db.UniqueConstraint('endpoint', name='uq_push_endpoint'),
+    )
+
+    def to_dict(self):
+        return {
+            'id': self.id,
+            'userAgent': self.user_agent,
+            'createdAt': self.created_at.isoformat() if self.created_at else None,
+        }
+
+    def to_webpush_dict(self):
+        return {
+            'endpoint': self.endpoint,
+            'keys': {
+                'p256dh': self.p256dh_key,
+                'auth': self.auth_key,
+            }
+        }
+
+
+class Notification(db.Model):
+    """Уведомление пользователя"""
+    __tablename__ = 'notifications'
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False, index=True)
+
+    title = db.Column(db.String(200), nullable=False)
+    body = db.Column(db.Text, nullable=False)
+    category = db.Column(db.String(30), nullable=False, index=True)
+
+    related_type = db.Column(db.String(30), nullable=True)
+    related_id = db.Column(db.Integer, nullable=True)
+
+    is_read = db.Column(db.Boolean, default=False, index=True)
+    is_pushed = db.Column(db.Boolean, default=False)
+
+    created_at = db.Column(db.DateTime, default=datetime.utcnow, index=True)
+    read_at = db.Column(db.DateTime, nullable=True)
+
+    user = db.relationship('User', backref=db.backref('notifications', lazy='dynamic', cascade='all, delete-orphan'))
+
+    def to_dict(self):
+        return {
+            'id': self.id,
+            'title': self.title,
+            'body': self.body,
+            'category': self.category,
+            'relatedType': self.related_type,
+            'relatedId': self.related_id,
+            'isRead': self.is_read,
+            'createdAt': self.created_at.isoformat() if self.created_at else None,
+            'readAt': self.read_at.isoformat() if self.read_at else None,
+        }
+
+
+class NotificationPreference(db.Model):
+    """Настройки уведомлений пользователя"""
+    __tablename__ = 'notification_preferences'
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False, unique=True)
+
+    meal_reminders = db.Column(db.Boolean, default=True)
+    water_reminders = db.Column(db.Boolean, default=True)
+    progress_updates = db.Column(db.Boolean, default=True)
+    group_activity = db.Column(db.Boolean, default=True)
+    weekly_reports = db.Column(db.Boolean, default=True)
+
+    breakfast_time = db.Column(db.String(5), default='08:00')
+    lunch_time = db.Column(db.String(5), default='13:00')
+    dinner_time = db.Column(db.String(5), default='19:00')
+
+    push_enabled = db.Column(db.Boolean, default=False)
+
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+    user = db.relationship('User', backref=db.backref('notification_preferences', uselist=False, cascade='all, delete-orphan'))
+
+    def to_dict(self):
+        return {
+            'mealReminders': self.meal_reminders,
+            'waterReminders': self.water_reminders,
+            'progressUpdates': self.progress_updates,
+            'groupActivity': self.group_activity,
+            'weeklyReports': self.weekly_reports,
+            'breakfastTime': self.breakfast_time,
+            'lunchTime': self.lunch_time,
+            'dinnerTime': self.dinner_time,
+            'pushEnabled': self.push_enabled,
+        }

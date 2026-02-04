@@ -2,6 +2,7 @@ from flask import Blueprint, request, jsonify
 from flask_jwt_extended import jwt_required, get_jwt_identity
 from models import db, User, Friendship
 from sqlalchemy import or_, and_
+from services.push_service import create_and_push_notification
 
 friends_bp = Blueprint('friends', __name__)
 
@@ -63,6 +64,20 @@ def send_friend_request():
     db.session.add(friendship)
     db.session.commit()
 
+    sender = User.query.get(user_id)
+    sender_name = sender.full_name or sender.nickname or 'Пользователь'
+    try:
+        create_and_push_notification(
+            user_id=addressee_id,
+            title='Запрос в друзья',
+            body=f'{sender_name} хочет добавить вас в друзья',
+            category='friend',
+            related_type='friendship',
+            related_id=friendship.id,
+        )
+    except Exception:
+        pass
+
     return jsonify(friendship.to_dict()), 201
 
 
@@ -85,6 +100,20 @@ def accept_friend_request(friendship_id):
 
     friendship.status = 'accepted'
     db.session.commit()
+
+    acceptor = User.query.get(user_id)
+    acceptor_name = acceptor.full_name or acceptor.nickname or 'Пользователь'
+    try:
+        create_and_push_notification(
+            user_id=friendship.requester_id,
+            title='Запрос принят',
+            body=f'{acceptor_name} принял(а) ваш запрос в друзья',
+            category='friend',
+            related_type='friendship',
+            related_id=friendship.id,
+        )
+    except Exception:
+        pass
 
     return jsonify(friendship.to_dict())
 

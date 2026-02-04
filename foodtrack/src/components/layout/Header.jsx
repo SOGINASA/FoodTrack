@@ -1,8 +1,8 @@
 import React from 'react';
-import { Settings, LogIn } from 'lucide-react';
+import { Settings, LogIn, Bell } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 
-const Header = ({ guestMode = false }) => {
+const Header = ({ guestMode = false, onOpenNotifications, unreadCount = 0 }) => {
   const navigate = useNavigate();
 
   return (
@@ -42,9 +42,23 @@ const Header = ({ guestMode = false }) => {
                 <span>Добавить еду</span>
               </button>
 
+              {/* Mobile: Bell icon */}
+              <button
+                onClick={onOpenNotifications}
+                className="p-2 hover:bg-gray-100 rounded-lg transition-colors lg:hidden relative"
+              >
+                <Bell className="w-6 h-6" />
+                {unreadCount > 0 && (
+                  <span className="absolute -top-1 -right-1 min-w-5 h-5 px-1 bg-red-500 text-white text-xs font-bold rounded-full flex items-center justify-center">
+                    {unreadCount > 99 ? '99+' : unreadCount}
+                  </span>
+                )}
+              </button>
+
+              {/* Desktop: Settings icon */}
               <button
                 onClick={() => navigate('/settings')}
-                className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
+                className="p-2 hover:bg-gray-100 rounded-lg transition-colors hidden lg:block"
               >
                 <Settings className="w-6 h-6" />
               </button>

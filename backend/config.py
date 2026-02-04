@@ -43,6 +43,11 @@ class Config:
     # OAuth Settings
     OAUTH_STATE_TTL = 600  # 10 minutes
     OAUTH_PKCE_ENABLED = True
+
+    # Web Push (VAPID)
+    VAPID_PRIVATE_KEY = os.environ.get('VAPID_PRIVATE_KEY', '')
+    VAPID_PUBLIC_KEY = os.environ.get('VAPID_PUBLIC_KEY', '')
+    VAPID_CLAIMS_EMAIL = os.environ.get('VAPID_CLAIMS_EMAIL', 'mailto:admin@foodtrack.app')
     
     
 class DevelopmentConfig(Config):

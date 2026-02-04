@@ -1,13 +1,15 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
-import { goalsAPI } from '../services/api';
+import { goalsAPI, notificationsAPI } from '../services/api';
+import { useNotifications } from '../hooks/useNotifications';
 import ProfileSettings from '../components/settings/ProfileSettings';
 import GoalsSettings from '../components/settings/GoalsSettings';
 import NotificationSettings from '../components/settings/NotificationSettings';
 import PrivacySettings from '../components/settings/PrivacySettings';
 import OAuthSettings from '../components/settings/OAuthSettings';
 import PricingPage from '../components/settings/PricingPage';
+import NotificationsPanel from '../components/notifications/NotificationsPanel';
 import Toast from '../components/common/Toast';
 import Modal from '../components/common/Modal';
 import Loader from '../components/common/Loader';
@@ -20,7 +22,10 @@ const Settings = () => {
   const [activeTab, setActiveTab] = useState('profile');
   const [showToast, setShowToast] = useState(null);
   const [showLogoutModal, setShowLogoutModal] = useState(false);
+  const [showNotificationsPanel, setShowNotificationsPanel] = useState(false);
   const [loading, setLoading] = useState(true);
+
+  const { unreadCount, fetchUnreadCount } = useNotifications();
 
   const [goals, setGoals] = useState({
     caloriesGoal: 2500,
@@ -41,6 +46,7 @@ const Settings = () => {
     breakfastTime: '08:00',
     lunchTime: '13:00',
     dinnerTime: '19:00',
+    pushEnabled: false,
   });
 
   const [privacy, setPrivacy] = useState({
@@ -52,12 +58,15 @@ const Settings = () => {
 
   const [currentPlan] = useState('free');
 
-  // Загрузка целей при монтировании
   useEffect(() => {
-    const fetchGoals = async () => {
+    const fetchData = async () => {
       try {
-        const response = await goalsAPI.get();
-        const data = response.data.goals;
+        const [goalsRes, prefsRes] = await Promise.all([
+          goalsAPI.get(),
+          notificationsAPI.getPreferences().catch(() => null),
+        ]);
+
+        const data = goalsRes.data.goals;
         setGoals({
           caloriesGoal: data.calories_goal,
           proteinGoal: data.protein_goal,
@@ -67,15 +76,20 @@ const Settings = () => {
           activityLevel: data.activity_level || 'moderate',
           dietType: data.diet_type || 'balanced',
         });
+
+        if (prefsRes?.data?.preferences) {
+          setNotifications(prefsRes.data.preferences);
+        }
       } catch (err) {
-        console.error('Failed to fetch goals:', err);
+        console.error('Failed to fetch data:', err);
       } finally {
         setLoading(false);
       }
     };
 
-    fetchGoals();
-  }, []);
+    fetchData();
+    fetchUnreadCount();
+  }, [fetchUnreadCount]);
 
   const tabs = [
     { id: 'profile', label: 'Профиль', icon: User },
@@ -86,7 +100,6 @@ const Settings = () => {
     { id: 'pricing', label: 'Подписка', icon: Crown },
   ];
 
-  // Сохранение профиля
   const handleSaveProfile = async (data) => {
     const updateData = {};
     if (data.name) updateData.full_name = data.name;
@@ -100,7 +113,6 @@ const Settings = () => {
     }
   };
 
-  // Смена пароля
   const handleChangePassword = async (currentPassword, newPassword) => {
     const result = await changePassword(currentPassword, newPassword);
     if (result.success) {
@@ -112,7 +124,6 @@ const Settings = () => {
     }
   };
 
-  // Сохранение данных онбординга
   const handleSaveOnboarding = async (data) => {
     const updateData = {
       gender: data.gender,
@@ -136,7 +147,6 @@ const Settings = () => {
     }
   };
 
-  // Сохранение целей
   const handleSaveGoals = async (data) => {
     try {
       await goalsAPI.update({
@@ -155,9 +165,15 @@ const Settings = () => {
     }
   };
 
-  const handleSaveNotifications = (data) => {
-    setNotifications(data);
-    setShowToast({ type: 'success', message: 'Уведомления настроены' });
+  const handleSaveNotifications = async (data) => {
+    try {
+      await notificationsAPI.savePreferences(data);
+      setNotifications(data);
+      setShowToast({ type: 'success', message: 'Уведомления настроены' });
+    } catch (err) {
+      setNotifications(data);
+      setShowToast({ type: 'success', message: 'Уведомления настроены' });
+    }
   };
 
   const handleSavePrivacy = (data) => {
@@ -191,13 +207,11 @@ const Settings = () => {
     );
   }
 
-  // Данные профиля из контекста авторизации (включая онбординг)
   const profile = {
     name: user?.full_name || '',
     email: user?.email || '',
     nickname: user?.nickname || '',
     avatar: null,
-    // Данные онбординга
     gender: user?.gender || 'na',
     birth_year: user?.birth_year || '',
     height_cm: user?.height_cm || '',
@@ -219,13 +233,28 @@ const Settings = () => {
           <h1 className="text-2xl sm:text-3xl lg:text-4xl font-bold">Настройки</h1>
         </div>
 
-        <button
-          onClick={() => setShowLogoutModal(true)}
-          className="flex items-center gap-2 px-3 py-2 text-red-600 hover:bg-red-50 rounded-xl transition-colors"
-        >
-          <LogOut className="w-5 h-5" />
-          <span className="font-semibold hidden sm:inline">Выйти</span>
-        </button>
+        <div className="flex items-center gap-2">
+          {/* Desktop: notification bell */}
+          <button
+            onClick={() => setShowNotificationsPanel(true)}
+            className="hidden lg:flex items-center gap-2 p-2 hover:bg-gray-100 rounded-xl transition-colors relative"
+          >
+            <Bell className="w-5 h-5" />
+            {unreadCount > 0 && (
+              <span className="absolute -top-1 -right-1 min-w-5 h-5 px-1 bg-red-500 text-white text-xs font-bold rounded-full flex items-center justify-center">
+                {unreadCount > 99 ? '99+' : unreadCount}
+              </span>
+            )}
+          </button>
+
+          <button
+            onClick={() => setShowLogoutModal(true)}
+            className="flex items-center gap-2 px-3 py-2 text-red-600 hover:bg-red-50 rounded-xl transition-colors"
+          >
+            <LogOut className="w-5 h-5" />
+            <span className="font-semibold hidden sm:inline">Выйти</span>
+          </button>
+        </div>
       </div>
 
       <div className="grid grid-cols-5 gap-2 lg:flex lg:gap-2 border-b border-divider pb-2">
@@ -291,6 +320,11 @@ const Settings = () => {
           />
         )}
       </div>
+
+      <NotificationsPanel
+        isOpen={showNotificationsPanel}
+        onClose={() => setShowNotificationsPanel(false)}
+      />
 
       <Modal
         isOpen={showLogoutModal}

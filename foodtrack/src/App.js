@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import { OnboardingProvider } from './context/OnboardingContext';
@@ -7,6 +7,7 @@ import Header from './components/layout/Header';
 import Sidebar from './components/layout/Sidebar';
 import Footer from './components/layout/Footer';
 import Loader from './components/common/Loader';
+import NotificationsPanel from './components/notifications/NotificationsPanel';
 
 import Dashboard from './pages/Dashboard';
 import AddMeal from './pages/AddMeal';
@@ -24,6 +25,8 @@ import NotFound from './pages/NotFound';
 import Auth from './pages/Auth';
 import Onboarding from './pages/Onboarding';
 import OAuthCallback from './pages/OAuthCallback';
+
+import api from './services/api';
 
 // Публичный роут — если уже авторизован, кидаем либо в приложение, либо в онбординг
 const PublicRoute = ({ children }) => {
@@ -48,7 +51,7 @@ const PublicRoute = ({ children }) => {
   return children;
 };
 
-// Роут онбординга — только для автоsризованных, и только если онбординг не завершён
+// Роут онбординга — только для авторизованных, и только если онбординг не завершён
 const OnboardingRoute = ({ children }) => {
   const { isAuthenticated, loading, onboardingCompleted } = useAuth();
 
@@ -89,7 +92,27 @@ const GuestAwareLayout = ({ children }) => {
 // Основной layout приложения (для авторизованных и гостей)
 const AppLayout = ({ guestMode = false }) => {
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+  const [showNotifications, setShowNotifications] = useState(false);
+  const [unreadCount, setUnreadCount] = useState(0);
   const { isAuthenticated, onboardingCompleted } = useAuth();
+
+  const fetchUnreadCount = useCallback(async () => {
+    if (!isAuthenticated) return;
+    try {
+      const response = await api.get('/notifications/unread-count');
+      setUnreadCount(response.data.count);
+    } catch (err) {
+      // Silently fail — notifications are non-critical
+    }
+  }, [isAuthenticated]);
+
+  useEffect(() => {
+    if (isAuthenticated) {
+      fetchUnreadCount();
+      const interval = setInterval(fetchUnreadCount, 60000);
+      return () => clearInterval(interval);
+    }
+  }, [isAuthenticated, fetchUnreadCount]);
 
   // Определяем, нужно ли редиректить на онбординг
   const needsOnboarding = isAuthenticated && !onboardingCompleted;
@@ -103,7 +126,11 @@ const AppLayout = ({ guestMode = false }) => {
       />
 
       <div className="flex-1 flex flex-col lg:ml-64 overflow-x-hidden">
-        <Header guestMode={guestMode && !isAuthenticated} />
+        <Header
+          guestMode={guestMode && !isAuthenticated}
+          onOpenNotifications={() => setShowNotifications(true)}
+          unreadCount={unreadCount}
+        />
 
         <main className="flex-1 pb-20 lg:pb-8 overflow-x-hidden">
           <div className="w-full px-4 py-6 lg:px-8 lg:py-8 lg:max-w-7xl lg:mx-auto overflow-x-hidden">
@@ -156,6 +183,16 @@ const AppLayout = ({ guestMode = false }) => {
 
         <Footer />
       </div>
+
+      {isAuthenticated && (
+        <NotificationsPanel
+          isOpen={showNotifications}
+          onClose={() => {
+            setShowNotifications(false);
+            fetchUnreadCount();
+          }}
+        />
+      )}
     </div>
   );
 };

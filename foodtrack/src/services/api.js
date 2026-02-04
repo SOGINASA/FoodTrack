@@ -293,6 +293,21 @@ export const fridgeAPI = {
   rejectShareRequest: (id) => api.post(`/fridge/share/reject/${id}`),
 };
 
+// === NOTIFICATIONS API ===
+export const notificationsAPI = {
+  getAll: (params = {}) => api.get('/notifications/get', { params }),
+  getUnreadCount: () => api.get('/notifications/unread-count'),
+  markAsRead: (id) => api.post(`/notifications/read/${id}`),
+  markAllAsRead: () => api.post('/notifications/read-all'),
+  deleteNotification: (id) => api.delete(`/notifications/${id}`),
+  getPreferences: () => api.get('/notifications/preferences'),
+  savePreferences: (data) => api.put('/notifications/preferences', data),
+  subscribe: (data) => api.post('/notifications/subscribe', data),
+  unsubscribe: () => api.delete('/notifications/unsubscribe'),
+  getVapidKey: () => api.get('/notifications/vapid-key'),
+  sendTest: () => api.post('/notifications/test'),
+};
+
 // === FRIENDS API ===
 export const friendsAPI = {
   // Получить список друзей

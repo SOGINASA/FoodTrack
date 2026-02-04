@@ -1,7 +1,8 @@
 import React, { useState } from 'react';
 import Card from '../common/Card';
 import Button from '../common/Button';
-import { Bell } from 'lucide-react';
+import { Bell, BellOff, Smartphone } from 'lucide-react';
+import { usePushNotifications } from '../../hooks/usePushNotifications';
 
 const NotificationSettings = ({ notifications, onSave }) => {
   const [settings, setSettings] = useState({
@@ -13,9 +14,19 @@ const NotificationSettings = ({ notifications, onSave }) => {
     breakfastTime: notifications.breakfastTime || '08:00',
     lunchTime: notifications.lunchTime || '13:00',
     dinnerTime: notifications.dinnerTime || '19:00',
+    pushEnabled: notifications.pushEnabled ?? false,
   });
 
   const [hasChanges, setHasChanges] = useState(false);
+
+  const {
+    isSupported,
+    isSubscribed,
+    permission,
+    loading: pushLoading,
+    subscribe,
+    unsubscribe,
+  } = usePushNotifications();
 
   const handleToggle = (field) => {
     setSettings({ ...settings, [field]: !settings[field] });
@@ -32,12 +43,29 @@ const NotificationSettings = ({ notifications, onSave }) => {
     setHasChanges(false);
   };
 
-  const ToggleSwitch = ({ enabled, onChange }) => (
+  const handlePushToggle = async () => {
+    if (isSubscribed) {
+      const result = await unsubscribe();
+      if (result.success) {
+        setSettings((prev) => ({ ...prev, pushEnabled: false }));
+        setHasChanges(true);
+      }
+    } else {
+      const result = await subscribe();
+      if (result.success) {
+        setSettings((prev) => ({ ...prev, pushEnabled: true }));
+        setHasChanges(true);
+      }
+    }
+  };
+
+  const ToggleSwitch = ({ enabled, onChange, disabled = false }) => (
     <button
       onClick={onChange}
+      disabled={disabled}
       className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
-        enabled ? 'bg-black' : 'bg-gray-300'
-      }`}
+        disabled ? 'opacity-50 cursor-not-allowed' : ''
+      } ${enabled ? 'bg-black' : 'bg-gray-300'}`}
     >
       <span
         className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
@@ -55,6 +83,53 @@ const NotificationSettings = ({ notifications, onSave }) => {
       </div>
 
       <div className="space-y-6">
+        {/* Push notifications toggle */}
+        {isSupported && (
+          <div className="p-4 bg-gray-50 rounded-xl space-y-3">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <div className={`w-9 h-9 rounded-full flex items-center justify-center ${
+                  isSubscribed ? 'bg-green-100 text-green-600' : 'bg-gray-200 text-gray-500'
+                }`}>
+                  {isSubscribed ? (
+                    <Smartphone className="w-4 h-4" />
+                  ) : (
+                    <BellOff className="w-4 h-4" />
+                  )}
+                </div>
+                <div>
+                  <div className="font-semibold">Push-уведомления</div>
+                  <div className="text-sm text-secondary">
+                    {permission === 'denied'
+                      ? 'Заблокированы в настройках браузера'
+                      : isSubscribed
+                      ? 'Уведомления приходят на это устройство'
+                      : 'Получайте уведомления даже при закрытом приложении'}
+                  </div>
+                </div>
+              </div>
+              <button
+                onClick={handlePushToggle}
+                disabled={pushLoading || permission === 'denied'}
+                className={`px-4 py-2 rounded-lg text-sm font-semibold transition-colors ${
+                  permission === 'denied'
+                    ? 'bg-gray-200 text-gray-400 cursor-not-allowed'
+                    : isSubscribed
+                    ? 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+                    : 'bg-black text-white hover:bg-gray-800'
+                }`}
+              >
+                {pushLoading
+                  ? 'Загрузка...'
+                  : isSubscribed
+                  ? 'Отключить'
+                  : 'Включить'}
+              </button>
+            </div>
+          </div>
+        )}
+
+        {/* Meal reminders */}
         <div className="space-y-4">
           <div className="flex items-center justify-between">
             <div>

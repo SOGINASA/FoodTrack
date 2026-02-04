@@ -5,6 +5,7 @@ from models import (
     ForumTopic, ForumReply
 )
 from datetime import datetime
+from services.push_service import create_and_push_notification
 
 groups_bp = Blueprint('groups', __name__)
 
@@ -244,6 +245,27 @@ def create_post(group_id):
     db.session.add(post)
     db.session.commit()
 
+    try:
+        author = User.query.get(user_id)
+        author_name = author.full_name or author.nickname or 'Пользователь'
+        group = Group.query.get(group_id)
+        group_name = group.name if group else 'группе'
+        members = GroupMember.query.filter(
+            GroupMember.group_id == group_id,
+            GroupMember.user_id != user_id
+        ).all()
+        for m in members:
+            create_and_push_notification(
+                user_id=m.user_id,
+                title=f'Новый пост в {group_name}',
+                body=f'{author_name}: {(data.get("text") or "")[:80]}',
+                category='group',
+                related_type='group_post',
+                related_id=post.id,
+            )
+    except Exception:
+        pass
+
     return jsonify(post.to_dict(user_id)), 201
 
 
@@ -319,6 +341,22 @@ def add_comment(group_id, post_id):
     )
     db.session.add(comment)
     db.session.commit()
+
+    try:
+        post = GroupPost.query.get(post_id)
+        if post and post.user_id != user_id:
+            commenter = User.query.get(user_id)
+            commenter_name = commenter.full_name or commenter.nickname or 'Пользователь'
+            create_and_push_notification(
+                user_id=post.user_id,
+                title='Новый комментарий',
+                body=f'{commenter_name}: {data["text"][:80]}',
+                category='group',
+                related_type='comment',
+                related_id=comment.id,
+            )
+    except Exception:
+        pass
 
     return jsonify(comment.to_dict()), 201
 

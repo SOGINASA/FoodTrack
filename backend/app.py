@@ -60,6 +60,7 @@ def create_app():
     from routes.friends import friends_bp
     from routes.fridge import fridge_bp
     from routes.water import water_bp
+    from routes.notifications import notifications_bp
 
     # Регистрация всех блюпринтов
     app.register_blueprint(auth_bp, url_prefix='/api/auth')
@@ -75,6 +76,7 @@ def create_app():
     app.register_blueprint(friends_bp, url_prefix='/api/friends')
     app.register_blueprint(fridge_bp, url_prefix='/api/fridge')
     app.register_blueprint(water_bp, url_prefix='/api/water')
+    app.register_blueprint(notifications_bp, url_prefix='/api/notifications')
 
     # Главная страница API
     @app.route('/api')
@@ -169,6 +171,17 @@ def create_admin():
     db.session.commit()
 
     print(f"Администратор {email} создан")
+
+
+@app.cli.command()
+def generate_vapid():
+    """Генерировать VAPID ключи для Web Push"""
+    from py_vapid import Vapid
+    vapid = Vapid()
+    vapid.generate_keys()
+    print("Добавьте в .env файл:")
+    print(f"VAPID_PRIVATE_KEY={vapid.private_pem().decode() if isinstance(vapid.private_pem(), bytes) else vapid.private_pem()}")
+    print(f"VAPID_PUBLIC_KEY={vapid.public_key_urlsafe_base64()}")
 
 
 if __name__ == '__main__':
