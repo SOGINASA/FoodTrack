@@ -11,7 +11,15 @@ class PushService:
         subscriptions = PushSubscription.query.filter_by(user_id=user_id).all()
 
         if not subscriptions:
-            return
+            print(f"[Push] No subscriptions for user {user_id}")
+            return False
+
+        vapid_private_key = current_app.config.get('VAPID_PRIVATE_KEY', '')
+        if not vapid_private_key:
+            print(f"[Push] VAPID_PRIVATE_KEY is empty, cannot send push")
+            return False
+
+        vapid_claims = {'sub': current_app.config['VAPID_CLAIMS_EMAIL']}
 
         payload = json.dumps({
             'title': notification.title,
@@ -23,9 +31,7 @@ class PushService:
             'url': PushService._get_url_for_category(notification),
         }, ensure_ascii=False)
 
-        vapid_private_key = current_app.config['VAPID_PRIVATE_KEY']
-        vapid_claims = {'sub': current_app.config['VAPID_CLAIMS_EMAIL']}
-
+        sent = False
         for sub in subscriptions:
             try:
                 webpush(
@@ -34,14 +40,19 @@ class PushService:
                     vapid_private_key=vapid_private_key,
                     vapid_claims=vapid_claims,
                 )
+                sent = True
+                print(f"[Push] Sent to user {user_id}, sub {sub.id}")
             except WebPushException as e:
                 if e.response and e.response.status_code == 410:
+                    print(f"[Push] Sub {sub.id} expired (410), removing")
                     db.session.delete(sub)
                 else:
-                    print(f"Push error for sub {sub.id}: {e}")
+                    print(f"[Push] WebPushException for sub {sub.id}: {e}")
+            except Exception as e:
+                print(f"[Push] Unexpected error for sub {sub.id}: {e}")
 
-        notification.is_pushed = True
-        db.session.commit()
+        notification.is_pushed = sent
+        return sent
 
     @staticmethod
     def _get_url_for_category(notification):
@@ -73,7 +84,11 @@ def create_and_push_notification(user_id, title, body, category, related_type=No
     db.session.flush()
 
     prefs = NotificationPreference.query.filter_by(user_id=user_id).first()
-    if prefs and prefs.push_enabled:
+    if not prefs:
+        print(f"[Push] No preferences for user {user_id}, skipping push")
+    elif not prefs.push_enabled:
+        print(f"[Push] push_enabled=False for user {user_id}, skipping push")
+    else:
         category_enabled = {
             'meal_reminder': prefs.meal_reminders,
             'water_reminder': prefs.water_reminders,
@@ -86,6 +101,8 @@ def create_and_push_notification(user_id, title, body, category, related_type=No
         }
         if category_enabled.get(category, True):
             PushService.send_to_user(user_id, notification)
+        else:
+            print(f"[Push] Category '{category}' disabled for user {user_id}")
 
     db.session.commit()
     return notification

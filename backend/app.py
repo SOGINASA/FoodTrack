@@ -33,7 +33,10 @@ def create_app():
 
     # Инициализация БД и заполнение данными при первом запуске
     with app.app_context():
-        db.create_all()
+        try:
+            db.create_all()
+        except Exception:
+            pass  # Таблицы уже созданы другим worker'ом
         # Проверяем, есть ли уже данные в БД
         if User.query.first() is None:
             try:

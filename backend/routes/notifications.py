@@ -183,14 +183,21 @@ def subscribe_push():
 @notifications_bp.route('/unsubscribe', methods=['DELETE'])
 @jwt_required()
 def unsubscribe_push():
-    """Удалить push-подписку"""
+    """Удалить push-подписку текущего устройства"""
     user_id = int(get_jwt_identity())
+    data = request.get_json(silent=True) or {}
+    endpoint = data.get('endpoint')
 
-    PushSubscription.query.filter_by(user_id=user_id).delete()
+    if endpoint:
+        PushSubscription.query.filter_by(user_id=user_id, endpoint=endpoint).delete()
+    else:
+        PushSubscription.query.filter_by(user_id=user_id).delete()
 
-    prefs = NotificationPreference.query.filter_by(user_id=user_id).first()
-    if prefs:
-        prefs.push_enabled = False
+    remaining = PushSubscription.query.filter_by(user_id=user_id).count()
+    if remaining == 0:
+        prefs = NotificationPreference.query.filter_by(user_id=user_id).first()
+        if prefs:
+            prefs.push_enabled = False
 
     db.session.commit()
     return jsonify({'message': 'Подписка удалена'})
@@ -210,14 +217,25 @@ def send_test_notification():
     """Отправить тестовое уведомление (для отладки)"""
     user_id = int(get_jwt_identity())
 
+    # Диагностика
+    prefs = NotificationPreference.query.filter_by(user_id=user_id).first()
+    subs = PushSubscription.query.filter_by(user_id=user_id).all()
+    vapid_set = bool(current_app.config.get('VAPID_PRIVATE_KEY'))
+
     notification = create_and_push_notification(
         user_id=user_id,
         title='Тестовое уведомление',
-        body='Push-уведомления работают! 🎉',
+        body='Push-уведомления работают!',
         category='system',
     )
 
     return jsonify({
         'message': 'Тестовое уведомление отправлено',
         'notification': notification.to_dict(),
+        'debug': {
+            'vapid_configured': vapid_set,
+            'push_enabled': prefs.push_enabled if prefs else False,
+            'subscriptions_count': len(subs),
+            'is_pushed': notification.is_pushed,
+        },
     })

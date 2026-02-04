@@ -282,8 +282,8 @@ def send_share_request():
             related_type='share_request',
             related_id=share_req.id,
         )
-    except Exception:
-        pass
+    except Exception as e:
+        print(f"[Notification error] fridge share to user {recipient_id}: {e}")
 
     return jsonify(share_req.to_dict()), 201
 

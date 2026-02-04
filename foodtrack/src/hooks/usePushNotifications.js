@@ -18,15 +18,31 @@ export const usePushNotifications = () => {
   const [permission, setPermission] = useState('default');
   const [loading, setLoading] = useState(false);
 
+  const syncSubscription = useCallback(async (subscription) => {
+    try {
+      const subJson = subscription.toJSON();
+      await api.post('/notifications/subscribe', {
+        endpoint: subJson.endpoint,
+        keys: subJson.keys,
+      });
+    } catch (err) {
+      // Не залогинен или сервер недоступен — игнорируем
+    }
+  }, []);
+
   const checkExistingSubscription = useCallback(async () => {
     try {
       const registration = await navigator.serviceWorker.ready;
       const subscription = await registration.pushManager.getSubscription();
       setIsSubscribed(!!subscription);
+
+      if (subscription) {
+        syncSubscription(subscription);
+      }
     } catch (err) {
       console.error('Error checking subscription:', err);
     }
-  }, []);
+  }, [syncSubscription]);
 
   useEffect(() => {
     const supported = 'serviceWorker' in navigator && 'PushManager' in window;
@@ -43,8 +59,7 @@ export const usePushNotifications = () => {
 
     setLoading(true);
     try {
-      const registration = await navigator.serviceWorker.register('/sw.js');
-      await navigator.serviceWorker.ready;
+      const registration = await navigator.serviceWorker.ready;
 
       const perm = await Notification.requestPermission();
       setPermission(perm);
@@ -82,8 +97,11 @@ export const usePushNotifications = () => {
       const registration = await navigator.serviceWorker.ready;
       const subscription = await registration.pushManager.getSubscription();
       if (subscription) {
+        const endpoint = subscription.endpoint;
         await subscription.unsubscribe();
-        await api.delete('/notifications/unsubscribe');
+        await api.delete('/notifications/unsubscribe', {
+          data: { endpoint },
+        });
       }
       setIsSubscribed(false);
       return { success: true };

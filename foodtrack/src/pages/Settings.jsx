@@ -171,8 +171,7 @@ const Settings = () => {
       setNotifications(data);
       setShowToast({ type: 'success', message: 'Уведомления настроены' });
     } catch (err) {
-      setNotifications(data);
-      setShowToast({ type: 'success', message: 'Уведомления настроены' });
+      setShowToast({ type: 'error', message: 'Ошибка сохранения настроек уведомлений' });
     }
   };
 

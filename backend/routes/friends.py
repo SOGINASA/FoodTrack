@@ -52,6 +52,21 @@ def send_friend_request():
             existing.addressee_id = addressee_id
             existing.status = 'pending'
             db.session.commit()
+
+            sender = User.query.get(user_id)
+            sender_name = sender.full_name or sender.nickname or 'Пользователь'
+            try:
+                create_and_push_notification(
+                    user_id=addressee_id,
+                    title='Запрос в друзья',
+                    body=f'{sender_name} хочет добавить вас в друзья',
+                    category='friend',
+                    related_type='friendship',
+                    related_id=existing.id,
+                )
+            except Exception as e:
+                print(f"[Notification error] friend re-request to user {addressee_id}: {e}")
+
             return jsonify(existing.to_dict()), 201
         if existing.status == 'blocked':
             return jsonify({'error': 'Невозможно отправить запрос'}), 400
@@ -75,8 +90,8 @@ def send_friend_request():
             related_type='friendship',
             related_id=friendship.id,
         )
-    except Exception:
-        pass
+    except Exception as e:
+        print(f"[Notification error] friend request to user {addressee_id}: {e}")
 
     return jsonify(friendship.to_dict()), 201
 
@@ -112,8 +127,8 @@ def accept_friend_request(friendship_id):
             related_type='friendship',
             related_id=friendship.id,
         )
-    except Exception:
-        pass
+    except Exception as e:
+        print(f"[Notification error] friend accept to user {friendship.requester_id}: {e}")
 
     return jsonify(friendship.to_dict())
 
