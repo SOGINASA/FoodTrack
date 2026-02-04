@@ -23,9 +23,9 @@ struct WeightTrackingView: View {
                     Button { dismiss() } label: {
                         Image(systemName: "chevron.left")
                             .font(.system(size: 16, weight: .semibold))
-                            .foregroundColor(.black)
+                            .foregroundColor(FTTheme.text)
                             .padding(12)
-                            .background(Color.gray.opacity(0.10))
+                            .background(FTTheme.fill)
                             .clipShape(Circle())
                     }
                     Spacer()
@@ -35,15 +35,15 @@ struct WeightTrackingView: View {
                     Button { showAddSheet = true } label: {
                         Image(systemName: "plus")
                             .font(.system(size: 16, weight: .semibold))
-                            .foregroundColor(.white)
+                            .foregroundColor(Color(.systemBackground))
                             .padding(12)
-                            .background(Color.black)
+                            .background(FTTheme.tint)
                             .clipShape(Circle())
                     }
                 }
 
                 if isLoading {
-                    ProgressView().tint(.black)
+                    ProgressView().tint(FTTheme.tint)
                         .frame(maxWidth: .infinity)
                         .padding(.top, 30)
                 } else {
@@ -92,7 +92,7 @@ struct WeightTrackingView: View {
                                             .foregroundColor(FTTheme.muted)
                                         Text("\(abs(diff), specifier: "%.1f") кг")
                                             .font(.system(size: 18, weight: .bold))
-                                            .foregroundColor(abs(diff) < 1 ? FTTheme.success : .black)
+                                            .foregroundColor(abs(diff) < 1 ? FTTheme.success : FTTheme.text)
                                     }
                                 }
                             }
@@ -193,7 +193,7 @@ struct WeightTrackingView: View {
                         path.move(to: CGPoint(x: 0, y: y))
                         path.addLine(to: CGPoint(x: width, y: y))
                     }
-                    .stroke(Color.gray.opacity(0.12), lineWidth: 1)
+                    .stroke(FTTheme.fill, lineWidth: 1)
                 }
 
                 // Line
@@ -206,14 +206,14 @@ struct WeightTrackingView: View {
                             else { path.addLine(to: CGPoint(x: x, y: y)) }
                         }
                     }
-                    .stroke(Color.black, style: StrokeStyle(lineWidth: 2, lineCap: .round, lineJoin: .round))
+                    .stroke(FTTheme.tint, style: StrokeStyle(lineWidth: 2, lineCap: .round, lineJoin: .round))
 
                     // Dots
                     ForEach(Array(sorted.enumerated()), id: \.offset) { i, entry in
                         let x = width * CGFloat(i) / CGFloat(max(sorted.count - 1, 1))
                         let y = height - (CGFloat(entry.weight - minW) / CGFloat(range)) * height
                         Circle()
-                            .fill(Color.black)
+                            .fill(FTTheme.tint)
                             .frame(width: 6, height: 6)
                             .position(x: x, y: y)
                     }
@@ -315,11 +315,11 @@ struct WeightTrackingView: View {
                 .foregroundColor(FTTheme.muted)
             Text(value)
                 .font(.system(size: 14, weight: .semibold))
-                .foregroundColor(isChange ? (value.hasPrefix("-") ? FTTheme.success : value == "0.0" ? FTTheme.muted : .red.opacity(0.85)) : .black)
+                .foregroundColor(isChange ? (value.hasPrefix("-") ? FTTheme.success : value == "0.0" ? FTTheme.muted : .red.opacity(0.85)) : FTTheme.text)
         }
         .frame(maxWidth: .infinity)
         .padding(.vertical, 10)
-        .background(Color.gray.opacity(0.06))
+        .background(FTTheme.fill.opacity(0.5))
         .cornerRadius(12)
     }
 

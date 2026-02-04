@@ -23,13 +23,13 @@ struct StepMealsPerDay: View {
                     } label: {
                         Text("\(n)")
                             .font(.system(size: 16, weight: .semibold))
-                            .foregroundColor(selected ? .white : .black)
+                            .foregroundColor(selected ? Color(.systemBackground) : FTTheme.text)
                             .frame(maxWidth: .infinity)
                             .padding(.vertical, 16)
-                            .background(selected ? Color.black : Color.white)
+                            .background(selected ? FTTheme.tint : FTTheme.card)
                             .overlay(
                                 RoundedRectangle(cornerRadius: FTTheme.corner)
-                                    .stroke(selected ? Color.black : FTTheme.border, lineWidth: 1)
+                                    .stroke(selected ? FTTheme.tint : FTTheme.border, lineWidth: 1)
                             )
                             .cornerRadius(FTTheme.corner)
                     }

@@ -28,9 +28,9 @@ struct EditProfileView: View {
                     Button { dismiss() } label: {
                         Image(systemName: "chevron.left")
                             .font(.system(size: 16, weight: .semibold))
-                            .foregroundColor(.black)
+                            .foregroundColor(FTTheme.text)
                             .padding(12)
-                            .background(Color.gray.opacity(0.10))
+                            .background(FTTheme.fill)
                             .clipShape(Circle())
                     }
                     Spacer()
@@ -135,9 +135,9 @@ struct EditProfileView: View {
                                 } label: {
                                     Text("\(n)")
                                         .font(.system(size: 14, weight: .semibold))
-                                        .foregroundColor(mealsPerDay == n ? .white : .black.opacity(0.7))
+                                        .foregroundColor(mealsPerDay == n ? Color(.systemBackground) : FTTheme.text.opacity(0.7))
                                         .frame(width: 38, height: 38)
-                                        .background(mealsPerDay == n ? Color.black : Color.gray.opacity(0.10))
+                                        .background(mealsPerDay == n ? FTTheme.tint : FTTheme.fill)
                                         .cornerRadius(10)
                                 }
                             }
@@ -169,10 +169,10 @@ struct EditProfileView: View {
         } label: {
             Text(label)
                 .font(.system(size: 14, weight: .semibold))
-                .foregroundColor(gender == value ? .white : .black.opacity(0.7))
+                .foregroundColor(gender == value ? Color(.systemBackground) : FTTheme.text.opacity(0.7))
                 .padding(.horizontal, 16)
                 .padding(.vertical, 10)
-                .background(gender == value ? Color.black : Color.gray.opacity(0.10))
+                .background(gender == value ? FTTheme.tint : FTTheme.fill)
                 .cornerRadius(12)
         }
     }
@@ -183,10 +183,10 @@ struct EditProfileView: View {
         } label: {
             Text(label)
                 .font(.system(size: 13, weight: .semibold))
-                .foregroundColor(diet == value ? .white : .black.opacity(0.7))
+                .foregroundColor(diet == value ? Color(.systemBackground) : FTTheme.text.opacity(0.7))
                 .padding(.horizontal, 14)
                 .padding(.vertical, 8)
-                .background(diet == value ? Color.black : Color.gray.opacity(0.10))
+                .background(diet == value ? FTTheme.tint : FTTheme.fill)
                 .cornerRadius(999)
         }
     }

@@ -58,7 +58,7 @@ struct RecipesView: View {
                 }
                 .padding(.horizontal, 14)
                 .padding(.vertical, 12)
-                .background(Color.white)
+                .background(FTTheme.card)
                 .overlay(
                     RoundedRectangle(cornerRadius: FTTheme.corner)
                         .stroke(FTTheme.border, lineWidth: 1)
@@ -67,7 +67,7 @@ struct RecipesView: View {
                 // List
                 ScrollView {
                     if isLoading {
-                        ProgressView().tint(.black)
+                        ProgressView().tint(FTTheme.tint)
                             .frame(maxWidth: .infinity)
                             .padding(.top, 30)
                     } else if useFallback {
@@ -123,18 +123,18 @@ private struct APIRecipeRow: View {
     var body: some View {
         HStack(spacing: 12) {
             RoundedRectangle(cornerRadius: 16)
-                .fill(Color.gray.opacity(0.12))
+                .fill(FTTheme.fill)
                 .frame(width: 72, height: 72)
                 .overlay(
                     Image(systemName: "fork.knife")
                         .font(.system(size: 22, weight: .semibold))
-                        .foregroundColor(.black.opacity(0.75))
+                        .foregroundColor(FTTheme.text.opacity(0.75))
                 )
 
             VStack(alignment: .leading, spacing: 6) {
                 Text(recipe.name)
                     .font(.system(size: 16, weight: .semibold))
-                    .foregroundColor(.black)
+                    .foregroundColor(FTTheme.text)
 
                 if let desc = recipe.description {
                     Text(desc)
@@ -158,7 +158,7 @@ private struct APIRecipeRow: View {
             }
         }
         .padding(14)
-        .background(Color.white)
+        .background(FTTheme.card)
         .overlay(
             RoundedRectangle(cornerRadius: FTTheme.corner)
                 .stroke(FTTheme.border, lineWidth: 1)
@@ -169,10 +169,10 @@ private struct APIRecipeRow: View {
     private func chip(_ text: String) -> some View {
         Text(text)
             .font(.system(size: 11, weight: .semibold))
-            .foregroundColor(.black.opacity(0.75))
+            .foregroundColor(FTTheme.text.opacity(0.75))
             .padding(.horizontal, 9)
             .padding(.vertical, 6)
-            .background(Color.gray.opacity(0.10))
+            .background(FTTheme.fill)
             .cornerRadius(999)
     }
 }
@@ -184,18 +184,18 @@ private struct RecipeRow: View {
     var body: some View {
         HStack(spacing: 12) {
             RoundedRectangle(cornerRadius: 16)
-                .fill(Color.gray.opacity(0.12))
+                .fill(FTTheme.fill)
                 .frame(width: 72, height: 72)
                 .overlay(
                     Image(systemName: recipe.imageSymbol)
                         .font(.system(size: 22, weight: .semibold))
-                        .foregroundColor(.black.opacity(0.75))
+                        .foregroundColor(FTTheme.text.opacity(0.75))
                 )
 
             VStack(alignment: .leading, spacing: 6) {
                 Text(recipe.title)
                     .font(.system(size: 16, weight: .semibold))
-                    .foregroundColor(.black)
+                    .foregroundColor(FTTheme.text)
 
                 Text(recipe.subtitle)
                     .font(.system(size: 12))
@@ -215,7 +215,7 @@ private struct RecipeRow: View {
                 .foregroundColor(FTTheme.muted)
         }
         .padding(14)
-        .background(Color.white)
+        .background(FTTheme.card)
         .overlay(
             RoundedRectangle(cornerRadius: FTTheme.corner)
                 .stroke(FTTheme.border, lineWidth: 1)
@@ -226,10 +226,10 @@ private struct RecipeRow: View {
     private func chip(_ text: String) -> some View {
         Text(text)
             .font(.system(size: 11, weight: .semibold))
-            .foregroundColor(.black.opacity(0.75))
+            .foregroundColor(FTTheme.text.opacity(0.75))
             .padding(.horizontal, 9)
             .padding(.vertical, 6)
-            .background(Color.gray.opacity(0.10))
+            .background(FTTheme.fill)
             .cornerRadius(999)
     }
 }

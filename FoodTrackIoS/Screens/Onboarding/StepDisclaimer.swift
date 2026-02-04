@@ -15,15 +15,15 @@ struct StepDisclaimer: View {
             FTCard {
                 Text("FoodTrack предоставляет информационные расчёты и материалы, которые не являются медицинской консультацией, диагнозом или лечением.")
                     .font(.system(size: 14))
-                    .foregroundColor(Color.black.opacity(0.78))
+                    .foregroundColor(FTTheme.text.opacity(0.78))
 
                 Text("Вы используете приложение добровольно и принимаете ответственность за решения о питании и тренировках, а также за своё состояние здоровья.")
                     .font(.system(size: 14))
-                    .foregroundColor(Color.black.opacity(0.78))
+                    .foregroundColor(FTTheme.text.opacity(0.78))
 
                 Text("При наличии заболеваний, беременности, травм или медицинских ограничений рекомендуем обратиться к врачу.")
                     .font(.system(size: 14))
-                    .foregroundColor(Color.black.opacity(0.78))
+                    .foregroundColor(FTTheme.text.opacity(0.78))
             }
             .padding(.top, 14)
 
@@ -33,11 +33,11 @@ struct StepDisclaimer: View {
                 HStack(alignment: .top, spacing: 12) {
                     Image(systemName: draft.disclaimerAccepted ? "checkmark.square.fill" : "square")
                         .font(.system(size: 20))
-                        .foregroundColor(.black)
+                        .foregroundColor(FTTheme.text)
 
                     Text("Я прочитал(а) и согласен(на) с условиями. Понимаю, что команда разработчиков не несёт ответственности за моё здоровье.")
                         .font(.system(size: 14))
-                        .foregroundColor(Color.black.opacity(0.78))
+                        .foregroundColor(FTTheme.text.opacity(0.78))
                         .fixedSize(horizontal: false, vertical: true)
                 }
                 .padding(.top, 12)

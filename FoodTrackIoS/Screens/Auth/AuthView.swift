@@ -19,11 +19,11 @@ struct AuthView: View {
                 // Logo
                 HStack(spacing: 10) {
                     RoundedRectangle(cornerRadius: 12)
-                        .fill(Color.gray.opacity(0.15))
+                        .fill(FTTheme.fill)
                         .frame(width: 44, height: 44)
-                        .overlay(Text("FT").font(.system(size: 14, weight: .bold)))
+                        .overlay(Text("FT").font(.system(size: 14, weight: .bold)).foregroundColor(FTTheme.text))
                     VStack(alignment: .leading, spacing: 2) {
-                        Text("FoodTrack").font(.system(size: 22, weight: .bold))
+                        Text("FoodTrack").font(.system(size: 22, weight: .bold)).foregroundColor(FTTheme.text)
                         Text("Snap it. Track it.")
                             .font(.system(size: 13))
                             .foregroundColor(FTTheme.muted)
@@ -38,12 +38,13 @@ struct AuthView: View {
                     modeButton("Регистрация", isActive: mode == .register) { mode = .register; error = "" }
                 }
                 .padding(6)
-                .background(Color.gray.opacity(0.12))
+                .background(FTTheme.fill)
                 .cornerRadius(16)
 
                 VStack(alignment: .leading, spacing: 6) {
                     Text(mode == .login ? "Добро пожаловать!" : "Создать аккаунт")
                         .font(.system(size: 26, weight: .semibold))
+                        .foregroundColor(FTTheme.text)
                     Text(mode == .login
                          ? "Войдите в свой аккаунт"
                          : "Зарегистрируйтесь для доступа ко всем функциям")
@@ -90,7 +91,6 @@ struct AuthView: View {
                 }
                 .padding(.top, 6)
 
-                // Switch mode hint
                 HStack {
                     Spacer()
                     Button {
@@ -101,7 +101,7 @@ struct AuthView: View {
                     } label: {
                         Text(mode == .login ? "Нет аккаунта? Зарегистрироваться" : "Уже есть аккаунт? Войти")
                             .font(.system(size: 13, weight: .medium))
-                            .foregroundColor(.black.opacity(0.6))
+                            .foregroundColor(FTTheme.muted)
                     }
                     Spacer()
                 }
@@ -148,8 +148,8 @@ struct AuthView: View {
                 .frame(maxWidth: .infinity)
                 .padding(.vertical, 12)
                 .font(.system(size: 15, weight: .semibold))
-                .foregroundColor(isActive ? .black : FTTheme.muted)
-                .background(isActive ? Color.white : Color.clear)
+                .foregroundColor(isActive ? FTTheme.text : FTTheme.muted)
+                .background(isActive ? FTTheme.card : Color.clear)
                 .cornerRadius(14)
         }
     }

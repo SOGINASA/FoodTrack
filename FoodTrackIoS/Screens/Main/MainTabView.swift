@@ -28,7 +28,7 @@ struct MainTabView: View {
                     Label("Профиль", systemImage: "person.crop.circle")
                 }
         }
-        .tint(.black)
+        .tint(FTTheme.tint)
         .toolbarBackground(.visible, for: .tabBar)
         .toolbarBackground(.ultraThinMaterial, for: .tabBar)
     }

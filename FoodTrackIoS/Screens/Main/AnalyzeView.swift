@@ -34,7 +34,7 @@ struct AnalyzeView: View {
 
                         ZStack {
                             RoundedRectangle(cornerRadius: 22)
-                                .fill(Color.gray.opacity(0.10))
+                                .fill(FTTheme.fill)
                                 .frame(height: 240)
 
                             if let img = capturedImage {
@@ -51,10 +51,10 @@ struct AnalyzeView: View {
                                 VStack(spacing: 10) {
                                     Image(systemName: "camera")
                                         .font(.system(size: 34, weight: .semibold))
-                                        .foregroundColor(.black.opacity(0.75))
+                                        .foregroundColor(FTTheme.text.opacity(0.75))
                                     Text("Сделайте фото для анализа")
                                         .font(.system(size: 13, weight: .medium))
-                                        .foregroundColor(.black.opacity(0.75))
+                                        .foregroundColor(FTTheme.text.opacity(0.75))
                                     Text("Лучше при хорошем освещении, без теней")
                                         .font(.system(size: 12))
                                         .foregroundColor(FTTheme.muted)
@@ -74,10 +74,10 @@ struct AnalyzeView: View {
                                         } label: {
                                             Text("Удалить")
                                                 .font(.system(size: 14, weight: .semibold))
-                                                .foregroundColor(.black)
+                                                .foregroundColor(FTTheme.text)
                                                 .padding(.horizontal, 14)
                                                 .padding(.vertical, 10)
-                                                .background(Color.white.opacity(0.95))
+                                                .background(FTTheme.card.opacity(0.95))
                                                 .cornerRadius(999)
                                                 .overlay(RoundedRectangle(cornerRadius: 999).stroke(FTTheme.border, lineWidth: 1))
                                         }
@@ -88,10 +88,10 @@ struct AnalyzeView: View {
                                     Button { showPhotoLibrary = true } label: {
                                         Text("Галерея")
                                             .font(.system(size: 14, weight: .semibold))
-                                            .foregroundColor(.black)
+                                            .foregroundColor(FTTheme.text)
                                             .padding(.horizontal, 14)
                                             .padding(.vertical, 10)
-                                            .background(Color.white.opacity(0.95))
+                                            .background(FTTheme.card.opacity(0.95))
                                             .cornerRadius(999)
                                             .overlay(RoundedRectangle(cornerRadius: 999).stroke(FTTheme.border, lineWidth: 1))
                                     }
@@ -99,10 +99,10 @@ struct AnalyzeView: View {
                                     Button { showCamera = true } label: {
                                         Text(capturedImage == nil ? "Камера" : "Переснять")
                                             .font(.system(size: 14, weight: .semibold))
-                                            .foregroundColor(.white)
+                                            .foregroundColor(Color(.systemBackground))
                                             .padding(.horizontal, 14)
                                             .padding(.vertical, 10)
-                                            .background(Color.black)
+                                            .background(FTTheme.text)
                                             .cornerRadius(999)
                                     }
                                 }
@@ -112,10 +112,10 @@ struct AnalyzeView: View {
 
                         if isAnalyzing {
                             HStack(spacing: 10) {
-                                ProgressView().tint(.black)
+                                ProgressView().tint(FTTheme.tint)
                                 Text("Анализируем фото...")
                                     .font(.system(size: 13, weight: .medium))
-                                    .foregroundColor(.black.opacity(0.75))
+                                    .foregroundColor(FTTheme.text.opacity(0.75))
                             }
                             .frame(maxWidth: .infinity)
                             .padding(.vertical, 12)
@@ -288,7 +288,7 @@ private struct AnalyzeResultSheet: View {
                     Button(action: onClose) {
                         Image(systemName: "xmark.circle.fill")
                             .font(.system(size: 20))
-                            .foregroundColor(.gray.opacity(0.7))
+                            .foregroundColor(FTTheme.muted)
                     }
                 }
 
@@ -309,7 +309,7 @@ private struct AnalyzeResultSheet: View {
                     if analysis.confidence != nil {
                         Text("\(analysis.confidencePercent)%")
                             .font(.system(size: 13, weight: .bold))
-                            .foregroundColor(.white)
+                            .foregroundColor(Color(.systemBackground))
                             .padding(.horizontal, 10)
                             .padding(.vertical, 5)
                             .background(FTTheme.success)
@@ -342,10 +342,10 @@ private struct AnalyzeResultSheet: View {
                             } label: {
                                 Text(type.title)
                                     .font(.system(size: 13, weight: .semibold))
-                                    .foregroundColor(selectedMealType == type ? .white : .black.opacity(0.7))
+                                    .foregroundColor(selectedMealType == type ? Color(.systemBackground) : FTTheme.text.opacity(0.7))
                                     .padding(.horizontal, 14)
                                     .padding(.vertical, 8)
-                                    .background(selectedMealType == type ? Color.black : Color.gray.opacity(0.12))
+                                    .background(selectedMealType == type ? FTTheme.text : FTTheme.fill)
                                     .cornerRadius(999)
                             }
                         }
@@ -356,20 +356,20 @@ private struct AnalyzeResultSheet: View {
                     Button(action: onRetake) {
                         Text("Переснять")
                             .font(.system(size: 14, weight: .semibold))
-                            .foregroundColor(.black)
+                            .foregroundColor(FTTheme.text)
                             .frame(maxWidth: .infinity)
                             .padding(.vertical, 12)
-                            .background(Color.gray.opacity(0.12))
+                            .background(FTTheme.fill)
                             .cornerRadius(999)
                     }
 
                     Button(action: onSave) {
                         Text(isSaving ? "Сохранение..." : "В дневник")
                             .font(.system(size: 14, weight: .semibold))
-                            .foregroundColor(.white)
+                            .foregroundColor(Color(.systemBackground))
                             .frame(maxWidth: .infinity)
                             .padding(.vertical, 12)
-                            .background(isSaving ? Color.black.opacity(0.5) : Color.black)
+                            .background(isSaving ? FTTheme.text.opacity(0.5) : FTTheme.text)
                             .cornerRadius(999)
                     }
                     .disabled(isSaving)
@@ -391,7 +391,7 @@ private struct AnalyzeTipRow: View {
         HStack(alignment: .top, spacing: 12) {
             Image(systemName: "checkmark.circle.fill")
                 .font(.system(size: 16, weight: .semibold))
-                .foregroundColor(.black.opacity(0.75))
+                .foregroundColor(FTTheme.text.opacity(0.75))
                 .padding(.top, 1)
             VStack(alignment: .leading, spacing: 3) {
                 Text(title).font(.system(size: 14, weight: .semibold))
@@ -417,7 +417,7 @@ private struct AnalyzeNutritionRow: View {
             Spacer()
             Text(value)
                 .font(.system(size: 14, weight: .semibold))
-                .foregroundColor(.black.opacity(0.8))
+                .foregroundColor(FTTheme.text.opacity(0.8))
         }
         .padding(.top, 10)
     }

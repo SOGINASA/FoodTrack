@@ -48,7 +48,7 @@ struct StepBodyGoal: View {
             if !goalHint.isEmpty {
                 Text(goalHint)
                     .font(.system(size: 14))
-                    .foregroundColor(.gray.opacity(0.8))
+                    .foregroundColor(FTTheme.muted)
                     .padding(.top, 6)
             }
 

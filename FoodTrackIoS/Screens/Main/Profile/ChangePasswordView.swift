@@ -19,9 +19,9 @@ struct ChangePasswordView: View {
                     Button { dismiss() } label: {
                         Image(systemName: "chevron.left")
                             .font(.system(size: 16, weight: .semibold))
-                            .foregroundColor(.black)
+                            .foregroundColor(FTTheme.text)
                             .padding(12)
-                            .background(Color.gray.opacity(0.10))
+                            .background(FTTheme.fill)
                             .clipShape(Circle())
                     }
                     Spacer()

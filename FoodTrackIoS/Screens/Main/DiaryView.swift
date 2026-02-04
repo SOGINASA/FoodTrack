@@ -37,7 +37,7 @@ struct DiaryView: View {
                     dateBar
 
                     if isLoading {
-                        ProgressView().tint(.black)
+                        ProgressView().tint(FTTheme.tint)
                             .frame(maxWidth: .infinity)
                             .padding(.top, 30)
                     } else {
@@ -87,9 +87,9 @@ struct DiaryView: View {
             } label: {
                 Image(systemName: "chevron.left")
                     .font(.system(size: 14, weight: .semibold))
-                    .foregroundColor(.black.opacity(0.7))
+                    .foregroundColor(FTTheme.text.opacity(0.7))
                     .padding(10)
-                    .background(Color.gray.opacity(0.10))
+                    .background(FTTheme.fill)
                     .clipShape(Circle())
             }
 
@@ -111,9 +111,9 @@ struct DiaryView: View {
             } label: {
                 Image(systemName: "chevron.right")
                     .font(.system(size: 14, weight: .semibold))
-                    .foregroundColor(.black.opacity(0.7))
+                    .foregroundColor(FTTheme.text.opacity(0.7))
                     .padding(10)
-                    .background(Color.gray.opacity(0.10))
+                    .background(FTTheme.fill)
                     .clipShape(Circle())
             }
         }
@@ -144,8 +144,8 @@ struct DiaryView: View {
             GeometryReader { geo in
                 let ratio = goals.caloriesGoal > 0 ? min(1.0, Double(totalKcal) / Double(goals.caloriesGoal)) : 0
                 ZStack(alignment: .leading) {
-                    Capsule().fill(Color.gray.opacity(0.12)).frame(height: 8)
-                    Capsule().fill(Color.black).frame(width: geo.size.width * ratio, height: 8)
+                    Capsule().fill(FTTheme.fill).frame(height: 8)
+                    Capsule().fill(FTTheme.tint).frame(width: geo.size.width * ratio, height: 8)
                 }
             }
             .frame(height: 8)
@@ -211,12 +211,12 @@ struct DiaryView: View {
     private func diaryMealRow(_ meal: MealDTO) -> some View {
         HStack(alignment: .top, spacing: 12) {
             RoundedRectangle(cornerRadius: 12)
-                .fill(Color.gray.opacity(0.12))
+                .fill(FTTheme.fill)
                 .frame(width: 44, height: 44)
                 .overlay(
                     Text("\(meal.displayCalories)")
                         .font(.system(size: 12, weight: .bold))
-                        .foregroundColor(.black.opacity(0.75))
+                        .foregroundColor(FTTheme.text.opacity(0.75))
                 )
 
             VStack(alignment: .leading, spacing: 4) {
@@ -225,7 +225,7 @@ struct DiaryView: View {
                     .lineLimit(1)
                 Text("Б \(meal.displayProtein) \u{2022} Ж \(meal.displayFats) \u{2022} У \(meal.displayCarbs)")
                     .font(.system(size: 12, weight: .semibold))
-                    .foregroundColor(.black.opacity(0.7))
+                    .foregroundColor(FTTheme.text.opacity(0.7))
             }
 
             Spacer()
@@ -236,9 +236,9 @@ struct DiaryView: View {
             } label: {
                 Image(systemName: "pencil")
                     .font(.system(size: 13))
-                    .foregroundColor(.black.opacity(0.5))
+                    .foregroundColor(FTTheme.text.opacity(0.5))
                     .padding(8)
-                    .background(Color.gray.opacity(0.08))
+                    .background(FTTheme.fill.opacity(0.6))
                     .clipShape(Circle())
             }
 
@@ -343,10 +343,10 @@ private struct EditMealSheet: View {
                                 } label: {
                                     Text(type.title)
                                         .font(.system(size: 13, weight: .semibold))
-                                        .foregroundColor(mealType == type ? .white : .black.opacity(0.7))
+                                        .foregroundColor(mealType == type ? Color(.systemBackground) : FTTheme.text.opacity(0.7))
                                         .padding(.horizontal, 12)
                                         .padding(.vertical, 8)
-                                        .background(mealType == type ? Color.black : Color.gray.opacity(0.10))
+                                        .background(mealType == type ? FTTheme.tint : FTTheme.fill)
                                         .cornerRadius(999)
                                 }
                             }
@@ -426,12 +426,12 @@ private struct DiaryMacroChip: View {
 
             Text("/ \(goal)\(unit)")
                 .font(.system(size: 11, weight: .semibold))
-                .foregroundColor(.black.opacity(0.5))
+                .foregroundColor(FTTheme.text.opacity(0.5))
 
             GeometryReader { geo in
                 let ratio = goal > 0 ? min(1.0, Double(value) / Double(goal)) : 0
                 ZStack(alignment: .leading) {
-                    Capsule().fill(Color.gray.opacity(0.12)).frame(height: 4)
+                    Capsule().fill(FTTheme.fill).frame(height: 4)
                     Capsule().fill(color).frame(width: geo.size.width * ratio, height: 4)
                 }
             }

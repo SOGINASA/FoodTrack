@@ -7,6 +7,10 @@ struct RecipeDetailView: View {
     @State private var selectedMealType: MealType = .lunch
     @State private var isSaving = false
     @State private var saved = false
+    @State private var showPlanSheet = false
+    @State private var planDate = Date()
+    @State private var planMealType: MealType = .lunch
+    @State private var planSaved = false
 
     var body: some View {
         ScrollView {
@@ -15,12 +19,12 @@ struct RecipeDetailView: View {
                 // Image area
                 ZStack {
                     RoundedRectangle(cornerRadius: 22)
-                        .fill(Color.gray.opacity(0.12))
+                        .fill(FTTheme.fill)
                         .frame(height: 190)
                         .overlay(
                             Image(systemName: recipe.imageSymbol)
                                 .font(.system(size: 44, weight: .semibold))
-                                .foregroundColor(.black.opacity(0.75))
+                                .foregroundColor(FTTheme.text.opacity(0.75))
                         )
 
                     HStack {
@@ -29,9 +33,9 @@ struct RecipeDetailView: View {
                         } label: {
                             Image(systemName: "chevron.left")
                                 .font(.system(size: 16, weight: .semibold))
-                                .foregroundColor(.black)
+                                .foregroundColor(FTTheme.text)
                                 .padding(12)
-                                .background(Color.white.opacity(0.95))
+                                .background(FTTheme.bg.opacity(0.95))
                                 .clipShape(Circle())
                                 .overlay(Circle().stroke(FTTheme.border, lineWidth: 1))
                         }
@@ -65,10 +69,10 @@ struct RecipeDetailView: View {
                     VStack(alignment: .leading, spacing: 10) {
                         ForEach(recipe.ingredients, id: \.self) { item in
                             HStack(alignment: .top, spacing: 10) {
-                                Circle().fill(Color.black.opacity(0.85)).frame(width: 6, height: 6).padding(.top, 6)
+                                Circle().fill(FTTheme.text.opacity(0.85)).frame(width: 6, height: 6).padding(.top, 6)
                                 Text(item)
                                     .font(.system(size: 15))
-                                    .foregroundColor(Color.black.opacity(0.82))
+                                    .foregroundColor(FTTheme.text.opacity(0.82))
                             }
                         }
                     }
@@ -82,14 +86,14 @@ struct RecipeDetailView: View {
                             HStack(alignment: .top, spacing: 12) {
                                 Text("\(idx + 1)")
                                     .font(.system(size: 14, weight: .semibold))
-                                    .foregroundColor(.white)
+                                    .foregroundColor(Color(.systemBackground))
                                     .frame(width: 26, height: 26)
-                                    .background(Color.black)
+                                    .background(FTTheme.text)
                                     .clipShape(Circle())
 
                                 Text(step)
                                     .font(.system(size: 15))
-                                    .foregroundColor(Color.black.opacity(0.82))
+                                    .foregroundColor(FTTheme.text.opacity(0.82))
                                     .fixedSize(horizontal: false, vertical: true)
 
                                 Spacer()
@@ -122,6 +126,41 @@ struct RecipeDetailView: View {
                     .padding(.top, 6)
                 }
 
+                // Add to meal plan
+                if planSaved {
+                    HStack {
+                        Image(systemName: "checkmark.circle.fill")
+                            .foregroundColor(FTTheme.success)
+                        Text("Добавлено в план!")
+                            .font(.system(size: 15, weight: .semibold))
+                            .foregroundColor(FTTheme.success)
+                    }
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, 14)
+                    .background(FTTheme.success.opacity(0.1))
+                    .cornerRadius(FTTheme.corner)
+                } else {
+                    Button {
+                        showPlanSheet = true
+                    } label: {
+                        HStack {
+                            Image(systemName: "calendar.badge.plus")
+                                .font(.system(size: 15, weight: .semibold))
+                            Text("Запланировать")
+                                .font(.system(size: 16, weight: .semibold))
+                        }
+                        .foregroundColor(FTTheme.text)
+                        .frame(maxWidth: .infinity)
+                        .padding(.vertical, 14)
+                        .background(FTTheme.card)
+                        .overlay(
+                            RoundedRectangle(cornerRadius: FTTheme.corner)
+                                .stroke(FTTheme.border, lineWidth: 1)
+                        )
+                        .cornerRadius(FTTheme.corner)
+                    }
+                }
+
                 Spacer(minLength: 20)
             }
             .padding(.horizontal, FTTheme.hPad)
@@ -137,6 +176,15 @@ struct RecipeDetailView: View {
                 }
             }
             Button("Отмена", role: .cancel) {}
+        }
+        .sheet(isPresented: $showPlanSheet) {
+            MealPlanSheet(
+                recipeName: recipe.title,
+                date: $planDate,
+                mealType: $planMealType,
+                onSave: addToMealPlan
+            )
+            .presentationDetents([.medium])
         }
     }
 
@@ -162,6 +210,28 @@ struct RecipeDetailView: View {
         }
     }
 
+    private func addToMealPlan() {
+        let formatter = DateFormatter()
+        formatter.dateFormat = "yyyy-MM-dd"
+        let dateStr = formatter.string(from: planDate)
+
+        Task {
+            let req = AddMealPlanRequest(
+                recipeId: 0,
+                name: recipe.title,
+                date: dateStr,
+                type: planMealType.rawValue,
+                calories: Double(recipe.kcal),
+                protein: Double(recipe.protein),
+                carbs: Double(recipe.carbs),
+                fats: Double(recipe.fat)
+            )
+            _ = try? await APIClient.shared.addMealPlan(req)
+            showPlanSheet = false
+            planSaved = true
+        }
+    }
+
     private func sectionTitle(_ text: String) -> some View {
         Text(text)
             .font(.system(size: 18, weight: .semibold))
@@ -177,13 +247,77 @@ struct RecipeDetailView: View {
             Text(text)
                 .font(.system(size: 12, weight: .semibold))
         }
-        .foregroundColor(.black.opacity(0.78))
+        .foregroundColor(FTTheme.text.opacity(0.78))
         .padding(.horizontal, 10)
         .padding(.vertical, 8)
-        .background(Color.white)
+        .background(FTTheme.card)
         .overlay(
             RoundedRectangle(cornerRadius: 999).stroke(FTTheme.border, lineWidth: 1)
         )
         .cornerRadius(999)
+    }
+}
+
+// MARK: - Meal Plan Sheet
+
+private struct MealPlanSheet: View {
+    let recipeName: String
+    @Binding var date: Date
+    @Binding var mealType: MealType
+    let onSave: () -> Void
+    @Environment(\.dismiss) private var dismiss
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 18) {
+            HStack {
+                Text("Запланировать")
+                    .font(.system(size: 20, weight: .semibold))
+                Spacer()
+                Button { dismiss() } label: {
+                    Image(systemName: "xmark.circle.fill")
+                        .font(.system(size: 22))
+                        .foregroundColor(FTTheme.muted)
+                }
+            }
+
+            Text(recipeName)
+                .font(.system(size: 15))
+                .foregroundColor(FTTheme.muted)
+
+            VStack(alignment: .leading, spacing: 8) {
+                Text("Дата")
+                    .font(.system(size: 14, weight: .medium))
+                DatePicker("", selection: $date, displayedComponents: .date)
+                    .datePickerStyle(.compact)
+                    .labelsHidden()
+            }
+
+            VStack(alignment: .leading, spacing: 8) {
+                Text("Тип приёма пищи")
+                    .font(.system(size: 14, weight: .medium))
+                HStack(spacing: 8) {
+                    ForEach(MealType.allCases, id: \.self) { type in
+                        Button {
+                            mealType = type
+                        } label: {
+                            Text(type.title)
+                                .font(.system(size: 13, weight: .semibold))
+                                .foregroundColor(mealType == type ? Color(.systemBackground) : FTTheme.text.opacity(0.7))
+                                .padding(.horizontal, 14)
+                                .padding(.vertical, 10)
+                                .background(mealType == type ? FTTheme.tint : FTTheme.fill)
+                                .cornerRadius(FTTheme.corner)
+                        }
+                    }
+                }
+            }
+
+            PrimaryButton(title: "Сохранить в план") {
+                onSave()
+            }
+            .padding(.top, 8)
+        }
+        .padding(FTTheme.hPad)
+        .background(FTTheme.bg)
     }
 }

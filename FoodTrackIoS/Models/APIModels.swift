@@ -403,6 +403,364 @@ struct FoodPrediction: Decodable {
     var confidencePercent: Int { Int((confidence ?? 0) * 100) }
 }
 
+// MARK: - Water Tracking
+
+struct WaterEntryDTO: Decodable, Identifiable {
+    let id: Int
+    let amount_ml: Int
+    let date: String?
+    let created_at: String?
+}
+
+struct WaterResponse: Decodable {
+    let entries: [WaterEntryDTO]
+    let total_ml: Int
+    let goal_ml: Int
+    let date: String?
+}
+
+struct AddWaterRequest: Encodable {
+    let amount_ml: Int
+    let date: String?
+}
+
+struct AddWaterResponse: Decodable {
+    let entry: WaterEntryDTO?
+    let total_ml: Int
+    let goal_ml: Int
+}
+
+// MARK: - Monthly Analytics
+
+struct MonthlyStatsDTO: Decodable {
+    let month: Int?
+    let year: Int?
+    let weeks: [WeekData]?
+    let totals: MonthlyTotals?
+    let summary: MonthlySummary?
+
+    struct WeekData: Decodable, Identifiable {
+        let week_number: Int
+        let start_date: String
+        let end_date: String
+        let avg_calories: Double?
+        let total_meals: Int?
+        var id: Int { week_number }
+    }
+
+    struct MonthlyTotals: Decodable {
+        let calories: Double?
+        let protein: Double?
+        let carbs: Double?
+        let fats: Double?
+        let meals_count: Int?
+    }
+
+    struct MonthlySummary: Decodable {
+        let avg_daily_calories: Double?
+        let days_tracked: Int?
+        let days_with_goal: Int?
+    }
+}
+
+// MARK: - Tips
+
+struct TipDTO: Decodable, Identifiable {
+    let id: Int?
+    let title: String
+    let description: String?
+    let category: String?
+    let priority: String?
+    let icon: String?
+
+    var safeId: Int { id ?? title.hashValue }
+}
+
+struct TipsResponse: Decodable {
+    let tips: [TipDTO]
+    let count: Int?
+}
+
+// MARK: - Progress (Measurements + Photos)
+
+struct MeasurementDTO: Decodable, Identifiable {
+    let id: Int
+    let date: String?
+    let chest: Double?
+    let waist: Double?
+    let hips: Double?
+    let biceps: Double?
+    let thigh: Double?
+    let neck: Double?
+    let notes: String?
+    let created_at: String?
+}
+
+struct MeasurementsResponse: Decodable {
+    let measurements: [MeasurementDTO]
+    let count: Int?
+}
+
+struct AddMeasurementRequest: Encodable {
+    let date: String?
+    let chest: Double?
+    let waist: Double?
+    let hips: Double?
+    let biceps: Double?
+    let thigh: Double?
+    let neck: Double?
+    let notes: String?
+}
+
+struct ProgressPhotoDTO: Decodable, Identifiable {
+    let id: Int
+    let image_url: String?
+    let date: String?
+    let category: String?
+    let notes: String?
+    let created_at: String?
+}
+
+struct ProgressPhotosResponse: Decodable {
+    let photos: [ProgressPhotoDTO]
+    let count: Int?
+}
+
+struct AddProgressPhotoRequest: Encodable {
+    let image_url: String
+    let date: String?
+    let category: String?
+    let notes: String?
+}
+
+// MARK: - Meal Plans
+
+struct MealPlanDTO: Decodable, Identifiable {
+    let id: Int
+    let recipe_id: Int?
+    let name: String?
+    let date: String?
+    let type: String?
+    let image: String?
+    let category: String?
+    let calories: Double?
+    let protein: Double?
+    let carbs: Double?
+    let fats: Double?
+    let time: Int?
+    let difficulty: String?
+    let is_completed: Bool?
+    let ingredients: [RecipeIngredientDTO]?
+    let steps: String?
+}
+
+struct MealPlansResponse: Decodable {
+    let meal_plans: [MealPlanDTO]
+    let count: Int?
+}
+
+struct AddMealPlanRequest: Encodable {
+    let recipeId: Int
+    let name: String
+    let date: String
+    let type: String
+    let calories: Double?
+    let protein: Double?
+    let carbs: Double?
+    let fats: Double?
+}
+
+struct WeekMealPlansResponse: Decodable {
+    let week_plans: [MealPlanDTO]
+    let start_date: String?
+    let end_date: String?
+    let total_count: Int?
+}
+
+// MARK: - Friends
+
+struct FriendshipDTO: Decodable, Identifiable {
+    let id: Int
+    let user_id: Int?
+    let friend_id: Int?
+    let status: String?
+    let created_at: String?
+    // Resolved friend info
+    let friend: FriendUserDTO?
+    let user: FriendUserDTO?
+}
+
+struct FriendUserDTO: Decodable, Identifiable {
+    let id: Int
+    let full_name: String?
+    let nickname: String?
+    let avatar: String?
+
+    var displayName: String {
+        full_name ?? nickname ?? "User"
+    }
+
+    var initials: String {
+        let name = displayName
+        let parts = name.split(separator: " ")
+        if parts.count >= 2 {
+            return String(parts[0].prefix(1) + parts[1].prefix(1)).uppercased()
+        }
+        return String(name.prefix(2)).uppercased()
+    }
+}
+
+struct FriendStatusResponse: Decodable {
+    let status: String?
+    let friendshipId: Int?
+    let isRequester: Bool?
+}
+
+struct FriendRequestBody: Encodable {
+    let userId: Int
+}
+
+struct SearchUsersResponse: Decodable {
+    // Backend may return array directly
+    let users: [FriendUserDTO]?
+}
+
+// MARK: - Groups
+
+struct GroupDTO: Decodable, Identifiable {
+    let id: Int
+    let name: String
+    let description: String?
+    let emoji: String?
+    let is_public: Bool?
+    let member_count: Int?
+    let created_at: String?
+    let is_member: Bool?
+    let is_admin: Bool?
+}
+
+struct CreateGroupRequest: Encodable {
+    let name: String
+    let description: String?
+    let emoji: String?
+    let isPublic: Bool
+}
+
+struct GroupPostDTO: Decodable, Identifiable {
+    let id: Int
+    let text: String?
+    let image: String?
+    let likes: Int?
+    let is_liked: Bool?
+    let created_at: String?
+    let author: FriendUserDTO?
+    let comments: [PostCommentDTO]?
+    let comments_count: Int?
+}
+
+struct PostCommentDTO: Decodable, Identifiable {
+    let id: Int
+    let text: String?
+    let created_at: String?
+    let author: FriendUserDTO?
+    let reply_to_name: String?
+}
+
+struct GroupPostsResponse: Decodable {
+    let posts: [GroupPostDTO]
+    let total: Int?
+    let pages: Int?
+    let current_page: Int?
+}
+
+struct CreatePostRequest: Encodable {
+    let text: String
+    let image: String?
+    let mealId: Int?
+}
+
+struct CreateCommentRequest: Encodable {
+    let text: String
+    let replyToId: Int?
+    let replyToName: String?
+}
+
+struct ForumTopicDTO: Decodable, Identifiable {
+    let id: Int
+    let title: String
+    let content: String?
+    let category: String?
+    let is_pinned: Bool?
+    let replies_count: Int?
+    let last_activity: String?
+    let created_at: String?
+    let author: FriendUserDTO?
+}
+
+struct CreateTopicRequest: Encodable {
+    let title: String
+    let content: String
+    let category: String?
+}
+
+struct ForumReplyDTO: Decodable, Identifiable {
+    let id: Int
+    let content: String?
+    let created_at: String?
+    let author: FriendUserDTO?
+    let reply_to_name: String?
+}
+
+struct GroupMemberDTO: Decodable, Identifiable {
+    let id: Int
+    let user: FriendUserDTO?
+    let role: String?
+    let joined_at: String?
+}
+
+// MARK: - Fridge
+
+struct FridgeProductDTO: Decodable, Identifiable {
+    let id: Int
+    let name: String
+    let quantity: Double?
+    let unit: String?
+    let category: String?
+    let expiry_date: String?
+    let notes: String?
+    let created_at: String?
+
+    var isExpiringSoon: Bool {
+        guard let expiry = expiry_date else { return false }
+        let formatter = DateFormatter()
+        formatter.dateFormat = "yyyy-MM-dd"
+        guard let date = formatter.date(from: expiry) else { return false }
+        let daysUntil = Calendar.current.dateComponents([.day], from: Date(), to: date).day ?? 0
+        return daysUntil <= 7 && daysUntil >= 0
+    }
+
+    var isExpired: Bool {
+        guard let expiry = expiry_date else { return false }
+        let formatter = DateFormatter()
+        formatter.dateFormat = "yyyy-MM-dd"
+        guard let date = formatter.date(from: expiry) else { return false }
+        return date < Date()
+    }
+}
+
+struct FridgeProductsResponse: Decodable {
+    let products: [FridgeProductDTO]?
+}
+
+struct AddFridgeProductRequest: Encodable {
+    let name: String
+    let quantity: Double?
+    let unit: String?
+    let category: String?
+    let expiryDate: String?
+    let notes: String?
+}
+
 // MARK: - Generic
 
 struct MessageResponse: Decodable {

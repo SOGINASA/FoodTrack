@@ -144,6 +144,231 @@ actor APIClient {
         return resp.recipes
     }
 
+    // MARK: - Water Tracking
+
+    func getWater(date: String? = nil) async throws -> WaterResponse {
+        var path = "/water"
+        if let date { path += "?date=\(date)" }
+        return try await get(path)
+    }
+
+    func addWater(_ req: AddWaterRequest) async throws -> AddWaterResponse {
+        try await post("/water", body: req)
+    }
+
+    func deleteWater(_ id: Int) async throws {
+        let _: MessageResponse = try await delete("/water/\(id)")
+    }
+
+    // MARK: - Monthly Analytics
+
+    func getMonthlyStats(year: Int, month: Int) async throws -> MonthlyStatsDTO {
+        try await get("/analytics/monthly?year=\(year)&month=\(month)")
+    }
+
+    // MARK: - Tips
+
+    func getTips(category: String? = nil, priority: String? = nil) async throws -> [TipDTO] {
+        var path = "/tips"
+        var params: [String] = []
+        if let category { params.append("category=\(category)") }
+        if let priority { params.append("priority=\(priority)") }
+        if !params.isEmpty { path += "?" + params.joined(separator: "&") }
+        let resp: TipsResponse = try await get(path)
+        return resp.tips
+    }
+
+    // MARK: - Progress (Measurements)
+
+    func getMeasurements() async throws -> [MeasurementDTO] {
+        let resp: MeasurementsResponse = try await get("/progress/measurements")
+        return resp.measurements
+    }
+
+    func addMeasurement(_ req: AddMeasurementRequest) async throws -> MeasurementDTO {
+        struct Resp: Decodable { let measurement: MeasurementDTO }
+        let resp: Resp = try await post("/progress/measurements", body: req)
+        return resp.measurement
+    }
+
+    func deleteMeasurement(_ id: Int) async throws {
+        let _: MessageResponse = try await delete("/progress/measurements/\(id)")
+    }
+
+    // MARK: - Progress (Photos)
+
+    func getProgressPhotos() async throws -> [ProgressPhotoDTO] {
+        let resp: ProgressPhotosResponse = try await get("/progress/photos")
+        return resp.photos
+    }
+
+    func deleteProgressPhoto(_ id: Int) async throws {
+        let _: MessageResponse = try await delete("/progress/photos/\(id)")
+    }
+
+    // MARK: - Meal Plans
+
+    func getMealPlans(date: String? = nil) async throws -> [MealPlanDTO] {
+        var path = "/meal-plans"
+        if let date { path += "?date=\(date)" }
+        let resp: MealPlansResponse = try await get(path)
+        return resp.meal_plans
+    }
+
+    func getWeekMealPlans(startDate: String) async throws -> WeekMealPlansResponse {
+        try await get("/meal-plans/week?start_date=\(startDate)")
+    }
+
+    func addMealPlan(_ req: AddMealPlanRequest) async throws -> MealPlanDTO {
+        struct Resp: Decodable { let meal_plan: MealPlanDTO }
+        let resp: Resp = try await post("/meal-plans", body: req)
+        return resp.meal_plan
+    }
+
+    func deleteMealPlan(_ id: Int) async throws {
+        let _: MessageResponse = try await delete("/meal-plans/\(id)")
+    }
+
+    func toggleMealPlanComplete(_ id: Int) async throws -> MealPlanDTO {
+        struct Resp: Decodable { let meal_plan: MealPlanDTO }
+        struct Empty: Encodable {}
+        let resp: Resp = try await post("/meal-plans/\(id)/complete", body: Empty())
+        return resp.meal_plan
+    }
+
+    // MARK: - Friends
+
+    func getFriends() async throws -> [FriendshipDTO] {
+        try await get("/friends")
+    }
+
+    func getIncomingRequests() async throws -> [FriendshipDTO] {
+        try await get("/friends/requests/incoming")
+    }
+
+    func getOutgoingRequests() async throws -> [FriendshipDTO] {
+        try await get("/friends/requests/outgoing")
+    }
+
+    func sendFriendRequest(userId: Int) async throws -> FriendshipDTO {
+        try await post("/friends/request", body: FriendRequestBody(userId: userId))
+    }
+
+    func acceptFriendRequest(_ id: Int) async throws {
+        struct Empty: Encodable {}
+        let _: MessageResponse = try await post("/friends/accept/\(id)", body: Empty())
+    }
+
+    func rejectFriendRequest(_ id: Int) async throws {
+        struct Empty: Encodable {}
+        let _: MessageResponse = try await post("/friends/reject/\(id)", body: Empty())
+    }
+
+    func removeFriend(_ id: Int) async throws {
+        let _: MessageResponse = try await delete("/friends/\(id)")
+    }
+
+    func searchUsers(query: String) async throws -> [FriendUserDTO] {
+        let encoded = query.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) ?? query
+        return try await get("/friends/search?q=\(encoded)")
+    }
+
+    // MARK: - Groups
+
+    func getMyGroups() async throws -> [GroupDTO] {
+        try await get("/groups/all")
+    }
+
+    func discoverGroups() async throws -> [GroupDTO] {
+        try await get("/groups/discover")
+    }
+
+    func createGroup(_ req: CreateGroupRequest) async throws -> GroupDTO {
+        try await post("/groups/create", body: req)
+    }
+
+    func getGroup(_ id: Int) async throws -> GroupDTO {
+        try await get("/groups/\(id)")
+    }
+
+    func deleteGroup(_ id: Int) async throws {
+        let _: MessageResponse = try await delete("/groups/\(id)")
+    }
+
+    func joinGroup(_ id: Int) async throws {
+        struct Empty: Encodable {}
+        let _: MessageResponse = try await post("/groups/\(id)/join", body: Empty())
+    }
+
+    func leaveGroup(_ id: Int) async throws {
+        struct Empty: Encodable {}
+        let _: MessageResponse = try await post("/groups/\(id)/leave", body: Empty())
+    }
+
+    func getGroupMembers(_ groupId: Int) async throws -> [GroupMemberDTO] {
+        try await get("/groups/\(groupId)/members")
+    }
+
+    func getGroupPosts(_ groupId: Int, page: Int = 1) async throws -> GroupPostsResponse {
+        try await get("/groups/\(groupId)/posts?page=\(page)")
+    }
+
+    func createGroupPost(_ groupId: Int, _ req: CreatePostRequest) async throws -> GroupPostDTO {
+        try await post("/groups/\(groupId)/posts", body: req)
+    }
+
+    func deleteGroupPost(_ groupId: Int, postId: Int) async throws {
+        let _: MessageResponse = try await delete("/groups/\(groupId)/posts/\(postId)")
+    }
+
+    func likePost(_ groupId: Int, postId: Int) async throws {
+        struct Empty: Encodable {}
+        let _: MessageResponse = try await post("/groups/\(groupId)/posts/\(postId)/like", body: Empty())
+    }
+
+    func commentOnPost(_ groupId: Int, postId: Int, _ req: CreateCommentRequest) async throws -> PostCommentDTO {
+        try await post("/groups/\(groupId)/posts/\(postId)/comments", body: req)
+    }
+
+    func getForumTopics(_ groupId: Int) async throws -> [ForumTopicDTO] {
+        try await get("/groups/\(groupId)/topics")
+    }
+
+    func createForumTopic(_ groupId: Int, _ req: CreateTopicRequest) async throws -> ForumTopicDTO {
+        try await post("/groups/\(groupId)/topics", body: req)
+    }
+
+    func getForumReplies(_ groupId: Int, topicId: Int) async throws -> [ForumReplyDTO] {
+        try await get("/groups/\(groupId)/topics/\(topicId)/replies")
+    }
+
+    // MARK: - Fridge
+
+    func getFridgeProducts() async throws -> [FridgeProductDTO] {
+        try await get("/fridge")
+    }
+
+    func addFridgeProduct(_ req: AddFridgeProductRequest) async throws -> FridgeProductDTO {
+        try await post("/fridge", body: req)
+    }
+
+    func deleteFridgeProduct(_ id: Int) async throws {
+        let _: MessageResponse = try await delete("/fridge/\(id)")
+    }
+
+    func getExpiringProducts(days: Int = 7) async throws -> [FridgeProductDTO] {
+        try await get("/fridge/expiring-soon?days=\(days)")
+    }
+
+    // MARK: - Meal Copy
+
+    func copyMeal(_ id: Int, type: String, date: String) async throws -> MealDTO {
+        struct CopyReq: Encodable { let type: String; let date: String }
+        struct Resp: Decodable { let meal: MealDTO }
+        let resp: Resp = try await post("/meals/\(id)/copy", body: CopyReq(type: type, date: date))
+        return resp.meal
+    }
+
     // MARK: - Photo Analysis
 
     func analyzePhoto(_ image: UIImage) async throws -> FoodPrediction {

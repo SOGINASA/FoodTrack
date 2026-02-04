@@ -41,9 +41,9 @@ struct EditGoalsView: View {
                     Button { dismiss() } label: {
                         Image(systemName: "chevron.left")
                             .font(.system(size: 16, weight: .semibold))
-                            .foregroundColor(.black)
+                            .foregroundColor(FTTheme.text)
                             .padding(12)
-                            .background(Color.gray.opacity(0.10))
+                            .background(FTTheme.fill)
                             .clipShape(Circle())
                     }
                     Spacer()
@@ -93,7 +93,7 @@ struct EditGoalsView: View {
                                 .keyboardType(.numberPad)
                                 .font(.system(size: 15))
                                 .padding(12)
-                                .background(Color.gray.opacity(0.08))
+                                .background(FTTheme.fill)
                                 .cornerRadius(12)
                                 .overlay(
                                     RoundedRectangle(cornerRadius: 12)
@@ -108,7 +108,7 @@ struct EditGoalsView: View {
                                 .keyboardType(.numberPad)
                                 .font(.system(size: 15))
                                 .padding(12)
-                                .background(Color.gray.opacity(0.08))
+                                .background(FTTheme.fill)
                                 .cornerRadius(12)
                                 .overlay(
                                     RoundedRectangle(cornerRadius: 12)
@@ -123,7 +123,7 @@ struct EditGoalsView: View {
                                 .keyboardType(.numberPad)
                                 .font(.system(size: 15))
                                 .padding(12)
-                                .background(Color.gray.opacity(0.08))
+                                .background(FTTheme.fill)
                                 .cornerRadius(12)
                                 .overlay(
                                     RoundedRectangle(cornerRadius: 12)
@@ -153,20 +153,20 @@ struct EditGoalsView: View {
                                 HStack {
                                     Text(label)
                                         .font(.system(size: 14, weight: .medium))
-                                        .foregroundColor(.black.opacity(0.8))
+                                        .foregroundColor(FTTheme.text.opacity(0.8))
                                     Spacer()
                                     if activityLevel == value {
                                         Image(systemName: "checkmark")
                                             .font(.system(size: 14, weight: .bold))
-                                            .foregroundColor(.black)
+                                            .foregroundColor(FTTheme.text)
                                     }
                                 }
                                 .padding(12)
-                                .background(activityLevel == value ? Color.black.opacity(0.06) : Color.gray.opacity(0.04))
+                                .background(activityLevel == value ? FTTheme.fill : FTTheme.fill.opacity(0.5))
                                 .cornerRadius(12)
                                 .overlay(
                                     RoundedRectangle(cornerRadius: 12)
-                                        .stroke(activityLevel == value ? Color.black.opacity(0.2) : FTTheme.border, lineWidth: 1)
+                                        .stroke(activityLevel == value ? FTTheme.text.opacity(0.2) : FTTheme.border, lineWidth: 1)
                                 )
                             }
                         }
@@ -186,10 +186,10 @@ struct EditGoalsView: View {
                                 } label: {
                                     Text(label)
                                         .font(.system(size: 13, weight: .semibold))
-                                        .foregroundColor(dietType == value ? .white : .black.opacity(0.7))
+                                        .foregroundColor(dietType == value ? Color(.systemBackground) : FTTheme.text.opacity(0.7))
                                         .padding(.horizontal, 14)
                                         .padding(.vertical, 8)
-                                        .background(dietType == value ? Color.black : Color.gray.opacity(0.10))
+                                        .background(dietType == value ? FTTheme.tint : FTTheme.fill)
                                         .cornerRadius(999)
                                 }
                             }

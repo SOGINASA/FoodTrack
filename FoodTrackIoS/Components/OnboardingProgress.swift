@@ -12,8 +12,8 @@ struct OnboardingProgress: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
             ZStack(alignment: .leading) {
-                Capsule().fill(Color.gray.opacity(0.12)).frame(height: 8)
-                Capsule().fill(Color.black).frame(width: max(8, CGFloat(percent) * 3.0), height: 8)
+                Capsule().fill(FTTheme.fill).frame(height: 8)
+                Capsule().fill(FTTheme.tint).frame(width: max(8, CGFloat(percent) * 3.0), height: 8)
                     .animation(.easeOut(duration: 0.2), value: percent)
             }
 

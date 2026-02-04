@@ -6,20 +6,20 @@ struct RootView: View {
     var body: some View {
         Group {
             if appState.isLoading {
-                // Splash / loading
                 VStack(spacing: 16) {
                     RoundedRectangle(cornerRadius: 20)
-                        .fill(Color.gray.opacity(0.15))
+                        .fill(FTTheme.fill)
                         .frame(width: 72, height: 72)
                         .overlay(
                             Text("FT")
                                 .font(.system(size: 24, weight: .bold))
-                                .foregroundColor(.black.opacity(0.85))
+                                .foregroundColor(FTTheme.text.opacity(0.85))
                         )
                     Text("FoodTrack")
                         .font(.system(size: 22, weight: .semibold))
+                        .foregroundColor(FTTheme.text)
                     ProgressView()
-                        .tint(.black)
+                        .tint(FTTheme.tint)
                 }
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
                 .background(FTTheme.bg)
@@ -42,5 +42,4 @@ struct RootView: View {
     }
 }
 
-// Make Route equatable for animation
 extension AppState.Route: Equatable {}

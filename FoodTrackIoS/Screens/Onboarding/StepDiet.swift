@@ -43,7 +43,7 @@ struct StepDiet: View {
                         .font(.system(size: 16))
                         .padding(.horizontal, 14)
                         .padding(.vertical, 12)
-                        .background(Color.white)
+                        .background(FTTheme.elevated)
                         .overlay(
                             RoundedRectangle(cornerRadius: FTTheme.corner)
                                 .stroke(FTTheme.border, lineWidth: 1)

@@ -15,7 +15,7 @@ struct OnboardingShell<Content: View>: View {
                 if let onBack {
                     Button("Назад", action: onBack)
                         .font(.system(size: 14, weight: .medium))
-                        .foregroundColor(.black.opacity(0.75))
+                        .foregroundColor(FTTheme.text.opacity(0.75))
                 } else {
                     Spacer().frame(width: 60)
                 }

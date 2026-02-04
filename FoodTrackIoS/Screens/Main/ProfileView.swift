@@ -22,17 +22,18 @@ struct ProfileView: View {
                     FTCard {
                         HStack(spacing: 14) {
                             Circle()
-                                .fill(Color.gray.opacity(0.15))
+                                .fill(FTTheme.fill)
                                 .frame(width: 54, height: 54)
                                 .overlay(
                                     Text(user?.initials ?? "FT")
                                         .font(.system(size: 14, weight: .bold))
-                                        .foregroundColor(.black.opacity(0.75))
+                                        .foregroundColor(FTTheme.text.opacity(0.75))
                                 )
 
                             VStack(alignment: .leading, spacing: 4) {
                                 Text(user?.displayName ?? "User")
                                     .font(.system(size: 16, weight: .semibold))
+                                    .foregroundColor(FTTheme.text)
                                 if let email = user?.email {
                                     Text(email)
                                         .font(.system(size: 12))
@@ -49,9 +50,9 @@ struct ProfileView: View {
                             NavigationLink(destination: EditProfileView().environmentObject(appState)) {
                                 Image(systemName: "pencil")
                                     .font(.system(size: 14, weight: .semibold))
-                                    .foregroundColor(.black.opacity(0.7))
+                                    .foregroundColor(FTTheme.text.opacity(0.7))
                                     .padding(10)
-                                    .background(Color.gray.opacity(0.10))
+                                    .background(FTTheme.fill)
                                     .clipShape(Circle())
                             }
                         }
@@ -62,6 +63,7 @@ struct ProfileView: View {
                         HStack {
                             Text("Дневная цель")
                                 .font(.system(size: 15, weight: .semibold))
+                                .foregroundColor(FTTheme.text)
                             Spacer()
                             NavigationLink(destination: EditGoalsView().environmentObject(appState)) {
                                 HStack(spacing: 4) {
@@ -70,7 +72,7 @@ struct ProfileView: View {
                                     Image(systemName: "chevron.right")
                                         .font(.system(size: 11, weight: .semibold))
                                 }
-                                .foregroundColor(.black.opacity(0.6))
+                                .foregroundColor(FTTheme.muted)
                             }
                         }
 
@@ -99,6 +101,7 @@ struct ProfileView: View {
                         HStack {
                             Text("Параметры тела")
                                 .font(.system(size: 15, weight: .semibold))
+                                .foregroundColor(FTTheme.text)
                             Spacer()
                             NavigationLink(destination: WeightTrackingView().environmentObject(appState)) {
                                 HStack(spacing: 4) {
@@ -107,7 +110,7 @@ struct ProfileView: View {
                                     Image(systemName: "chevron.right")
                                         .font(.system(size: 11, weight: .semibold))
                                 }
-                                .foregroundColor(.black.opacity(0.6))
+                                .foregroundColor(FTTheme.muted)
                             }
                         }
 
@@ -131,6 +134,7 @@ struct ProfileView: View {
                     FTCard {
                         Text("Настройки")
                             .font(.system(size: 16, weight: .semibold))
+                            .foregroundColor(FTTheme.text)
 
                         NavigationLink(destination: ChangePasswordView()) {
                             ProfileSettingRow(icon: "lock.rotation", title: "Сменить пароль", subtitle: "Обновить пароль учётной записи")
@@ -161,10 +165,11 @@ struct ProfileView: View {
                     FTCard {
                         Text("О FoodTrack")
                             .font(.system(size: 16, weight: .semibold))
+                            .foregroundColor(FTTheme.text)
 
                         Text("FoodTrack — дневник питания + анализ по фото. Контроль питания без чувства вины.")
                             .font(.system(size: 13))
-                            .foregroundColor(.black.opacity(0.78))
+                            .foregroundColor(FTTheme.text.opacity(0.78))
                             .padding(.top, 4)
 
                         HStack(spacing: 10) {
@@ -216,11 +221,11 @@ private struct ProfileStatChip: View {
                 .foregroundColor(FTTheme.muted)
             Text(value)
                 .font(.system(size: 14, weight: .semibold))
-                .foregroundColor(.black.opacity(0.8))
+                .foregroundColor(FTTheme.text.opacity(0.8))
         }
         .padding(.horizontal, 12)
         .padding(.vertical, 10)
-        .background(Color.gray.opacity(0.10))
+        .background(FTTheme.fill)
         .cornerRadius(14)
     }
 }
@@ -233,12 +238,12 @@ private struct ProfileSettingRow: View {
     var body: some View {
         HStack(alignment: .top, spacing: 12) {
             RoundedRectangle(cornerRadius: 14)
-                .fill(Color.gray.opacity(0.12))
+                .fill(FTTheme.fill)
                 .frame(width: 44, height: 44)
-                .overlay(Image(systemName: icon).font(.system(size: 18, weight: .semibold)).foregroundColor(.black.opacity(0.75)))
+                .overlay(Image(systemName: icon).font(.system(size: 18, weight: .semibold)).foregroundColor(FTTheme.text.opacity(0.75)))
 
             VStack(alignment: .leading, spacing: 4) {
-                Text(title).font(.system(size: 15, weight: .semibold))
+                Text(title).font(.system(size: 15, weight: .semibold)).foregroundColor(FTTheme.text)
                 Text(subtitle).font(.system(size: 12)).foregroundColor(FTTheme.muted)
             }
             Spacer()
@@ -256,10 +261,10 @@ private struct ProfileMiniTag: View {
     var body: some View {
         Text(text)
             .font(.system(size: 11, weight: .semibold))
-            .foregroundColor(.black.opacity(0.75))
+            .foregroundColor(FTTheme.text.opacity(0.75))
             .padding(.horizontal, 10)
             .padding(.vertical, 6)
-            .background(Color.gray.opacity(0.10))
+            .background(FTTheme.fill)
             .cornerRadius(999)
     }
 }

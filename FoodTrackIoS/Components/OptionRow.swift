@@ -12,16 +12,16 @@ struct OptionRow: View {
                     .font(.system(size: 16, weight: .medium))
                 Spacer()
                 Circle()
-                    .fill(selected ? Color.white : Color.gray.opacity(0.35))
+                    .fill(selected ? Color(.systemBackground) : FTTheme.fill)
                     .frame(width: 10, height: 10)
             }
-            .foregroundColor(selected ? .white : .black)
+            .foregroundColor(selected ? Color(.systemBackground) : FTTheme.text)
             .padding(.horizontal, 18)
             .padding(.vertical, 16)
-            .background(selected ? Color.black : Color.white)
+            .background(selected ? FTTheme.tint : FTTheme.card)
             .overlay(
                 RoundedRectangle(cornerRadius: FTTheme.corner)
-                    .stroke(selected ? Color.black : FTTheme.border, lineWidth: 1)
+                    .stroke(selected ? FTTheme.tint : FTTheme.border, lineWidth: 1)
             )
             .cornerRadius(FTTheme.corner)
         }

@@ -8,18 +8,16 @@ struct FoodTrackApp: App {
 
     init() {
         let appearance = UITabBarAppearance()
-        appearance.configureWithTransparentBackground()
-        appearance.backgroundEffect = UIBlurEffect(style: .systemUltraThinMaterial)
-        appearance.shadowColor = UIColor.black.withAlphaComponent(0.10)
+        appearance.configureWithDefaultBackground()
 
-        appearance.stackedLayoutAppearance.normal.iconColor = UIColor.gray.withAlphaComponent(0.65)
+        appearance.stackedLayoutAppearance.normal.iconColor = UIColor.secondaryLabel
         appearance.stackedLayoutAppearance.normal.titleTextAttributes = [
-            .foregroundColor: UIColor.gray.withAlphaComponent(0.75)
+            .foregroundColor: UIColor.secondaryLabel
         ]
 
-        appearance.stackedLayoutAppearance.selected.iconColor = UIColor.black
+        appearance.stackedLayoutAppearance.selected.iconColor = UIColor.label
         appearance.stackedLayoutAppearance.selected.titleTextAttributes = [
-            .foregroundColor: UIColor.black
+            .foregroundColor: UIColor.label
         ]
 
         UITabBar.appearance().standardAppearance = appearance

@@ -30,12 +30,12 @@ struct DashboardView: View {
                     // Header
                     HStack(spacing: 10) {
                         RoundedRectangle(cornerRadius: 12)
-                            .fill(Color.gray.opacity(0.15))
+                            .fill(FTTheme.fill)
                             .frame(width: 38, height: 38)
                             .overlay(
                                 Text("FT")
                                     .font(.system(size: 13, weight: .bold))
-                                    .foregroundColor(.black.opacity(0.85))
+                                    .foregroundColor(FTTheme.text.opacity(0.85))
                             )
 
                         VStack(alignment: .leading, spacing: 2) {
@@ -58,7 +58,7 @@ struct DashboardView: View {
                             .foregroundColor(.orange)
                             .padding(.horizontal, 10)
                             .padding(.vertical, 6)
-                            .background(Color.orange.opacity(0.12))
+                            .background(Color.orange.opacity(0.15))
                             .cornerRadius(999)
                         }
                     }
@@ -69,7 +69,7 @@ struct DashboardView: View {
 
                     if isLoading {
                         VStack(spacing: 12) {
-                            ProgressView().tint(.black)
+                            ProgressView().tint(FTTheme.tint)
                             Text("Загрузка...")
                                 .font(.system(size: 13))
                                 .foregroundColor(FTTheme.muted)
@@ -118,9 +118,9 @@ struct DashboardView: View {
             } label: {
                 Image(systemName: "chevron.left")
                     .font(.system(size: 14, weight: .semibold))
-                    .foregroundColor(.black.opacity(0.7))
+                    .foregroundColor(FTTheme.text.opacity(0.7))
                     .padding(10)
-                    .background(Color.gray.opacity(0.10))
+                    .background(FTTheme.fill)
                     .clipShape(Circle())
             }
 
@@ -135,7 +135,7 @@ struct DashboardView: View {
                         Task { await loadData() }
                     }
                     .font(.system(size: 12, weight: .medium))
-                    .foregroundColor(.black.opacity(0.6))
+                    .foregroundColor(FTTheme.text.opacity(0.6))
                 }
             }
 
@@ -147,9 +147,9 @@ struct DashboardView: View {
             } label: {
                 Image(systemName: "chevron.right")
                     .font(.system(size: 14, weight: .semibold))
-                    .foregroundColor(.black.opacity(0.7))
+                    .foregroundColor(FTTheme.text.opacity(0.7))
                     .padding(10)
-                    .background(Color.gray.opacity(0.10))
+                    .background(FTTheme.fill)
                     .clipShape(Circle())
             }
         }
@@ -182,8 +182,8 @@ struct DashboardView: View {
             GeometryReader { geo in
                 let ratio = goals.caloriesGoal > 0 ? min(1.0, Double(consumedKcal) / Double(goals.caloriesGoal)) : 0
                 ZStack(alignment: .leading) {
-                    Capsule().fill(Color.gray.opacity(0.12)).frame(height: 10)
-                    Capsule().fill(Color.black).frame(width: geo.size.width * ratio, height: 10)
+                    Capsule().fill(FTTheme.fill).frame(height: 10)
+                    Capsule().fill(FTTheme.tint).frame(width: geo.size.width * ratio, height: 10)
                 }
             }
             .frame(height: 10)
@@ -238,7 +238,7 @@ struct DashboardView: View {
                         let height = maxCal > 0 ? CGFloat(cal / maxCal) * 100 : 0
                         VStack(spacing: 4) {
                             RoundedRectangle(cornerRadius: 6)
-                                .fill(Color.black.opacity(0.85))
+                                .fill(FTTheme.text.opacity(0.85))
                                 .frame(height: max(4, height))
 
                             Text(shortDay(day.date))
@@ -292,12 +292,12 @@ struct DashboardView: View {
                 ForEach(meals.prefix(3)) { meal in
                     HStack(spacing: 12) {
                         RoundedRectangle(cornerRadius: 12)
-                            .fill(Color.gray.opacity(0.12))
+                            .fill(FTTheme.fill)
                             .frame(width: 44, height: 44)
                             .overlay(
                                 Text("\(meal.displayCalories)")
                                     .font(.system(size: 12, weight: .bold))
-                                    .foregroundColor(.black.opacity(0.75))
+                                    .foregroundColor(FTTheme.text.opacity(0.75))
                             )
 
                         VStack(alignment: .leading, spacing: 4) {
@@ -306,7 +306,7 @@ struct DashboardView: View {
                                 .lineLimit(1)
                             Text("Б \(meal.displayProtein) \u{2022} Ж \(meal.displayFats) \u{2022} У \(meal.displayCarbs)")
                                 .font(.system(size: 12, weight: .semibold))
-                                .foregroundColor(.black.opacity(0.7))
+                                .foregroundColor(FTTheme.text.opacity(0.7))
                         }
                         Spacer()
                         Text(meal.mealType.title)
@@ -314,7 +314,7 @@ struct DashboardView: View {
                             .foregroundColor(FTTheme.muted)
                             .padding(.horizontal, 8)
                             .padding(.vertical, 4)
-                            .background(Color.gray.opacity(0.10))
+                            .background(FTTheme.fill)
                             .cornerRadius(999)
                     }
                 }
@@ -337,9 +337,9 @@ struct DashboardView: View {
                     HStack(spacing: 12) {
                         Text("\(idx + 1)")
                             .font(.system(size: 12, weight: .bold))
-                            .foregroundColor(.white)
+                            .foregroundColor(FTTheme.bg)
                             .frame(width: 22, height: 22)
-                            .background(Color.black.opacity(0.8))
+                            .background(FTTheme.text.opacity(0.8))
                             .clipShape(Circle())
 
                         Text(food.name)
@@ -426,7 +426,7 @@ private struct MacroCircle: View {
         VStack(spacing: 6) {
             ZStack {
                 Circle()
-                    .stroke(Color.gray.opacity(0.12), lineWidth: 6)
+                    .stroke(FTTheme.fill, lineWidth: 6)
                 Circle()
                     .trim(from: 0, to: ratio)
                     .stroke(color, style: StrokeStyle(lineWidth: 6, lineCap: .round))
