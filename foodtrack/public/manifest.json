@@ -11,12 +11,12 @@
   "background_color": "#ffffff",
   "icons": [
     {
-      "src": "/logo192.png",
+      "src": "/imgs/logo.png",
       "type": "image/png",
       "sizes": "192x192"
     },
     {
-      "src": "/logo512.png",
+      "src": "/imgs/logo.png",
       "type": "image/png",
       "sizes": "512x512"
     },
