@@ -183,14 +183,21 @@ def subscribe_push():
 @notifications_bp.route('/unsubscribe', methods=['DELETE'])
 @jwt_required()
 def unsubscribe_push():
-    """Удалить push-подписку"""
+    """Удалить push-подписку текущего устройства"""
     user_id = int(get_jwt_identity())
+    data = request.get_json(silent=True) or {}
+    endpoint = data.get('endpoint')
 
-    PushSubscription.query.filter_by(user_id=user_id).delete()
+    if endpoint:
+        PushSubscription.query.filter_by(user_id=user_id, endpoint=endpoint).delete()
+    else:
+        PushSubscription.query.filter_by(user_id=user_id).delete()
 
-    prefs = NotificationPreference.query.filter_by(user_id=user_id).first()
-    if prefs:
-        prefs.push_enabled = False
+    remaining = PushSubscription.query.filter_by(user_id=user_id).count()
+    if remaining == 0:
+        prefs = NotificationPreference.query.filter_by(user_id=user_id).first()
+        if prefs:
+            prefs.push_enabled = False
 
     db.session.commit()
     return jsonify({'message': 'Подписка удалена'})
