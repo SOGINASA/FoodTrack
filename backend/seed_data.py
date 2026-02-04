@@ -201,13 +201,21 @@ def seed_all():
         }
     ]
 
+    existing_ids = {
+        uid for (uid,) in db.session.query(UserGoals.user_id).all()
+    }
+
+    created = 0
     for i, user in enumerate(users):
-        goals = UserGoals(
-            user_id=user.id,
-            **goals_data[i]
-        )
+        if user.id in existing_ids:
+            continue
+
+        goals = UserGoals(user_id=user.id, **goals_data[i])
         db.session.add(goals)
-    print(f"  Созданы цели для {len(users)} пользователей")
+        created += 1
+
+    print(f"  Созданы цели для {created} пользователей")
+
 
     # === История веса для каждого пользователя ===
     weight_configs = [
