@@ -19,7 +19,7 @@ def get_groups():
     user_id = get_jwt_identity()
 
     # Группы, в которых пользователь участник
-    memberships = GroupMember.query.filter_by(user_id=user_id).all()
+    memberships = GroupMember.query.all()
     group_ids = [m.group_id for m in memberships]
     groups = Group.query.filter(Group.id.in_(group_ids)).all()
 
