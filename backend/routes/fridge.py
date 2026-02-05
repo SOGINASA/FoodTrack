@@ -236,12 +236,14 @@ def send_share_request():
     if not product_ids:
         return jsonify({'error': 'Выберите хотя бы один продукт'}), 400
 
-    recipient = User.query.get(int(recipient_id))
+    recipient_id_int = int(recipient_id)
+
+    if recipient_id_int == user_id:
+        return jsonify({'error': 'Нельзя отправить запрос самому себе'}), 400
+
+    recipient = User.query.get(recipient_id_int)
     if not recipient or not recipient.is_active:
         return jsonify({'error': 'Получатель не найден'}), 404
-
-    if int(recipient_id) == user_id:
-        return jsonify({'error': 'Нельзя отправить запрос самому себе'}), 400
 
     # Собираем данные о выбранных продуктах
     products = FridgeProduct.query.filter(
@@ -252,14 +254,17 @@ def send_share_request():
     if not products:
         return jsonify({'error': 'Продукты не найдены'}), 404
 
+    sender = User.query.get(user_id)
+    sender_name = sender.full_name or sender.nickname or 'Пользователь'
+
     products_data = [
-        {'name': p.name, 'quantity': p.quantity, 'unit': p.unit}
+        {'id': p.id, 'name': p.name, 'quantity': p.quantity, 'unit': p.unit}
         for p in products
     ]
 
     share_req = ProductShareRequest(
         sender_id=user_id,
-        recipient_id=int(recipient_id),
+        recipient_id=recipient_id_int,
         products_json=json.dumps(products_data, ensure_ascii=False),
         sender_lat=sender_location.get('lat') if sender_location else None,
         sender_lng=sender_location.get('lng') if sender_location else None,
@@ -269,13 +274,11 @@ def send_share_request():
     db.session.commit()
 
     try:
-        sender = User.query.get(user_id)
-        sender_name = sender.full_name or sender.nickname or 'Пользователь'
         product_names = ', '.join(p['name'] for p in products_data[:3])
         if len(products_data) > 3:
             product_names += f' и ещё {len(products_data) - 3}'
         create_and_push_notification(
-            user_id=int(recipient_id),
+            user_id=recipient_id_int,
             title='Запрос на передачу продуктов',
             body=f'{sender_name} хочет передать вам: {product_names}',
             category='fridge',
@@ -320,15 +323,25 @@ def accept_share_request(request_id):
 
     # Добавляем продукты в холодильник получателя
     products_data = json.loads(share_req.products_json) if share_req.products_json else []
-    for p in products_data:
-        new_product = FridgeProduct(
+    new_products = [
+        FridgeProduct(
             user_id=user_id,
             name=p['name'],
             quantity=float(p.get('quantity', 1)),
             unit=p.get('unit', 'шт'),
             category='other',
         )
-        db.session.add(new_product)
+        for p in products_data
+    ]
+    db.session.add_all(new_products)
+
+    # Удаляем продукты из холодильника отправителя
+    original_ids = [p['id'] for p in products_data if 'id' in p]
+    if original_ids:
+        FridgeProduct.query.filter(
+            FridgeProduct.id.in_(original_ids),
+            FridgeProduct.user_id == share_req.sender_id,
+        ).delete(synchronize_session=False)
 
     db.session.commit()
 
