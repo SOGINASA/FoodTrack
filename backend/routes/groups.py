@@ -15,13 +15,8 @@ groups_bp = Blueprint('groups', __name__)
 @groups_bp.route('/all', methods=['GET'])
 @jwt_required()
 def get_groups():
-    """Получить список групп пользователя"""
-    user_id = get_jwt_identity()
-
-    # Группы, в которых пользователь участник
-    memberships = GroupMember.query.all()
-    group_ids = [m.group_id for m in memberships]
-    groups = Group.query.filter(Group.id.in_(group_ids)).all()
+    """Получить список всех групп"""
+    groups = Group.query.all()
 
     return jsonify([g.to_dict() for g in groups])
 
