@@ -9,6 +9,10 @@ import { useNavigate } from 'react-router-dom';
 import { mealsAPI } from '../services/api';
 import { useAuth } from '../context/AuthContext';
 
+const MAX_FILE_SIZE = 99 * 1024 * 1024; // 99 МБ
+const ALLOWED_TYPES = ['image/jpeg', 'image/png', 'image/webp', 'image/heic', 'image/heif'];
+const ALLOWED_EXTENSIONS = ['.jpg', '.jpeg', '.png', '.webp', '.heic', '.heif'];
+
 const AddMeal = () => {
   const navigate = useNavigate();
   const { isAuthenticated } = useAuth();
@@ -225,8 +229,40 @@ const AddMeal = () => {
   const handleFileUpload = (e) => {
     const file = e.target.files[0];
     if (file) {
+      // Проверка формата файла
+      const extension = '.' + file.name.split('.').pop().toLowerCase();
+      if (!ALLOWED_TYPES.includes(file.type) && !ALLOWED_EXTENSIONS.includes(extension)) {
+        setShowToast({
+          type: 'error',
+          message: `Неподдерживаемый формат файла (${file.type || extension}). Поддерживаются: JPEG, PNG, WebP, HEIC.`,
+        });
+        e.target.value = '';
+        return;
+      }
+
+      // Проверка размера файла
+      if (file.size > MAX_FILE_SIZE) {
+        const sizeMB = (file.size / (1024 * 1024)).toFixed(1);
+        setShowToast({
+          type: 'error',
+          message: `Файл слишком большой (${sizeMB} МБ). Максимальный размер — 99 МБ.`,
+        });
+        e.target.value = '';
+        return;
+      }
+
+      // Проверка что файл не пустой
+      if (file.size === 0) {
+        setShowToast({ type: 'error', message: 'Файл пуст. Выберите другое изображение.' });
+        e.target.value = '';
+        return;
+      }
+
       lastInputModeRef.current = 'file';
       const reader = new FileReader();
+      reader.onerror = () => {
+        setShowToast({ type: 'error', message: 'Не удалось прочитать файл. Попробуйте другое изображение.' });
+      };
       reader.onloadend = () => {
         setCapturedImage(reader.result);
         analyzeImage(reader.result);
@@ -282,12 +318,16 @@ const AddMeal = () => {
     setRetryMessage(null);
 
     try {
-      // Сжимаем изображение перед отправкой
-      const compressedImage = await compressImage(imageData);
+      // Конвертируем base64 в Blob для проверки размера
+      const rawByteString = atob(imageData.split(',')[1]);
+      const rawSize = rawByteString.length;
+
+      // Сжимаем только если файл >= 99 МБ
+      const finalImage = rawSize >= MAX_FILE_SIZE ? await compressImage(imageData) : imageData;
 
       // Конвертируем base64 в Blob
-      const byteString = atob(compressedImage.split(',')[1]);
-      const mimeString = compressedImage.split(',')[0].match(/:(.*?);/)[1];
+      const byteString = atob(finalImage.split(',')[1]);
+      const mimeString = finalImage.split(',')[0].match(/:(.*?);/)[1];
       const ab = new ArrayBuffer(byteString.length);
       const ia = new Uint8Array(ab);
       for (let i = 0; i < byteString.length; i++) {
@@ -296,8 +336,8 @@ const AddMeal = () => {
       const blob = new Blob([ab], { type: mimeString });
 
       // Создаём File из Blob
-      const file = new File([blob], 'photo.jpg', { type: 'image/jpeg' });
-      
+      const file = new File([blob], 'photo.jpg', { type: mimeString });
+
       // Отправляем на API анализа
       const response = await mealsAPI.analyzePhoto(file);
 
@@ -306,7 +346,7 @@ const AddMeal = () => {
       // Проверяем, что модель что-то нашла
       if (!result.top_prediction || result.confidence === 0) {
         setCapturedImage(null);
-        retryAfterError('Не удалось распознать блюдо. Попробуйте сделать более чёткое фото.');
+        retryAfterError('Не удалось распознать блюдо. Убедитесь, что на фото чётко видна еда, и попробуйте снова.');
         return;
       }
 
@@ -332,12 +372,45 @@ const AddMeal = () => {
 
       let errorMessage = 'Ошибка анализа. Попробуйте ещё раз.';
 
-      if (error.response?.status === 413) {
-        errorMessage = 'Файл слишком большой. Попробуйте фото меньшего размера.';
-      } else if (error.response?.data?.detail) {
-        errorMessage = error.response.data.detail;
-      } else if (!navigator.onLine) {
-        errorMessage = 'Нет подключения к интернету';
+      if (!navigator.onLine) {
+        errorMessage = 'Нет подключения к интернету. Проверьте соединение и попробуйте снова.';
+      } else if (error.code === 'ECONNABORTED' || error.message?.includes('timeout')) {
+        errorMessage = 'Сервер не ответил вовремя. Проверьте интернет-соединение или попробуйте фото меньшего размера.';
+      } else if (error.message === 'Network Error') {
+        errorMessage = 'Ошибка сети. Проверьте подключение к интернету и попробуйте снова.';
+      } else if (error.response) {
+        const status = error.response.status;
+        const detail = error.response.data?.detail || error.response.data?.message;
+
+        switch (status) {
+          case 400:
+            errorMessage = detail || 'Некорректный запрос. Возможно, файл повреждён или имеет неподдерживаемый формат.';
+            break;
+          case 413:
+            errorMessage = 'Файл слишком большой. Попробуйте фото меньшего размера или снизьте качество камеры.';
+            break;
+          case 415:
+            errorMessage = 'Неподдерживаемый формат изображения. Используйте JPEG, PNG или WebP.';
+            break;
+          case 422:
+            errorMessage = detail || 'Не удалось обработать изображение. Убедитесь, что это фото еды, а не скриншот или документ.';
+            break;
+          case 429:
+            errorMessage = 'Слишком много запросов. Подождите немного и попробуйте снова.';
+            break;
+          case 500:
+            errorMessage = 'Внутренняя ошибка сервера. Попробуйте позже.';
+            break;
+          case 502:
+          case 503:
+            errorMessage = 'Сервис распознавания временно недоступен. Попробуйте через несколько минут.';
+            break;
+          case 504:
+            errorMessage = 'Сервер распознавания не отвечает. Попробуйте фото меньшего размера или повторите позже.';
+            break;
+          default:
+            errorMessage = detail || `Ошибка сервера (${status}). Попробуйте ещё раз.`;
+        }
       }
 
       setCapturedImage(null);
