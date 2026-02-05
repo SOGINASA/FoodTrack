@@ -1,7 +1,7 @@
 from flask import Blueprint, request, jsonify
 from flask_jwt_extended import jwt_required, get_jwt_identity
 from models import db, WaterEntry, UserGoals
-from datetime import datetime, date, timedelta
+from datetime import datetime, timedelta, timezone
 from sqlalchemy import func
 
 water_bp = Blueprint('water', __name__)
@@ -13,7 +13,7 @@ def get_water():
     """Получить записи воды за указанную дату"""
     try:
         user_id = int(get_jwt_identity())
-        date_str = request.args.get('date', date.today().isoformat())
+        date_str = request.args.get('date', datetime.now(timezone.utc).date().isoformat())
         target_date = datetime.strptime(date_str, '%Y-%m-%d').date()
 
         entries = WaterEntry.query.filter_by(
@@ -50,7 +50,7 @@ def add_water():
         if not amount_ml or amount_ml <= 0:
             return jsonify({'error': 'Укажите количество воды в мл'}), 400
 
-        date_str = data.get('date', date.today().isoformat())
+        date_str = data.get('date', datetime.now(timezone.utc).date().isoformat())
         target_date = datetime.strptime(date_str, '%Y-%m-%d').date()
 
         entry = WaterEntry(

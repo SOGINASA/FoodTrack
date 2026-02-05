@@ -1,7 +1,7 @@
 from flask import Blueprint, request, jsonify
 from flask_jwt_extended import create_access_token, create_refresh_token, jwt_required, get_jwt_identity
 from models import db, User, UserGoals
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 import re
 
 auth_bp = Blueprint('auth', __name__)
@@ -92,7 +92,7 @@ def register():
             user_type='user',
             is_active=True,
             is_verified=False,
-            last_login=datetime.utcnow()
+            last_login=datetime.now(timezone.utc)
         )
         user.set_password(password)
         db.session.add(user)
@@ -176,7 +176,7 @@ def login():
 
     try:
         # Обновляем время последнего входа
-        user.last_login = datetime.utcnow()
+        user.last_login = datetime.now(timezone.utc)
         db.session.commit()
 
         # Создаем токены
@@ -435,7 +435,7 @@ def forgot_password():
         import secrets
         reset_token = secrets.token_urlsafe(32)
         user.reset_token = reset_token
-        user.reset_token_expires = datetime.utcnow() + timedelta(hours=1)
+        user.reset_token_expires = datetime.now(timezone.utc) + timedelta(hours=1)
         
         db.session.commit()
         
@@ -459,7 +459,7 @@ def reset_password():
     
     user = User.query.filter_by(reset_token=data['token']).first()
     
-    if not user or not user.reset_token_expires or user.reset_token_expires < datetime.utcnow():
+    if not user or not user.reset_token_expires or user.reset_token_expires < datetime.now(timezone.utc):
         return jsonify({'error': 'Недействительный или истекший токен'}), 400
     
     # Валидация нового пароля

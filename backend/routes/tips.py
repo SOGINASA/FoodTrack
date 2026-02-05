@@ -1,7 +1,7 @@
 from flask import Blueprint, request, jsonify
 from flask_jwt_extended import jwt_required, get_jwt_identity
 from models import db, User, Meal, UserGoals, WaterEntry
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 import json
 import logging
 
@@ -435,7 +435,7 @@ def get_tips():
         goals = UserGoals.query.filter_by(user_id=user_id).first()
         
         # Получаем приёмы пищи за последние 7 дней
-        week_ago = datetime.utcnow().date() - timedelta(days=7)
+        week_ago = datetime.now(timezone.utc).date() - timedelta(days=7)
         meals_week = Meal.query.filter(
             Meal.user_id == user_id,
             Meal.meal_date >= week_ago

@@ -1,7 +1,7 @@
 from flask import Blueprint, request, jsonify
 from flask_jwt_extended import jwt_required, get_jwt_identity
 from models import db, Meal, MealIngredient
-from datetime import datetime, date
+from datetime import datetime, timezone
 import json
 import logging
 
@@ -87,7 +87,7 @@ def create_meal():
         if not data.get('name'):
             return jsonify({'error': 'Название блюда обязательно'}), 400
 
-        meal_date = data.get('date', date.today().isoformat())
+        meal_date = data.get('date', datetime.now(timezone.utc).date().isoformat())
         if isinstance(meal_date, str):
             meal_date = datetime.strptime(meal_date, '%Y-%m-%d').date()
 
@@ -249,7 +249,7 @@ def copy_meal(meal_id):
             user_id=user_id,
             name=original.name,
             meal_type=data.get('type', original.meal_type),
-            meal_date=datetime.strptime(data['date'], '%Y-%m-%d').date() if data.get('date') else date.today(),
+            meal_date=datetime.strptime(data['date'], '%Y-%m-%d').date() if data.get('date') else datetime.now(timezone.utc).date(),
             meal_time=data.get('time', original.meal_time),
             calories=original.calories,
             protein=original.protein,
@@ -298,7 +298,7 @@ def get_today_meals():
     """Получить приёмы пищи за сегодня"""
     try:
         user_id = int(get_jwt_identity())
-        today = date.today()
+        today = datetime.now(timezone.utc).date()
 
         logger.info(f"[GET /meals/today] user_id={user_id}, date={today}")
 

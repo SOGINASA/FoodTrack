@@ -1,6 +1,6 @@
 from flask import Blueprint, request, jsonify, current_app
 from flask_jwt_extended import jwt_required, get_jwt_identity
-from datetime import datetime
+from datetime import datetime, timezone
 from models import db, Notification, NotificationPreference, PushSubscription
 from services.push_service import create_and_push_notification
 
@@ -49,7 +49,7 @@ def mark_as_read(notification_id):
         return jsonify({'error': 'Уведомление не найдено'}), 404
 
     notification.is_read = True
-    notification.read_at = datetime.utcnow()
+    notification.read_at = datetime.now(timezone.utc)
     db.session.commit()
 
     return jsonify({'message': 'Отмечено прочитанным'})
@@ -60,7 +60,7 @@ def mark_as_read(notification_id):
 def mark_all_as_read():
     """Отметить все уведомления прочитанными"""
     user_id = int(get_jwt_identity())
-    now = datetime.utcnow()
+    now = datetime.now(timezone.utc)
 
     Notification.query.filter_by(user_id=user_id, is_read=False).update({
         'is_read': True,

@@ -5,7 +5,7 @@ from flask_jwt_extended import create_access_token, create_refresh_token, jwt_re
 from models import db, User, UserGoals
 from services.oauth_service import get_oauth_service
 from services.auth_logger import auth_logger
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 import secrets
 import time
 
@@ -26,7 +26,7 @@ def oauth_start(provider):
         # Генерируем state для CSRF защиты
         state = secrets.token_urlsafe(32)
         _state_tokens[state] = {
-            'created_at': datetime.utcnow(),
+            'created_at': datetime.now(timezone.utc),
             'ttl': 600  # 10 минут
         }
         
@@ -64,7 +64,7 @@ def oauth_callback(provider):
         #     return jsonify({'error': 'Invalid or expired state'}), 400
         # 
         # state_data = _state_tokens[state]
-        # if (datetime.utcnow() - state_data['created_at']).seconds > state_data['ttl']:
+        # if (datetime.now(timezone.utc) - state_data['created_at']).seconds > state_data['ttl']:
         #     del _state_tokens[state]
         #     return jsonify({'error': 'State token expired'}), 400
         # 
@@ -87,7 +87,7 @@ def oauth_callback(provider):
         
         if user:
             # Существующий пользователь - логируем вход
-            user.last_login = datetime.utcnow()
+            user.last_login = datetime.now(timezone.utc)
             db.session.commit()
             
             auth_logger.log_login(
@@ -110,12 +110,12 @@ def oauth_callback(provider):
                 oauth_provider=provider,
                 oauth_id=oauth_user['id'],
                 oauth_access_token=access_token,
-                oauth_token_expires=datetime.utcnow() + timedelta(days=365),
+                oauth_token_expires=datetime.now(timezone.utc) + timedelta(days=365),
                 user_type='user',
                 is_active=True,
                 is_verified=True,  # OAuth провайдеры верифицируют
-                email_verified_at=datetime.utcnow(),
-                last_login=datetime.utcnow(),
+                email_verified_at=datetime.now(timezone.utc),
+                last_login=datetime.now(timezone.utc),
                 onboarding_completed=False  # Новые пользователи должны пройти onboarding
             )
             
@@ -242,8 +242,8 @@ def oauth_link(provider):
         user.oauth_provider = provider
         user.oauth_id = oauth_user['id']
         user.oauth_access_token = access_token
-        user.oauth_token_expires = datetime.utcnow() + timedelta(days=365)
-        user.oauth_linked_at = datetime.utcnow()
+        user.oauth_token_expires = datetime.now(timezone.utc) + timedelta(days=365)
+        user.oauth_linked_at = datetime.now(timezone.utc)
         
         db.session.commit()
         

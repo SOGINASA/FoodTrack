@@ -3,7 +3,7 @@
 import json
 import uuid
 import traceback
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from flask import request
 from models import db, AuditLog
 from utils.request_helpers import get_request_context, get_client_ip
@@ -137,7 +137,7 @@ class AuthLogger:
     
     def count_failed_attempts(self, ip, minutes=10):
         """Подсчитать неудачные попытки входа с IP за последние N минут"""
-        since = datetime.utcnow() - timedelta(minutes=minutes)
+        since = datetime.now(timezone.utc) - timedelta(minutes=minutes)
         
         count = AuditLog.query.filter(
             AuditLog.ip_address == ip,

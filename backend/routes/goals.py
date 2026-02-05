@@ -1,7 +1,7 @@
 from flask import Blueprint, request, jsonify
 from flask_jwt_extended import jwt_required, get_jwt_identity
 from models import db, UserGoals, WeightEntry
-from datetime import datetime, date, timedelta
+from datetime import datetime, timedelta, timezone
 
 goals_bp = Blueprint('goals', __name__)
 
@@ -85,7 +85,7 @@ def get_weight_history():
 
         # Параметры фильтрации
         days = request.args.get('days', 30, type=int)
-        start_date = date.today() - timedelta(days=days)
+        start_date = datetime.now(timezone.utc).date() - timedelta(days=days)
 
         entries = WeightEntry.query.filter(
             WeightEntry.user_id == user_id,
@@ -127,7 +127,7 @@ def add_weight():
         if not data or not data.get('weight'):
             return jsonify({'error': 'Вес обязателен'}), 400
 
-        entry_date = data.get('date', date.today().isoformat())
+        entry_date = data.get('date', datetime.now(timezone.utc).date().isoformat())
         if isinstance(entry_date, str):
             entry_date = datetime.strptime(entry_date, '%Y-%m-%d').date()
 

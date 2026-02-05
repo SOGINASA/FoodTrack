@@ -1,7 +1,7 @@
 from flask import Blueprint, request, jsonify
 from flask_jwt_extended import jwt_required, get_jwt_identity
 from models import db, Meal, UserGoals
-from datetime import datetime, date, timedelta
+from datetime import datetime, date, timedelta, timezone
 from sqlalchemy import func
 
 analytics_bp = Blueprint('analytics', __name__)
@@ -14,7 +14,7 @@ def get_daily_stats():
     try:
         user_id = int(get_jwt_identity())
 
-        date_str = request.args.get('date', date.today().isoformat())
+        date_str = request.args.get('date', datetime.now(timezone.utc).date().isoformat())
         target_date = datetime.strptime(date_str, '%Y-%m-%d').date()
 
         meals = Meal.query.filter_by(
@@ -72,7 +72,7 @@ def get_weekly_stats():
     try:
         user_id = int(get_jwt_identity())
 
-        end_date = date.today()
+        end_date = datetime.now(timezone.utc).date()
         start_date = end_date - timedelta(days=6)
 
         # Получаем все приёмы пищи за неделю
@@ -143,8 +143,8 @@ def get_monthly_stats():
         user_id = int(get_jwt_identity())
 
         # Можно указать месяц и год
-        year = request.args.get('year', date.today().year, type=int)
-        month = request.args.get('month', date.today().month, type=int)
+        year = request.args.get('year', datetime.now(timezone.utc).date().year, type=int)
+        month = request.args.get('month', datetime.now(timezone.utc).date().month, type=int)
 
         start_date = date(year, month, 1)
         if month == 12:
@@ -218,7 +218,7 @@ def get_top_foods():
 
         days = request.args.get('days', 30, type=int)
         limit = request.args.get('limit', 10, type=int)
-        start_date = date.today() - timedelta(days=days)
+        start_date = datetime.now(timezone.utc).date() - timedelta(days=days)
 
         # Группируем по названию блюда
         top_foods = db.session.query(
@@ -272,7 +272,7 @@ def get_streak():
 
         # Считаем текущую серию
         current_streak = 0
-        today = date.today()
+        today = datetime.now(timezone.utc).date()
 
         for i, d in enumerate(dates):
             expected_date = today - timedelta(days=i)

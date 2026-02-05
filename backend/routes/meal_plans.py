@@ -1,7 +1,7 @@
 from flask import Blueprint, request, jsonify
 from flask_jwt_extended import jwt_required, get_jwt_identity
 from models import db, MealPlan
-from datetime import datetime, date, timedelta
+from datetime import datetime, timedelta, timezone
 import json
 import logging
 
@@ -234,7 +234,7 @@ def get_week_meal_plans():
         user_id = int(get_jwt_identity())
 
         # Определяем текущую неделю
-        today = date.today()
+        today = datetime.now(timezone.utc).date()
         start_of_week = today - timedelta(days=today.weekday())
         end_of_week = start_of_week + timedelta(days=6)
 

@@ -4,7 +4,7 @@ from models import (
     db, User, Group, GroupMember, GroupPost, PostComment, PostLike,
     ForumTopic, ForumReply
 )
-from datetime import datetime
+from datetime import datetime, timezone
 from services.push_service import create_and_push_notification
 
 groups_bp = Blueprint('groups', __name__)
@@ -467,7 +467,7 @@ def add_reply(group_id, topic_id):
     db.session.add(reply)
 
     # Обновляем время последней активности темы
-    topic.last_activity = datetime.utcnow()
+    topic.last_activity = datetime.now(timezone.utc)
     db.session.commit()
 
     return jsonify(reply.to_dict()), 201

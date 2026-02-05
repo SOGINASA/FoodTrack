@@ -1,7 +1,7 @@
 from flask import json
 from flask_sqlalchemy import SQLAlchemy
 from werkzeug.security import generate_password_hash, check_password_hash
-from datetime import datetime, date
+from datetime import datetime, timezone
 
 db = SQLAlchemy()
 
@@ -18,7 +18,7 @@ class User(db.Model):
     is_active = db.Column(db.Boolean, default=True)
     is_verified = db.Column(db.Boolean, default=False)
 
-    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    created_at = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc))
     last_login = db.Column(db.DateTime)
 
     # Данные профиля (онбординг)
@@ -127,8 +127,8 @@ class Meal(db.Model):
     ai_advice = db.Column(db.Text)
     tags = db.Column(db.Text)  # JSON массив тегов
 
-    created_at = db.Column(db.DateTime, default=datetime.utcnow)
-    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    created_at = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc))
+    updated_at = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc), onupdate=lambda: datetime.now(timezone.utc))
 
     # Связь с ингредиентами
     ingredients = db.relationship('MealIngredient', backref='meal', lazy='dynamic', cascade='all, delete-orphan')
@@ -195,7 +195,7 @@ class UserGoals(db.Model):
     goal_type = db.Column(db.String(20), default='maintain')  # lose, maintain, gain
     diet_type = db.Column(db.String(20), default='balanced')  # balanced, low_carb, high_protein, keto, vegetarian
 
-    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    updated_at = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc), onupdate=lambda: datetime.now(timezone.utc))
 
     def to_dict(self):
         return {
@@ -222,7 +222,7 @@ class WaterEntry(db.Model):
     date = db.Column(db.Date, nullable=False, index=True)
     time = db.Column(db.String(5))  # HH:MM
 
-    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    created_at = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc))
 
     def to_dict(self):
         return {
@@ -243,7 +243,7 @@ class WeightEntry(db.Model):
     date = db.Column(db.Date, nullable=False, index=True)
     notes = db.Column(db.Text)
 
-    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    created_at = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc))
 
     def to_dict(self):
         return {
@@ -269,7 +269,7 @@ class Measurement(db.Model):
     neck = db.Column(db.Float)  # шея
     notes = db.Column(db.Text)
 
-    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    created_at = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc))
 
     def to_dict(self):
         return {
@@ -297,7 +297,7 @@ class ProgressPhoto(db.Model):
     category = db.Column(db.String(20), default='front')  # front, side, back
     notes = db.Column(db.Text)
 
-    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    created_at = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc))
 
     def to_dict(self):
         return {
@@ -322,8 +322,8 @@ class Group(db.Model):
     is_public = db.Column(db.Boolean, default=True)
     owner_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
 
-    created_at = db.Column(db.DateTime, default=datetime.utcnow)
-    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    created_at = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc))
+    updated_at = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc), onupdate=lambda: datetime.now(timezone.utc))
 
     # Связи
     owner = db.relationship('User', backref='owned_groups', foreign_keys=[owner_id])
@@ -341,7 +341,7 @@ class Group(db.Model):
             'ownerId': self.owner_id,
             'membersCount': self.members.count(),
             'postsToday': self.posts.filter(
-                db.func.date(GroupPost.created_at) == date.today()
+                db.func.date(GroupPost.created_at) == datetime.now(timezone.utc).date()
             ).count(),
             'createdAt': self.created_at.isoformat() if self.created_at else None,
         }
@@ -358,7 +358,7 @@ class GroupMember(db.Model):
     user_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False, index=True)
     role = db.Column(db.String(20), default='member')  # owner, admin, member
 
-    joined_at = db.Column(db.DateTime, default=datetime.utcnow)
+    joined_at = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc))
 
     user = db.relationship('User', backref='group_memberships')
 
@@ -388,8 +388,8 @@ class GroupPost(db.Model):
     # Привязка к блюду (опционально)
     meal_id = db.Column(db.Integer, db.ForeignKey('meals.id'))
 
-    created_at = db.Column(db.DateTime, default=datetime.utcnow)
-    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    created_at = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc))
+    updated_at = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc), onupdate=lambda: datetime.now(timezone.utc))
 
     # Связи
     user = db.relationship('User', backref='group_posts')
@@ -433,7 +433,7 @@ class PostComment(db.Model):
     reply_to_id = db.Column(db.Integer, db.ForeignKey('post_comments.id'))
     reply_to_name = db.Column(db.String(100))
 
-    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    created_at = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc))
 
     user = db.relationship('User', backref='post_comments')
     replies = db.relationship('PostComment', backref=db.backref('parent', remote_side=[id]), lazy='dynamic')
@@ -457,7 +457,7 @@ class PostLike(db.Model):
     post_id = db.Column(db.Integer, db.ForeignKey('group_posts.id'), nullable=False, index=True)
     user_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
 
-    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    created_at = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc))
 
     __table_args__ = (db.UniqueConstraint('post_id', 'user_id', name='unique_post_like'),)
 
@@ -474,8 +474,8 @@ class ForumTopic(db.Model):
     category = db.Column(db.String(20), default='discussion')  # discussion, question, recipe, achievement, tip
     is_pinned = db.Column(db.Boolean, default=False)
 
-    created_at = db.Column(db.DateTime, default=datetime.utcnow)
-    last_activity = db.Column(db.DateTime, default=datetime.utcnow)
+    created_at = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc))
+    last_activity = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc))
 
     author = db.relationship('User', backref='forum_topics')
     replies = db.relationship('ForumReply', backref='topic', lazy='dynamic', cascade='all, delete-orphan')
@@ -507,7 +507,7 @@ class ForumReply(db.Model):
     reply_to_id = db.Column(db.Integer, db.ForeignKey('forum_replies.id'))
     reply_to_name = db.Column(db.String(100))
 
-    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    created_at = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc))
 
     author = db.relationship('User', backref='forum_replies')
 
@@ -559,8 +559,8 @@ class MealPlan(db.Model):
     # Статус
     is_completed = db.Column(db.Boolean, default=False)  # приготовлено ли
 
-    created_at = db.Column(db.DateTime, default=datetime.utcnow)
-    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    created_at = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc))
+    updated_at = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc), onupdate=lambda: datetime.now(timezone.utc))
 
     def to_dict(self):
         return {
@@ -655,7 +655,7 @@ class AuditLog(db.Model):
     request_id = db.Column(db.String(100), unique=True)
     
     # Временные метки
-    created_at = db.Column(db.DateTime, default=datetime.utcnow, index=True)
+    created_at = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc), index=True)
     duration_ms = db.Column(db.Integer)  # Длительность операции в миллисекундах
     
     # Индексы для быстрого поиска
@@ -693,8 +693,8 @@ class Friendship(db.Model):
     addressee_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False, index=True)
     status = db.Column(db.String(20), default='pending')  # pending, accepted, rejected, blocked
 
-    created_at = db.Column(db.DateTime, default=datetime.utcnow)
-    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    created_at = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc))
+    updated_at = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc), onupdate=lambda: datetime.now(timezone.utc))
 
     # Связи
     requester = db.relationship('User', foreign_keys=[requester_id], backref='sent_friend_requests')
@@ -734,8 +734,8 @@ class FridgeProduct(db.Model):
     expiry_date = db.Column(db.Date, nullable=True)
     notes = db.Column(db.Text, nullable=True)
 
-    created_at = db.Column(db.DateTime, default=datetime.utcnow)
-    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    created_at = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc))
+    updated_at = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc), onupdate=lambda: datetime.now(timezone.utc))
 
     def to_dict(self):
         return {
@@ -764,8 +764,8 @@ class ProductShareRequest(db.Model):
     sender_lat = db.Column(db.Float, nullable=True)
     sender_lng = db.Column(db.Float, nullable=True)
 
-    created_at = db.Column(db.DateTime, default=datetime.utcnow)
-    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    created_at = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc))
+    updated_at = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc), onupdate=lambda: datetime.now(timezone.utc))
 
     sender = db.relationship('User', foreign_keys=[sender_id], backref='sent_share_requests')
     recipient = db.relationship('User', foreign_keys=[recipient_id], backref='received_share_requests')
@@ -794,8 +794,8 @@ class PushSubscription(db.Model):
 
     user_agent = db.Column(db.String(255), nullable=True)
 
-    created_at = db.Column(db.DateTime, default=datetime.utcnow)
-    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    created_at = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc))
+    updated_at = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc), onupdate=lambda: datetime.now(timezone.utc))
 
     user = db.relationship('User', backref=db.backref('push_subscriptions', lazy='dynamic', cascade='all, delete-orphan'))
 
@@ -836,7 +836,7 @@ class Notification(db.Model):
     is_read = db.Column(db.Boolean, default=False, index=True)
     is_pushed = db.Column(db.Boolean, default=False)
 
-    created_at = db.Column(db.DateTime, default=datetime.utcnow, index=True)
+    created_at = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc), index=True)
     read_at = db.Column(db.DateTime, nullable=True)
 
     user = db.relationship('User', backref=db.backref('notifications', lazy='dynamic', cascade='all, delete-orphan'))
@@ -873,8 +873,8 @@ class NotificationPreference(db.Model):
 
     push_enabled = db.Column(db.Boolean, default=False)
 
-    created_at = db.Column(db.DateTime, default=datetime.utcnow)
-    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    created_at = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc))
+    updated_at = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc), onupdate=lambda: datetime.now(timezone.utc))
 
     user = db.relationship('User', backref=db.backref('notification_preferences', uselist=False, cascade='all, delete-orphan'))
 

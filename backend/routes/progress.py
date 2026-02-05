@@ -1,7 +1,7 @@
 from flask import Blueprint, request, jsonify
 from flask_jwt_extended import jwt_required, get_jwt_identity
 from models import db, Measurement, ProgressPhoto
-from datetime import datetime, date
+from datetime import datetime, timezone
 
 progress_bp = Blueprint('progress', __name__)
 
@@ -39,7 +39,7 @@ def add_measurement():
         if not data:
             return jsonify({'error': 'Данные не предоставлены'}), 400
 
-        entry_date = data.get('date', date.today().isoformat())
+        entry_date = data.get('date', datetime.now(timezone.utc).date().isoformat())
         if isinstance(entry_date, str):
             entry_date = datetime.strptime(entry_date, '%Y-%m-%d').date()
 
@@ -149,7 +149,7 @@ def add_photo():
         if not data or not data.get('image_url'):
             return jsonify({'error': 'URL изображения обязателен'}), 400
 
-        entry_date = data.get('date', date.today().isoformat())
+        entry_date = data.get('date', datetime.now(timezone.utc).date().isoformat())
         if isinstance(entry_date, str):
             entry_date = datetime.strptime(entry_date, '%Y-%m-%d').date()
 

@@ -1,5 +1,5 @@
 import math
-from datetime import datetime, date, timedelta
+from datetime import datetime, date, timedelta, timezone
 
 from flask import Blueprint, request, jsonify
 from flask_jwt_extended import jwt_required, get_jwt_identity
@@ -119,13 +119,13 @@ def get_expiring_soon():
     user_id = int(get_jwt_identity())
     days = int(request.args.get('days', 7))
 
-    deadline = date.today() + timedelta(days=days)
+    deadline = datetime.now(timezone.utc).date() + timedelta(days=days)
 
     products = FridgeProduct.query.filter(
         FridgeProduct.user_id == user_id,
         FridgeProduct.expiry_date != None,
         FridgeProduct.expiry_date <= deadline,
-        FridgeProduct.expiry_date >= date.today(),
+        FridgeProduct.expiry_date >= datetime.now(timezone.utc).date(),
     ).order_by(FridgeProduct.expiry_date).all()
 
     return jsonify([p.to_dict() for p in products])
@@ -164,7 +164,7 @@ def update_location():
     user = User.query.get(user_id)
     user.latitude = float(lat)
     user.longitude = float(lng)
-    user.location_updated_at = datetime.utcnow()
+    user.location_updated_at = datetime.now(timezone.utc)
     db.session.commit()
 
     return jsonify({'message': 'Геолокация обновлена'})
@@ -186,7 +186,7 @@ def get_nearby_users():
     current_user = User.query.get(user_id)
     current_user.latitude = lat
     current_user.longitude = lng
-    current_user.location_updated_at = datetime.utcnow()
+    current_user.location_updated_at = datetime.now(timezone.utc)
     db.session.commit()
 
     # Грубый bbox-фильтр (~0.01° ≈ 1.1 км)
