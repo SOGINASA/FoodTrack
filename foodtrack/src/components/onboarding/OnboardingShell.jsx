@@ -65,7 +65,7 @@ export default function OnboardingShell({
         </div>
       ) : null}
 
-      {/* Продолжить */}
+      {/* Продолжитьы */}
       <div className="mt-8">
         <button
           type="button"
