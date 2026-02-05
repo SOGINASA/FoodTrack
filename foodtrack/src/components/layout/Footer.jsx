@@ -15,12 +15,15 @@ const Footer = () => {
   ];
 
   return (
-    <footer className="fixed bottom-0 left-0 right-0 bg-white border-t border-divider lg:hidden z-40">
+    <footer
+      className="fixed bottom-0 left-0 right-0 bg-white border-t border-divider lg:hidden z-40"
+      style={{ paddingBottom: 'env(safe-area-inset-bottom, 0px)' }}
+    >
       <nav className="w-full flex justify-around items-center py-2">
         {menuItems.map((item) => {
           const Icon = item.icon;
           const isActive = location.pathname === item.path;
-          
+
           if (item.isMain) {
             return (
               <button
@@ -32,7 +35,7 @@ const Footer = () => {
               </button>
             );
           }
-          
+
           return (
             <button
               key={item.path}

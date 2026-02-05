@@ -132,7 +132,7 @@ const AppLayout = ({ guestMode = false }) => {
           unreadCount={unreadCount}
         />
 
-        <main className="flex-1 pb-20 lg:pb-8 overflow-x-hidden">
+        <main className="flex-1 pb-safe-footer lg:pb-8 overflow-x-hidden">
           <div className="w-full px-4 py-6 lg:px-8 lg:py-8 lg:max-w-7xl lg:mx-auto overflow-x-hidden">
             <Routes>
               {/* Публичные страницы - доступны всем */}
