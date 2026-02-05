@@ -47,13 +47,13 @@ const Modal = ({
           </button>
         )}
         
-        <div className="p-6">
+        <div className="p-6" style={{ paddingBottom: 'max(1.5rem, env(safe-area-inset-bottom, 1.5rem))' }}>
           <div className="w-12 h-1.5 bg-gray-300 rounded-full mx-auto mb-4 sm:hidden" />
-          
+
           {title && (
             <h2 className="text-2xl font-bold mb-4">{title}</h2>
           )}
-          
+
           {children}
         </div>
       </div>

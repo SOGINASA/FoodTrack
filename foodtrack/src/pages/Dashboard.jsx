@@ -13,7 +13,7 @@ import { useAnalytics } from '../hooks/useAnalytics';
 import { useWater } from '../hooks/useWater';
 
 // ✅ импорт из api.js
-import { notificationsAPI } from '../api'; // если путь другой — поправь на '../api.js' или '../services/api'
+import { notificationsAPI } from '../services/api'; // если путь другой — поправь на '../api.js' или '../services/api'
 
 const QuickIconTips = ({ className = '' }) => (
   <svg viewBox="0 0 24 24" className={className} fill="none" aria-hidden="true">
@@ -263,7 +263,7 @@ const Dashboard = () => {
 
       {/* ✅ Видно ТОЛЬКО на мобильных (скрыто на lg и выше) */}
       <div className="grid grid-cols-2 gap-3 lg:hidden">
-        {quickLinks.map(({ label, path, Icon }) => (
+        {quickLinks.map(({ label, path, Icon }, index) => (
           <button
             key={path}
             type="button"
@@ -274,6 +274,7 @@ const Dashboard = () => {
               'flex items-center justify-center gap-2',
               'hover:border-black hover:shadow-sm transition',
               'active:scale-[0.99]',
+              quickLinks.length % 2 !== 0 && index === quickLinks.length - 1 ? 'col-span-2' : '',
             ].join(' ')}
           >
             <span className="inline-flex items-center justify-center">
