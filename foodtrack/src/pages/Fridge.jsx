@@ -7,8 +7,10 @@ import ProductCard from '../components/fridge/ProductCard';
 import RecipeGeneratorModal from '../components/fridge/RecipeGeneratorModal';
 import ShareProductsModal from '../components/fridge/ShareProductsModal';
 import { ShareRequestsList } from '../components/fridge/ShareRequestNotification';
+import ConfirmationModal from '../components/common/ConfirmationModal';
 import { fridgeAPI } from '../services/api';
 import useNotificationStore from '../stores/notificationStore';
+import useToastStore from '../stores/toastStore';
 
 const Fridge = () => {
   const [products, setProducts] = useState([]);
@@ -20,8 +22,10 @@ const Fridge = () => {
   const [editingProduct, setEditingProduct] = useState(null);
   const [filterCategory, setFilterCategory] = useState('all');
   const [shareRequests, setShareRequests] = useState([]);
+  const [deleteProductId, setDeleteProductId] = useState(null);
 
   const newNotification = useNotificationStore((s) => s.newNotification);
+  const { showToast } = useToastStore();
 
   // Загрузка продуктов при монтировании
   useEffect(() => {
@@ -58,11 +62,11 @@ const Fridge = () => {
     try {
       await fridgeAPI.acceptShareRequest(requestId);
       setShareRequests(prev => prev.filter(req => req.id !== requestId));
-      alert('Запрос принят! Продукты добавлены в ваш холодильник');
+      showToast('Запрос принят! Продукты добавлены в ваш холодильник', 'success');
       fetchProducts(); // обновляем список продуктов
     } catch (error) {
       console.error('Ошибка принятия запроса:', error);
-      alert('Не удалось принять запрос');
+      showToast('Не удалось принять запрос', 'error');
     }
   };
 
@@ -119,6 +123,7 @@ const Fridge = () => {
     try {
       const response = await fridgeAPI.addProduct(productData);
       setProducts(prev => [response.data, ...prev]);
+      showToast('Продукт добавлен', 'success');
     } catch (error) {
       console.error('Ошибка добавления продукта:', error);
       // Временно добавляем локально
@@ -127,6 +132,7 @@ const Fridge = () => {
         ...productData,
       };
       setProducts(prev => [newProduct, ...prev]);
+      showToast('Продукт добавлен локально', 'warning');
     }
   };
 
@@ -137,22 +143,33 @@ const Fridge = () => {
       setProducts(prev =>
         prev.map(p => (p.id === editingProduct.id ? { ...p, ...productData } : p))
       );
+      showToast('Продукт обновлён', 'success');
     } catch (error) {
       console.error('Ошибка обновления продукта:', error);
+      showToast('Не удалось обновить продукт', 'error');
     }
   };
 
-  // Удаление продукта
-  const handleDeleteProduct = async (productId) => {
-    if (!window.confirm('Удалить этот продукт?')) return;
+  // Удаление продукта (открытие модалки подтверждения)
+  const handleDeleteProductClick = (productId) => {
+    setDeleteProductId(productId);
+  };
+
+  // Подтверждение удаления
+  const confirmDeleteProduct = async () => {
+    if (!deleteProductId) return;
 
     try {
-      await fridgeAPI.deleteProduct(productId);
-      setProducts(prev => prev.filter(p => p.id !== productId));
+      await fridgeAPI.deleteProduct(deleteProductId);
+      setProducts(prev => prev.filter(p => p.id !== deleteProductId));
+      showToast('Продукт удалён', 'success');
     } catch (error) {
       console.error('Ошибка удаления продукта:', error);
       // Временно удаляем локально
-      setProducts(prev => prev.filter(p => p.id !== productId));
+      setProducts(prev => prev.filter(p => p.id !== deleteProductId));
+      showToast('Продукт удалён локально', 'warning');
+    } finally {
+      setDeleteProductId(null);
     }
   };
 
@@ -314,7 +331,7 @@ const Fridge = () => {
               key={product.id}
               product={product}
               onEdit={handleEditProduct}
-              onDelete={handleDeleteProduct}
+              onDelete={handleDeleteProductClick}
             />
           ))}
         </div>
@@ -354,6 +371,18 @@ const Fridge = () => {
         requests={shareRequests}
         onAccept={handleAcceptShareRequest}
         onDecline={handleDeclineShareRequest}
+      />
+
+      {/* Модалка подтверждения удаления */}
+      <ConfirmationModal
+        isOpen={!!deleteProductId}
+        onClose={() => setDeleteProductId(null)}
+        onConfirm={confirmDeleteProduct}
+        title="Удалить продукт?"
+        message="Вы уверены, что хотите удалить этот продукт из холодильника?"
+        confirmText="Удалить"
+        cancelText="Отмена"
+        variant="danger"
       />
     </div>
   );

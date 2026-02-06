@@ -10,6 +10,7 @@ import Footer from './components/layout/Footer';
 import Loader from './components/common/Loader';
 import NotificationsPanel from './components/notifications/NotificationsPanel';
 import NotificationToast from './components/notifications/NotificationToast';
+import ToastContainer from './components/common/ToastContainer';
 
 import Dashboard from './pages/Dashboard';
 import AddMeal from './pages/AddMeal';
@@ -187,6 +188,7 @@ const AppLayout = ({ guestMode = false }) => {
 
       {/* Real-time notification toast */}
       <NotificationToast />
+      <ToastContainer />
     </div>
   );
 };
