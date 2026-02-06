@@ -1,13 +1,15 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState } from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import { OnboardingProvider } from './context/OnboardingContext';
+import { NotificationProvider, useNotificationContext } from './context/NotificationContext';
 
 import Header from './components/layout/Header';
 import Sidebar from './components/layout/Sidebar';
 import Footer from './components/layout/Footer';
 import Loader from './components/common/Loader';
 import NotificationsPanel from './components/notifications/NotificationsPanel';
+import NotificationToast from './components/notifications/NotificationToast';
 
 import Dashboard from './pages/Dashboard';
 import AddMeal from './pages/AddMeal';
@@ -25,8 +27,6 @@ import NotFound from './pages/NotFound';
 import Auth from './pages/Auth';
 import Onboarding from './pages/Onboarding';
 import OAuthCallback from './pages/OAuthCallback';
-
-import api from './services/api';
 
 // Публичный роут — если уже авторизован, кидаем либо в приложение, либо в онбординг
 const PublicRoute = ({ children }) => {
@@ -93,26 +93,8 @@ const GuestAwareLayout = ({ children }) => {
 const AppLayout = ({ guestMode = false }) => {
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [showNotifications, setShowNotifications] = useState(false);
-  const [unreadCount, setUnreadCount] = useState(0);
   const { isAuthenticated, onboardingCompleted } = useAuth();
-
-  const fetchUnreadCount = useCallback(async () => {
-    if (!isAuthenticated) return;
-    try {
-      const response = await api.get('/notifications/unread-count');
-      setUnreadCount(response.data.count);
-    } catch (err) {
-      // Silently fail — notifications are non-critical
-    }
-  }, [isAuthenticated]);
-
-  useEffect(() => {
-    if (isAuthenticated) {
-      fetchUnreadCount();
-      const interval = setInterval(fetchUnreadCount, 60000);
-      return () => clearInterval(interval);
-    }
-  }, [isAuthenticated, fetchUnreadCount]);
+  const { unreadCount } = useNotificationContext();
 
   // Определяем, нужно ли редиректить на онбординг
   const needsOnboarding = isAuthenticated && !onboardingCompleted;
@@ -187,12 +169,12 @@ const AppLayout = ({ guestMode = false }) => {
       {isAuthenticated && (
         <NotificationsPanel
           isOpen={showNotifications}
-          onClose={() => {
-            setShowNotifications(false);
-            fetchUnreadCount();
-          }}
+          onClose={() => setShowNotifications(false)}
         />
       )}
+
+      {/* Real-time notification toast */}
+      <NotificationToast />
     </div>
   );
 };
@@ -201,42 +183,44 @@ function App() {
   return (
     <Router>
       <AuthProvider>
-        <OnboardingProvider>
-          <Routes>
-            {/* Auth */}
-            <Route
-              path="/auth"
-              element={
-                <PublicRoute>
-                  <Auth />
-                </PublicRoute>
-              }
-            />
+        <NotificationProvider>
+          <OnboardingProvider>
+            <Routes>
+              {/* Auth */}
+              <Route
+                path="/auth"
+                element={
+                  <PublicRoute>
+                    <Auth />
+                  </PublicRoute>
+                }
+              />
 
-            {/* OAuth Callback */}
-            <Route path="/oauth/callback" element={<OAuthCallback />} />
+              {/* OAuth Callback */}
+              <Route path="/oauth/callback" element={<OAuthCallback />} />
 
-            {/* Onboarding */}
-            <Route
-              path="/onboarding"
-              element={
-                <OnboardingRoute>
-                  <Onboarding />
-                </OnboardingRoute>
-              }
-            />
+              {/* Onboarding */}
+              <Route
+                path="/onboarding"
+                element={
+                  <OnboardingRoute>
+                    <Onboarding />
+                  </OnboardingRoute>
+                }
+              />
 
-            {/* App - доступно всем (с ограничениями внутри) */}
-            <Route
-              path="/*"
-              element={
-                <GuestAwareLayout>
-                  <AppLayout guestMode={true} />
-                </GuestAwareLayout>
-              }
-            />
-          </Routes>
-        </OnboardingProvider>
+              {/* App - доступно всем (с ограничениями внутри) */}
+              <Route
+                path="/*"
+                element={
+                  <GuestAwareLayout>
+                    <AppLayout guestMode={true} />
+                  </GuestAwareLayout>
+                }
+              />
+            </Routes>
+          </OnboardingProvider>
+        </NotificationProvider>
       </AuthProvider>
     </Router>
   );

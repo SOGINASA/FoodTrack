@@ -26,12 +26,25 @@
   .text-secondary {
     @apply text-[#8E8E93];
   }
-  
+
   .text-tertiary {
     @apply text-[#C7C7CC];
   }
-  
+
   .border-divider {
     @apply border-[#F2F2F7];
+  }
+
+  .animate-shrink-width {
+    animation: shrink-width linear forwards;
+  }
+}
+
+@keyframes shrink-width {
+  from {
+    width: 100%;
+  }
+  to {
+    width: 0%;
   }
 }

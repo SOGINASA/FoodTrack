@@ -1,7 +1,7 @@
 import React, { useEffect, useCallback } from 'react';
 import { X, CheckCheck, Bell, BellOff } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
-import { useNotifications } from '../../hooks/useNotifications';
+import { useNotificationContext } from '../../context/NotificationContext';
 import { usePushNotifications } from '../../hooks/usePushNotifications';
 import NotificationItem from './NotificationItem';
 
@@ -13,11 +13,10 @@ const NotificationsPanel = ({ isOpen, onClose }) => {
     loading,
     hasMore,
     fetchNotifications,
-    fetchUnreadCount,
     markAsRead,
     markAllAsRead,
     loadMore,
-  } = useNotifications();
+  } = useNotificationContext();
 
   const {
     isSupported,
@@ -31,9 +30,8 @@ const NotificationsPanel = ({ isOpen, onClose }) => {
   useEffect(() => {
     if (isOpen) {
       fetchNotifications(1);
-      fetchUnreadCount();
     }
-  }, [isOpen, fetchNotifications, fetchUnreadCount]);
+  }, [isOpen, fetchNotifications]);
 
   const handleNavigate = useCallback(
     (path) => {
