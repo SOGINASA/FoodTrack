@@ -4,6 +4,7 @@ from datetime import datetime, date, timedelta, timezone
 from flask import Blueprint, request, jsonify
 from flask_jwt_extended import jwt_required, get_jwt_identity
 from services.push_service import create_and_push_notification
+from services import websocket_service
 from models import db, User, FridgeProduct, ProductShareRequest
 import json
 
@@ -53,6 +54,13 @@ def add_product():
 
     db.session.add(product)
     db.session.commit()
+
+    # Отправляем WebSocket уведомление для обновления списка
+    websocket_service.send_to_user(user_id, {
+        'type': 'fridge_update',
+        'action': 'added',
+        'product': product.to_dict(),
+    })
 
     return jsonify(product.to_dict()), 201
 
@@ -108,6 +116,13 @@ def delete_product(product_id):
 
     db.session.delete(product)
     db.session.commit()
+
+    # Отправляем WebSocket уведомление для обновления списка
+    websocket_service.send_to_user(user_id, {
+        'type': 'fridge_update',
+        'action': 'deleted',
+        'product_id': product_id,
+    })
 
     return jsonify({'message': 'Продукт удалён'})
 

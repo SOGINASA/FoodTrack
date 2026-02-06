@@ -26,11 +26,33 @@ const Fridge = () => {
 
   const newNotification = useNotificationStore((s) => s.newNotification);
   const { showToast } = useToastStore();
+  const registerFridgeUpdate = useNotificationStore((s) => s.registerFridgeUpdate);
+  const unregisterFridgeUpdate = useNotificationStore((s) => s.unregisterFridgeUpdate);
 
   // Загрузка продуктов при монтировании
   useEffect(() => {
     fetchProducts();
     loadShareRequests();
+  }, []);
+
+  // Регистрация для обновлений холодильника через WebSocket
+  useEffect(() => {
+    const handleFridgeUpdate = (data) => {
+      console.log('[Fridge] WebSocket update received:', data);
+      if (data.action === 'added') {
+        setProducts(prev => [data.product, ...prev]);
+        showToast(`Добавлен: ${data.product.name}`, 'success');
+      } else if (data.action === 'deleted') {
+        setProducts(prev => prev.filter(p => p.id !== data.product_id));
+        showToast('Продукт удалён', 'warning');
+      }
+    };
+
+    registerFridgeUpdate('fridge-page', handleFridgeUpdate);
+
+    return () => {
+      unregisterFridgeUpdate('fridge-page');
+    };
   }, []);
 
   // Рефетч при fridge-уведомлении через WebSocket

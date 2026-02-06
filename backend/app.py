@@ -1,5 +1,6 @@
 import os
 import json
+import time
 from flask import Flask, jsonify, request
 from flask_cors import CORS
 from flask_migrate import Migrate
@@ -110,15 +111,27 @@ def create_app():
             ws.send(json.dumps({'type': 'unread_count', 'payload': {'count': count}}))
 
             # Держим соединение открытым, слушаем клиент
+            # Отправляем ping каждые 25 секунд для поддержания соединения
+            last_ping = time.time()
             while True:
-                data = ws.receive(timeout=30)
+                data = ws.receive(timeout=60)
                 if data is None:
-                    break
+                    # Check if we need to send ping
+                    if time.time() - last_ping > 25:
+                        try:
+                            ws.send(json.dumps({'type': 'ping'}))
+                            last_ping = time.time()
+                        except Exception:
+                            break
+                    continue
                 # Клиент может слать ping — отвечаем pong
                 try:
                     msg = json.loads(data)
                     if msg.get('type') == 'ping':
                         ws.send(json.dumps({'type': 'pong'}))
+                        last_ping = time.time()
+                    elif msg.get('type') == 'pong':
+                        last_ping = time.time()
                 except (json.JSONDecodeError, TypeError):
                     pass
         except Exception:

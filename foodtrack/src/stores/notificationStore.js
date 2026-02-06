@@ -14,6 +14,7 @@ let reconnectTimeout = null;
 let reconnectAttempts = 0;
 let pollInterval = null;
 let focusHandler = null;
+let pingInterval = null;
 const MAX_RECONNECT_ATTEMPTS = 5;
 
 const useNotificationStore = create((set, get) => ({
@@ -24,6 +25,7 @@ const useNotificationStore = create((set, get) => ({
   page: 1,
   connected: false,
   newNotification: null,
+  fridgeUpdateCallbacks: {},
 
   // === API actions ===
 
@@ -100,6 +102,24 @@ const useNotificationStore = create((set, get) => ({
 
   clearNewNotification: () => set({ newNotification: null }),
 
+  // === Fridge update callbacks ===
+
+  registerFridgeUpdate: (id, callback) => {
+    set((state) => ({
+      fridgeUpdateCallbacks: {
+        ...state.fridgeUpdateCallbacks,
+        [id]: callback,
+      },
+    }));
+  },
+
+  unregisterFridgeUpdate: (id) => {
+    set((state) => {
+      const { [id]: _, ...rest } = state.fridgeUpdateCallbacks;
+      return { fridgeUpdateCallbacks: rest };
+    });
+  },
+
   // === WebSocket ===
 
   connectWebSocket: () => {
@@ -111,11 +131,19 @@ const useNotificationStore = create((set, get) => ({
     try {
       const wsUrl = `${getWsUrl()}?token=${encodeURIComponent(token)}`;
       ws = new WebSocket(wsUrl);
+      let pingInterval = null;
 
       ws.onopen = () => {
         console.log('WebSocket connected');
         set({ connected: true });
         reconnectAttempts = 0;
+        
+        // Send ping every 20 seconds to keep connection alive
+        pingInterval = setInterval(() => {
+          if (ws.readyState === WebSocket.OPEN) {
+            ws.send(JSON.stringify({ type: 'ping' }));
+          }
+        }, 20000);
       };
 
       ws.onmessage = (event) => {
@@ -139,6 +167,10 @@ const useNotificationStore = create((set, get) => ({
             }, 5000);
           } else if (data.type === 'unread_count') {
             set({ unreadCount: data.payload.count });
+          } else if (data.type === 'fridge_update') {
+            // Trigger fridge update callback if registered
+            const callbacks = get().fridgeUpdateCallbacks || {};
+            Object.values(callbacks).forEach(callback => callback(data));
           }
         } catch (err) {
           console.error('Error parsing WebSocket message:', err);
@@ -153,6 +185,12 @@ const useNotificationStore = create((set, get) => ({
         console.log('WebSocket closed:', event.code, event.reason);
         set({ connected: false });
         ws = null;
+        
+        // Clear ping interval
+        if (pingInterval) {
+          clearInterval(pingInterval);
+          pingInterval = null;
+        }
 
         // Reconnect with exponential backoff
         if (reconnectAttempts < MAX_RECONNECT_ATTEMPTS) {
@@ -174,6 +212,10 @@ const useNotificationStore = create((set, get) => ({
     if (reconnectTimeout) {
       clearTimeout(reconnectTimeout);
       reconnectTimeout = null;
+    }
+    if (pingInterval) {
+      clearInterval(pingInterval);
+      pingInterval = null;
     }
     if (ws) {
       ws.close(1000, 'User logout');
