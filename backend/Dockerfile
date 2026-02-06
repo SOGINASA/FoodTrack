@@ -18,4 +18,4 @@ RUN mkdir -p /app/database
 
 EXPOSE 5252
 
-CMD ["gunicorn", "-w", "4", "-b", "0.0.0.0:5252", "app:app"]
+CMD ["gunicorn", "-w", "4", "--threads", "10", "-b", "0.0.0.0:5252", "--timeout", "120", "app:app"]

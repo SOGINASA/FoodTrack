@@ -1,6 +1,24 @@
 import os
 import json
 import time
+import signal
+import sys
+
+# Gunicorn configuration for WebSocket support
+def on_exit(sig, frame):
+    """Handle graceful shutdown"""
+    sys.exit(0)
+
+signal.signal(signal.SIGTERM, on_exit)
+
+# Set gunicorn timeout (only effective when running under gunicorn)
+if __name__ != "__main__":
+    import multiprocessing
+    
+    # Configure gunicorn through environment or defaults
+    GRACEFUL_TIMEOUT = os.environ.get("GRACEFUL_TIMEOUT", "120")
+    KEEPALIVE_TIMEOUT = os.environ.get("KEEPALIVE_TIMEOUT", "120")
+
 from flask import Flask, jsonify, request
 from flask_cors import CORS
 from flask_migrate import Migrate
