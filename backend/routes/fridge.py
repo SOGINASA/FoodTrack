@@ -345,6 +345,24 @@ def accept_share_request(request_id):
 
     db.session.commit()
 
+    # Уведомляем отправителя что продукты приняты
+    try:
+        recipient = User.query.get(user_id)
+        recipient_name = recipient.full_name or recipient.nickname or 'Пользователь'
+        product_names = ', '.join(p['name'] for p in products_data[:3])
+        if len(products_data) > 3:
+            product_names += f' и ещё {len(products_data) - 3}'
+        create_and_push_notification(
+            user_id=share_req.sender_id,
+            title='Продукты приняты',
+            body=f'{recipient_name} принял(а): {product_names}',
+            category='fridge',
+            related_type='share_request',
+            related_id=share_req.id,
+        )
+    except Exception as e:
+        print(f"[Notification error] fridge accept to sender {share_req.sender_id}: {e}")
+
     return jsonify(share_req.to_dict())
 
 

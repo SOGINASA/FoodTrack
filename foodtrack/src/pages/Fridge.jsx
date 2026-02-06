@@ -8,6 +8,7 @@ import RecipeGeneratorModal from '../components/fridge/RecipeGeneratorModal';
 import ShareProductsModal from '../components/fridge/ShareProductsModal';
 import { ShareRequestsList } from '../components/fridge/ShareRequestNotification';
 import { fridgeAPI } from '../services/api';
+import useNotificationStore from '../stores/notificationStore';
 
 const Fridge = () => {
   const [products, setProducts] = useState([]);
@@ -20,11 +21,21 @@ const Fridge = () => {
   const [filterCategory, setFilterCategory] = useState('all');
   const [shareRequests, setShareRequests] = useState([]);
 
+  const newNotification = useNotificationStore((s) => s.newNotification);
+
   // Загрузка продуктов при монтировании
   useEffect(() => {
     fetchProducts();
     loadShareRequests();
   }, []);
+
+  // Рефетч при fridge-уведомлении через WebSocket
+  useEffect(() => {
+    if (newNotification?.category === 'fridge') {
+      loadShareRequests();
+      fetchProducts();
+    }
+  }, [newNotification]);
 
   // Загрузка входящих запросов на sharing
   const loadShareRequests = async () => {

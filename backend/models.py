@@ -850,8 +850,8 @@ class Notification(db.Model):
             'relatedType': self.related_type,
             'relatedId': self.related_id,
             'isRead': self.is_read,
-            'createdAt': self.created_at.isoformat() if self.created_at else None,
-            'readAt': self.read_at.isoformat() if self.read_at else None,
+            'createdAt': (self.created_at.isoformat() + 'Z') if self.created_at else None,
+            'readAt': (self.read_at.isoformat() + 'Z') if self.read_at else None,
         }
 
 
