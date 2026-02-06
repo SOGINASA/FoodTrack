@@ -11,7 +11,7 @@ import {
   Info,
   X,
 } from 'lucide-react';
-import { useNotificationContext } from '../../context/NotificationContext';
+import useNotificationStore from '../../stores/notificationStore';
 
 const categoryConfig = {
   meal_reminder: { icon: Utensils, color: 'bg-orange-500', label: 'Напоминание' },
@@ -26,7 +26,7 @@ const categoryConfig = {
 };
 
 const NotificationToast = () => {
-  const { newNotification, clearNewNotification } = useNotificationContext();
+  const { newNotification, clearNewNotification } = useNotificationStore();
   const [isVisible, setIsVisible] = useState(false);
   const [isExiting, setIsExiting] = useState(false);
 

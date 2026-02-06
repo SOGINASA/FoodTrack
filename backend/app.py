@@ -1,17 +1,21 @@
 import os
-from flask import Flask, jsonify
+import json
+from flask import Flask, jsonify, request
 from flask_cors import CORS
 from flask_migrate import Migrate
-from flask_jwt_extended import JWTManager
+from flask_jwt_extended import JWTManager, decode_token
+from flask_sock import Sock
 from config import Config, DATABASE_DIR
-from models import db, User, UserGoals
+from models import db, User, UserGoals, Notification
 from seed_data import seed_all
 from flask_jwt_extended.exceptions import JWTExtendedException
 from werkzeug.exceptions import HTTPException
+from services import websocket_service
 
 # Инициализация расширений
 migrate = Migrate()
 jwt = JWTManager()
+sock = Sock()
 
 
 def create_app():
@@ -30,6 +34,7 @@ def create_app():
     db.init_app(app)
     migrate.init_app(app, db)
     jwt.init_app(app)
+    sock.init_app(app)
 
     # Инициализация БД и заполнение данными при первом запуске
     with app.app_context():
@@ -80,6 +85,46 @@ def create_app():
     app.register_blueprint(fridge_bp, url_prefix='/api/fridge')
     app.register_blueprint(water_bp, url_prefix='/api/water')
     app.register_blueprint(notifications_bp, url_prefix='/api/notifications')
+
+    # WebSocket endpoint для real-time уведомлений
+    @sock.route('/ws/notifications')
+    def ws_notifications(ws):
+        token = request.args.get('token')
+        if not token:
+            ws.close(1008, 'Token required')
+            return
+
+        try:
+            decoded = decode_token(token)
+            user_id = int(decoded['sub'])
+        except Exception:
+            ws.close(1008, 'Invalid token')
+            return
+
+        # Регистрируем соединение
+        websocket_service.register(user_id, ws)
+
+        try:
+            # Отправляем текущий счётчик непрочитанных
+            count = Notification.query.filter_by(user_id=user_id, is_read=False).count()
+            ws.send(json.dumps({'type': 'unread_count', 'payload': {'count': count}}))
+
+            # Держим соединение открытым, слушаем клиент
+            while True:
+                data = ws.receive(timeout=30)
+                if data is None:
+                    break
+                # Клиент может слать ping — отвечаем pong
+                try:
+                    msg = json.loads(data)
+                    if msg.get('type') == 'ping':
+                        ws.send(json.dumps({'type': 'pong'}))
+                except (json.JSONDecodeError, TypeError):
+                    pass
+        except Exception:
+            pass
+        finally:
+            websocket_service.unregister(user_id, ws)
 
     # Главная страница API
     @app.route('/api')

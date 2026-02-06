@@ -1,8 +1,8 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import { OnboardingProvider } from './context/OnboardingContext';
-import { NotificationProvider, useNotificationContext } from './context/NotificationContext';
+import useNotificationStore from './stores/notificationStore';
 
 import Header from './components/layout/Header';
 import Sidebar from './components/layout/Sidebar';
@@ -94,7 +94,19 @@ const AppLayout = ({ guestMode = false }) => {
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [showNotifications, setShowNotifications] = useState(false);
   const { isAuthenticated, onboardingCompleted } = useAuth();
-  const { unreadCount } = useNotificationContext();
+  const unreadCount = useNotificationStore((s) => s.unreadCount);
+  const connect = useNotificationStore((s) => s.connect);
+  const disconnect = useNotificationStore((s) => s.disconnect);
+
+  // WebSocket + polling lifecycle
+  useEffect(() => {
+    if (isAuthenticated) {
+      connect();
+      return () => disconnect();
+    } else {
+      disconnect();
+    }
+  }, [isAuthenticated, connect, disconnect]);
 
   // Определяем, нужно ли редиректить на онбординг
   const needsOnboarding = isAuthenticated && !onboardingCompleted;
@@ -183,7 +195,6 @@ function App() {
   return (
     <Router>
       <AuthProvider>
-        <NotificationProvider>
           <OnboardingProvider>
             <Routes>
               {/* Auth */}
@@ -220,7 +231,6 @@ function App() {
               />
             </Routes>
           </OnboardingProvider>
-        </NotificationProvider>
       </AuthProvider>
     </Router>
   );

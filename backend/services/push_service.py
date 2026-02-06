@@ -3,6 +3,7 @@ import threading
 from pywebpush import webpush, WebPushException
 from flask import current_app
 from models import db, PushSubscription, Notification, NotificationPreference
+from services import websocket_service
 
 
 class PushService:
@@ -124,6 +125,14 @@ def create_and_push_notification(user_id, title, body, category, related_type=No
 
     db.session.commit()
 
+    # Отправляем через WebSocket (мгновенно)
+    websocket_service.send_notification(user_id, notification.to_dict())
+
+    # Отправляем обновлённый счётчик непрочитанных
+    unread = Notification.query.filter_by(user_id=user_id, is_read=False).count()
+    websocket_service.send_unread_count(user_id, unread)
+
+    # Отправляем через Web Push (в фоновом потоке)
     if should_push:
         PushService.send_to_user(user_id, notification)
 

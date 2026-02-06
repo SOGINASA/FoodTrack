@@ -1,7 +1,7 @@
 import React, { useEffect, useCallback } from 'react';
 import { X, CheckCheck, Bell, BellOff } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
-import { useNotificationContext } from '../../context/NotificationContext';
+import useNotificationStore from '../../stores/notificationStore';
 import { usePushNotifications } from '../../hooks/usePushNotifications';
 import NotificationItem from './NotificationItem';
 
@@ -16,7 +16,7 @@ const NotificationsPanel = ({ isOpen, onClose }) => {
     markAsRead,
     markAllAsRead,
     loadMore,
-  } = useNotificationContext();
+  } = useNotificationStore();
 
   const {
     isSupported,
