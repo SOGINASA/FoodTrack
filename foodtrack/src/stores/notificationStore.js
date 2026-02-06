@@ -14,7 +14,6 @@ let reconnectTimeout = null;
 let reconnectAttempts = 0;
 let pollInterval = null;
 let focusHandler = null;
-let lastKnownNotificationId = null;
 const MAX_RECONNECT_ATTEMPTS = 5;
 
 const useNotificationStore = create((set, get) => ({
@@ -101,35 +100,6 @@ const useNotificationStore = create((set, get) => ({
 
   clearNewNotification: () => set({ newNotification: null }),
 
-  // Polling fallback — проверяет последнее уведомление через API
-  _pollForNew: async () => {
-    try {
-      const response = await notificationsAPI.getAll({ page: 1, per_page: 1 });
-      const items = response.data.notifications;
-      if (items.length > 0) {
-        const latest = items[0];
-        if (lastKnownNotificationId && latest.id !== lastKnownNotificationId) {
-          // Новое уведомление — ставим в стор
-          set((state) => ({
-            notifications: [latest, ...state.notifications.filter((n) => n.id !== latest.id)],
-            newNotification: latest,
-          }));
-
-          // Auto-clear toast
-          setTimeout(() => {
-            const current = get().newNotification;
-            if (current?.id === latest.id) {
-              set({ newNotification: null });
-            }
-          }, 5000);
-        }
-        lastKnownNotificationId = latest.id;
-      }
-    } catch (err) {
-      // тихо падаем
-    }
-  },
-
   // === WebSocket ===
 
   connectWebSocket: () => {
@@ -214,36 +184,24 @@ const useNotificationStore = create((set, get) => ({
   },
 
   // Вызывается из App.js при смене auth state
-  connect: async () => {
-    const { fetchUnreadCount, connectWebSocket, _pollForNew } = get();
+  connect: () => {
+    const { fetchUnreadCount, connectWebSocket } = get();
 
     fetchUnreadCount();
     connectWebSocket();
 
-    // Запоминаем ID последнего уведомления
-    try {
-      const response = await notificationsAPI.getAll({ page: 1, per_page: 1 });
-      if (response.data.notifications.length > 0) {
-        lastKnownNotificationId = response.data.notifications[0].id;
-      }
-    } catch (err) {
-      // тихо
-    }
-
-    // Fallback polling каждые 10 секунд (если WebSocket не подключён)
+    // Fallback polling каждые 30 секунд
     pollInterval = setInterval(() => {
       if (!get().connected) {
-        fetchUnreadCount();
-        _pollForNew();
+        get().fetchUnreadCount();
       }
-    }, 10000);
+    }, 30000);
 
     // Переподключение при фокусе окна
     focusHandler = () => {
-      fetchUnreadCount();
-      _pollForNew();
+      get().fetchUnreadCount();
       if (!get().connected) {
-        connectWebSocket();
+        get().connectWebSocket();
       }
     };
     window.addEventListener('focus', focusHandler);
@@ -261,7 +219,6 @@ const useNotificationStore = create((set, get) => ({
       focusHandler = null;
     }
 
-    lastKnownNotificationId = null;
     set({ notifications: [], unreadCount: 0, newNotification: null });
   },
 }));
