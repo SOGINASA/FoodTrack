@@ -2,6 +2,7 @@ from flask import Blueprint, request, jsonify
 from flask_jwt_extended import jwt_required, get_jwt_identity
 from models import db, Meal, MealIngredient
 from datetime import datetime, timezone
+from utils.validators import parse_date, parse_date_range
 import json
 import logging
 
@@ -30,12 +31,20 @@ def get_meals():
         query = Meal.query.filter_by(user_id=user_id)
 
         if date_str:
-            query = query.filter(Meal.meal_date == datetime.strptime(date_str, '%Y-%m-%d').date())
+            parsed_date, error = parse_date(date_str)
+            if error:
+                return jsonify({'error': f'Некорректная дата: {error}'}), 400
+            if parsed_date:
+                query = query.filter(Meal.meal_date == parsed_date)
         elif start_date and end_date:
-            query = query.filter(
-                Meal.meal_date >= datetime.strptime(start_date, '%Y-%m-%d').date(),
-                Meal.meal_date <= datetime.strptime(end_date, '%Y-%m-%d').date()
-            )
+            start_parsed, end_parsed, range_error = parse_date_range(start_date, end_date)
+            if range_error:
+                return jsonify({'error': range_error}), 400
+            if start_parsed and end_parsed:
+                query = query.filter(
+                    Meal.meal_date >= start_parsed,
+                    Meal.meal_date <= end_parsed
+                )
 
         if meal_type:
             query = query.filter(Meal.meal_type == meal_type)
@@ -87,9 +96,12 @@ def create_meal():
         if not data.get('name'):
             return jsonify({'error': 'Название блюда обязательно'}), 400
 
-        meal_date = data.get('date', datetime.now(timezone.utc).date().isoformat())
-        if isinstance(meal_date, str):
-            meal_date = datetime.strptime(meal_date, '%Y-%m-%d').date()
+        meal_date_str = data.get('date', datetime.now(timezone.utc).date().isoformat())
+        meal_date, date_error = parse_date(meal_date_str, allow_future=False, max_days_past=365)
+        if date_error:
+            return jsonify({'error': f'Некорректная дата: {date_error}'}), 400
+        if meal_date is None:
+            meal_date = datetime.now(timezone.utc).date()
 
         meal = Meal(
             user_id=user_id,
@@ -160,7 +172,11 @@ def update_meal(meal_id):
         if 'type' in data:
             meal.meal_type = data['type']
         if 'date' in data:
-            meal.meal_date = datetime.strptime(data['date'], '%Y-%m-%d').date()
+            parsed_date, date_error = parse_date(data['date'], allow_future=False, max_days_past=365)
+            if date_error:
+                return jsonify({'error': f'Некорректная дата: {date_error}'}), 400
+            if parsed_date:
+                meal.meal_date = parsed_date
         if 'time' in data:
             meal.meal_time = data['time']
         if 'calories' in data:
@@ -249,7 +265,7 @@ def copy_meal(meal_id):
             user_id=user_id,
             name=original.name,
             meal_type=data.get('type', original.meal_type),
-            meal_date=datetime.strptime(data['date'], '%Y-%m-%d').date() if data.get('date') else datetime.now(timezone.utc).date(),
+            meal_date=parse_date(data['date'])[0] if data.get('date') else datetime.now(timezone.utc).date(),
             meal_time=data.get('time', original.meal_time),
             calories=original.calories,
             protein=original.protein,

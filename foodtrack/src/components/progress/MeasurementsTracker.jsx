@@ -28,11 +28,26 @@ const MeasurementsTracker = ({ measurements, onAddMeasurements }) => {
 
   const handleAddMeasurements = () => {
     const hasAnyMeasurement = Object.values(newMeasurements).some(v => v !== '');
-    
+
     if (hasAnyMeasurement) {
+      // Валидация даты
+      const selectedDate = new Date(newDate);
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+
+      if (isNaN(selectedDate.getTime())) {
+        alert('Некорректная дата');
+        return;
+      }
+
+      if (selectedDate > today) {
+        alert('Дата не может быть в будущем');
+        return;
+      }
+
       onAddMeasurements({
         id: Date.now(),
-        date: new Date(newDate),
+        date: selectedDate,
         ...Object.fromEntries(
           Object.entries(newMeasurements).map(([key, value]) => [key, value ? parseFloat(value) : null])
         ),

@@ -20,10 +20,25 @@ const WeightTracker = ({ weightData, goalWeight, onAddWeight }) => {
 
   const handleAddWeight = () => {
     if (newWeight) {
+      // Валидация даты
+      const selectedDate = new Date(newDate);
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+
+      if (isNaN(selectedDate.getTime())) {
+        alert('Некорректная дата');
+        return;
+      }
+
+      if (selectedDate > today) {
+        alert('Дата не может быть в будущем');
+        return;
+      }
+
       onAddWeight({
         id: Date.now(),
         weight: parseFloat(newWeight),
-        date: new Date(newDate),
+        date: selectedDate,
       });
       setShowAddModal(false);
       setNewWeight('');

@@ -46,6 +46,23 @@ const AddProductModal = ({ isOpen, onClose, onAdd, initialData = null }) => {
       return;
     }
 
+    // Валидация срока годности
+    if (formData.expiryDate) {
+      const expiryDate = new Date(formData.expiryDate);
+      const todayDate = new Date();
+      todayDate.setHours(0, 0, 0, 0);
+
+      if (isNaN(expiryDate.getTime())) {
+        alert('Некорректная дата срока годности');
+        return;
+      }
+
+      if (expiryDate < todayDate) {
+        alert('Срок годности не может быть в прошлом');
+        return;
+      }
+    }
+
     onAdd(formData);
     handleClose();
   };

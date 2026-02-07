@@ -2,6 +2,7 @@ from flask import Blueprint, request, jsonify
 from flask_jwt_extended import jwt_required, get_jwt_identity
 from models import db, MealPlan
 from datetime import datetime, timedelta, timezone
+from utils.validators import parse_date, parse_date_range
 import json
 import logging
 
@@ -29,12 +30,20 @@ def get_meal_plans():
         query = MealPlan.query.filter_by(user_id=user_id)
 
         if date_str:
-            query = query.filter(MealPlan.planned_date == datetime.strptime(date_str, '%Y-%m-%d').date())
+            parsed_date, date_error = parse_date(date_str)
+            if date_error:
+                return jsonify({'error': f'Некорректная дата: {date_error}'}), 400
+            if parsed_date:
+                query = query.filter(MealPlan.planned_date == parsed_date)
         elif start_date and end_date:
-            query = query.filter(
-                MealPlan.planned_date >= datetime.strptime(start_date, '%Y-%m-%d').date(),
-                MealPlan.planned_date <= datetime.strptime(end_date, '%Y-%m-%d').date()
-            )
+            start_parsed, end_parsed, range_error = parse_date_range(start_date, end_date)
+            if range_error:
+                return jsonify({'error': range_error}), 400
+            if start_parsed and end_parsed:
+                query = query.filter(
+                    MealPlan.planned_date >= start_parsed,
+                    MealPlan.planned_date <= end_parsed
+                )
 
         if meal_type:
             query = query.filter(MealPlan.meal_type == meal_type)
@@ -90,9 +99,10 @@ def create_meal_plan():
         if not data.get('date'):
             return jsonify({'error': 'Дата обязательна'}), 400
 
-        planned_date = data.get('date')
-        if isinstance(planned_date, str):
-            planned_date = datetime.strptime(planned_date, '%Y-%m-%d').date()
+        planned_date_str = data.get('date')
+        planned_date, date_error = parse_date(planned_date_str, required=True, max_days_future=365)
+        if date_error:
+            return jsonify({'error': f'Некорректная дата: {date_error}'}), 400
 
         # Определяем тип приёма пищи из категории рецепта
         category = data.get('category', 'snack')
@@ -155,7 +165,11 @@ def update_meal_plan(plan_id):
 
         # Обновляем поля
         if 'date' in data:
-            plan.planned_date = datetime.strptime(data['date'], '%Y-%m-%d').date()
+            parsed_date, date_error = parse_date(data['date'], max_days_future=365)
+            if date_error:
+                return jsonify({'error': f'Некорректная дата: {date_error}'}), 400
+            if parsed_date:
+                plan.planned_date = parsed_date
         if 'type' in data:
             plan.meal_type = data['type']
         if 'isCompleted' in data:
@@ -241,8 +255,11 @@ def get_week_meal_plans():
         # Можно передать конкретную дату начала недели
         start_date_str = request.args.get('start_date')
         if start_date_str:
-            start_of_week = datetime.strptime(start_date_str, '%Y-%m-%d').date()
-            end_of_week = start_of_week + timedelta(days=6)
+            start_of_week, date_error = parse_date(start_date_str)
+            if date_error:
+                return jsonify({'error': f'Некорректная дата: {date_error}'}), 400
+            if start_of_week:
+                end_of_week = start_of_week + timedelta(days=6)
 
         plans = MealPlan.query.filter(
             MealPlan.user_id == user_id,
