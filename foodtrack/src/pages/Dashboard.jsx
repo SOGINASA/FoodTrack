@@ -155,23 +155,23 @@ const Dashboard = () => {
   };
 
   // ✅ функция, которая делает запрос на API (POST /notifications/test)
-  const handleSendTestNotification = async () => {
-    setTestSending(true);
-    setTestResult(null);
+  // const handleSendTestNotification = async () => {
+  //   setTestSending(true);
+  //   setTestResult(null);
 
-    try {
-      await notificationsAPI.sendTest();
-      setTestResult({ type: 'success', text: 'Тестовое уведомление отправлено.' });
-    } catch (e) {
-      const message =
-        e?.response?.data?.message ||
-        e?.message ||
-        'Не удалось отправить тестовое уведомление.';
-      setTestResult({ type: 'error', text: message });
-    } finally {
-      setTestSending(false);
-    }
-  };
+  //   try {
+  //     await notificationsAPI.sendTest();
+  //     setTestResult({ type: 'success', text: 'Тестовое уведомление отправлено.' });
+  //   } catch (e) {
+  //     const message =
+  //       e?.response?.data?.message ||
+  //       e?.message ||
+  //       'Не удалось отправить тестовое уведомление.';
+  //     setTestResult({ type: 'error', text: message });
+  //   } finally {
+  //     setTestSending(false);
+  //   }
+  // };
 
   const waterPercent = waterData.goal_ml > 0
     ? Math.min(100, Math.round((waterData.total_ml / waterData.goal_ml) * 100))
@@ -454,7 +454,7 @@ const Dashboard = () => {
       </div>
 
       {/* ✅ Dev/Test: отправка тестового уведомления */}
-      <Card padding="lg">
+      {/* <Card padding="lg">
         <div className="flex items-center justify-between gap-3 flex-wrap">
           <div>
             <h3 className="text-lg font-semibold">Тест уведомлений</h3>
@@ -485,7 +485,7 @@ const Dashboard = () => {
             {testResult.text}
           </div>
         )}
-      </Card>
+      </Card> */}
 
       <AddMealButton />
     </div>
