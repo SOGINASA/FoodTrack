@@ -132,7 +132,6 @@ const ShareProductsModal = ({ isOpen, onClose, products }) => {
         productIds: selectedProducts,
         senderLocation: userLocation,
       });
-      alert(`Запрос отправлен пользователю ${selectedUser.name}!`);
       onClose();
     } catch (error) {
       console.error('Ошибка отправки запроса:', error);
