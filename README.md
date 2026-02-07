@@ -1,57 +1,92 @@
 <div align="center">
 
-# 🍽️ FoodTrack
+<img src="FoodTrack/foodtrack/public/imgs/logo.png" alt="FoodTrack Logo" width="120" />
+
+# FoodTrack
 
 ### Snap it. Track it.
 
-Интеллектуальная система анализа рациона и автоматического учёта КБЖУ.
-Сфотографируй еду — получи полный расклад по калориям и нутриентам.
+**Интеллектуальная система анализа рациона и автоматического учёта КБЖУ**
 
-![React](https://img.shields.io/badge/React-19-61DAFB?logo=react&logoColor=white)
-![Flask](https://img.shields.io/badge/Flask-3.1-000?logo=flask&logoColor=white)
-![FastAPI](https://img.shields.io/badge/FastAPI-0.100+-009688?logo=fastapi&logoColor=white)
-![YOLOv8](https://img.shields.io/badge/YOLOv8-ultralytics-purple)
-![Tailwind](https://img.shields.io/badge/Tailwind_CSS-3-06B6D4?logo=tailwindcss&logoColor=white)
-![PWA](https://img.shields.io/badge/PWA-ready-5A0FC8?logo=pwa&logoColor=white)
+Сфотографируй еду — получи полный расклад по калориям и нутриентам
+
+[![React](https://img.shields.io/badge/React-19-61DAFB?style=for-the-badge&logo=react&logoColor=white)](https://react.dev)
+[![Flask](https://img.shields.io/badge/Flask-3.1-000?style=for-the-badge&logo=flask&logoColor=white)](https://flask.palletsprojects.com)
+[![FastAPI](https://img.shields.io/badge/FastAPI-0.100+-009688?style=for-the-badge&logo=fastapi&logoColor=white)](https://fastapi.tiangolo.com)
+[![YOLOv8](https://img.shields.io/badge/YOLOv8-Ultralytics-purple?style=for-the-badge)](https://ultralytics.com)
+[![Tailwind CSS](https://img.shields.io/badge/Tailwind-3-06B6D4?style=for-the-badge&logo=tailwindcss&logoColor=white)](https://tailwindcss.com)
+[![PWA](https://img.shields.io/badge/PWA-Ready-5A0FC8?style=for-the-badge&logo=pwa&logoColor=white)](https://web.dev/progressive-web-apps/)
 
 </div>
 
 ---
 
-## Возможности
+## Что умеет FoodTrack?
 
-**Распознавание еды по фото** — YOLOv8 модель определяет блюдо на фотографии и автоматически подтягивает данные о калорийности и БЖУ через FatSecret API.
+<table>
+<tr>
+<td width="50%">
 
-**Дневник питания** — ведение ежедневного журнала приёмов пищи с детальной статистикой по калориям, белкам, жирам и углеводам.
+### Распознавание еды по фото
+YOLOv8 модель определяет блюдо на фотографии и автоматически подтягивает данные о калорийности и БЖУ через FatSecret API
 
-**Аналитика и прогресс** — графики за неделю/месяц, трекинг веса, стрик-система для мотивации, отслеживание достижения целей.
+### Дневник питания
+Ведение ежедневного журнала приёмов пищи с детальной статистикой по калориям, белкам, жирам и углеводам
 
-**Группы** — совместный трекинг с семьёй, друзьями или командой. Групповая лента, приглашения, общая статистика.
+### Аналитика и прогресс
+Графики за неделю/месяц, трекинг веса, стрик-система для мотивации, отслеживание достижения целей
 
-**Виртуальный холодильник** — учёт продуктов дома. Возможность поделиться излишками с пользователями поблизости через карту (Leaflet, радиус 1 км).
+</td>
+<td width="50%">
 
-**Рецепты и советы** — подборка рецептов с фотографиями и персонализированные рекомендации по питанию.
+### Группы
+Совместный трекинг с семьёй, друзьями или командой. Групповая лента, приглашения, общая статистика
 
-**Онбординг** — пошаговая настройка профиля: возраст, рост, вес, цели, уровень активности, частота приёмов пищи.
+### Виртуальный холодильник
+Учёт продуктов дома. Возможность поделиться излишками с пользователями поблизости через карту (радиус 1 км)
+
+### Рецепты и советы
+Подборка рецептов с фотографиями и персонализированные рекомендации по питанию
+
+</td>
+</tr>
+</table>
 
 ---
 
-## Архитектура
+## Архитектура проекта
 
 ```
 FoodTrack/
-├── foodtrack/          React 19 · веб-приложение (PWA)
-├── backend/            Flask · REST API, авторизация, бизнес-логика
-├── predicts/           FastAPI · ML-сервис распознавания еды (YOLOv8)
+├── foodtrack/          React 19 — веб-приложение (PWA)
+├── backend/            Flask — REST API, авторизация, бизнес-логика
+├── predicts/           FastAPI — ML-сервис распознавания еды (YOLOv8)
 ├── FoodTrackIoS/       iOS-приложение
 └── android/            Android-приложение
 ```
 
-| Сервис | Стек | Порт |
-|--------|------|------|
-| **Frontend** | React 19, Tailwind CSS, Zustand, React Router 7, Recharts, Framer Motion | `3000` |
-| **Backend API** | Flask, SQLAlchemy, Flask-JWT-Extended, Flask-Migrate, Authlib | `5252` |
-| **ML Service** | FastAPI, YOLOv8, PyTorch, OpenCV, FatSecret API | `8000` |
+<table>
+<tr>
+<th>Сервис</th>
+<th>Технологии</th>
+<th>Порт</th>
+</tr>
+<tr>
+<td><strong>Frontend</strong></td>
+<td>React 19, Tailwind CSS, Zustand, React Router 7, Recharts, Framer Motion</td>
+<td><code>3000</code></td>
+</tr>
+<tr>
+<td><strong>Backend API</strong></td>
+<td>Flask, SQLAlchemy, Flask-JWT-Extended, Flask-Migrate, Authlib</td>
+<td><code>5252</code></td>
+</tr>
+<tr>
+<td><strong>ML Service</strong></td>
+<td>FastAPI, YOLOv8, PyTorch, OpenCV, FatSecret API</td>
+<td><code>8000</code></td>
+</tr>
+</table>
 
 ---
 
@@ -59,8 +94,8 @@ FoodTrack/
 
 ### Требования
 
-- Node.js 20.x / npm 10.x
-- Python 3.11+
+- **Node.js** 20.x / npm 10.x
+- **Python** 3.11+
 
 ### Frontend
 
@@ -70,10 +105,9 @@ npm install
 npm start
 ```
 
-Приложение запустится на `http://localhost:3000`.
+Приложение запустится на `http://localhost:3000`
 
-Для указания адреса API создайте `.env`:
-
+Создайте `.env` файл:
 ```env
 REACT_APP_API_URL=http://localhost:5252/api
 ```
@@ -87,21 +121,19 @@ source venv/bin/activate        # Windows: venv\Scripts\activate
 pip install -r requirements.txt
 ```
 
-Создайте `.env` в папке `backend`:
-
+Создайте `.env` файл:
 ```env
 SECRET_KEY=your-secret-key
 JWT_SECRET_KEY=your-jwt-secret
 ```
 
 Запуск:
-
 ```bash
 flask db upgrade
 flask run --port 5252
 ```
 
-### ML-сервис (распознавание еды)
+### ML-сервис
 
 ```bash
 cd FoodTrack/predicts
@@ -110,22 +142,18 @@ source venv/bin/activate
 pip install -r requirements.docker.txt
 ```
 
-Создайте `.env` в папке `predicts`:
-
+Создайте `.env` файл:
 ```env
 FATSECRET_CLIENT_ID=your-client-id
 FATSECRET_CLIENT_SECRET=your-client-secret
 ```
 
 Запуск:
-
 ```bash
 uvicorn app:app --port 8000
 ```
 
 ### Docker
-
-Для каждого сервиса есть `Dockerfile`:
 
 ```bash
 # Backend
@@ -139,25 +167,27 @@ docker run -p 8000:8000 foodtrack-ml
 
 ---
 
-## API
+## API Reference
 
-### Backend (`/api`)
+### Backend API (`/api`)
 
 | Группа | Эндпоинты | Описание |
 |--------|-----------|----------|
-| `/api/auth` | register, login, refresh, me, profile | Регистрация, JWT-авторизация, OAuth |
+| `/api/auth` | register, login, refresh, me, profile | Регистрация и JWT-авторизация |
 | `/api/meals` | CRUD, copy, today | Управление приёмами пищи |
-| `/api/analytics` | daily, weekly, monthly, nutrition | Статистика и аналитика |
+| `/api/water` | CRUD | Трекинг воды |
+| `/api/analytics` | daily, weekly, monthly, streak | Статистика и аналитика |
 | `/api/goals` | CRUD, weight | Цели и трекинг веса |
-| `/api/progress` | overview, weight-chart, calories-chart | Графики прогресса |
-| `/api/groups` | CRUD, invite, members | Группы и приглашения |
+| `/api/progress` | measurements, photos | Замеры и фото прогресса |
+| `/api/groups` | CRUD, invite, members, feed | Группы и приглашения |
+| `/api/fridge` | CRUD, expiring-soon, share | Виртуальный холодильник |
 | `/api/recipes` | list, details | Рецепты |
 | `/api/tips` | list | Советы по питанию |
 
 ### ML Service
 
 | Эндпоинт | Описание |
-|-----------|----------|
+|----------|----------|
 | `POST /predict` | Полный анализ фото (класс, уверенность, top-предсказания) |
 | `POST /predict/simple` | Быстрый анализ |
 | `POST /predict/with-nutrition` | Анализ + данные о калорийности |
@@ -165,18 +195,61 @@ docker run -p 8000:8000 foodtrack-ml
 
 ---
 
-## Стек технологий
+## Технологии
 
-**Frontend:** React 19 · React Router 7 · Zustand · Tailwind CSS · Framer Motion · Recharts · React Hook Form + Zod · Leaflet · Axios · Lucide Icons
+<table>
+<tr>
+<td align="center" width="33%">
 
-**Backend:** Flask · SQLAlchemy · Flask-JWT-Extended · Flask-Migrate (Alembic) · Authlib · PostgreSQL / SQLite
+**Frontend**
 
-**ML:** FastAPI · YOLOv8 (Ultralytics) · PyTorch · OpenCV · FatSecret API
+React 19 • React Router 7 • Zustand • Tailwind CSS • Framer Motion • Recharts • React Hook Form + Zod • Leaflet • Axios • Lucide Icons • date-fns
+
+</td>
+<td align="center" width="33%">
+
+**Backend**
+
+Flask • SQLAlchemy • Flask-JWT-Extended • Flask-Migrate • Authlib • PostgreSQL / SQLite • WebSocket
+
+</td>
+<td align="center" width="33%">
+
+**ML / AI**
+
+FastAPI • YOLOv8 (Ultralytics) • PyTorch • OpenCV • FatSecret API
+
+</td>
+</tr>
+</table>
 
 ---
 
 <div align="center">
 
+## Команда разработчиков
+
+<table>
+<tr>
+<td align="center">
+<strong>Pinigin Artyom</strong><br/>
+<a href="https://t.me/ArtemSogi">@ArtemSogi</a>
+</td>
+<td align="center">
+<strong>Efremov Ivan</strong><br/>
+<a href="https://t.me/Vanek3222">@Vanek3222</a>
+</td>
+<td align="center">
+<strong>Zhumabek Alikhan</strong><br/>
+<a href="https://t.me/Gaklelk">@Gaklelk</a>
+</td>
+</tr>
+</table>
+
+---
+
 **FoodTrack** — Snap it. Track it.
+
+*2025*
 
 </div>
