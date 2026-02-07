@@ -63,6 +63,14 @@ const Fridge = () => {
     }
   }, [newNotification]);
 
+  // Polling share requests каждые 15 сек (fallback если WS не работает)
+  useEffect(() => {
+    const interval = setInterval(() => {
+      loadShareRequests();
+    }, 15000);
+    return () => clearInterval(interval);
+  }, []);
+
   // Загрузка входящих запросов на sharing
   const loadShareRequests = async () => {
     try {

@@ -14,8 +14,7 @@ let reconnectTimeout = null;
 let reconnectAttempts = 0;
 let pollInterval = null;
 let focusHandler = null;
-let pingInterval = null;
-const MAX_RECONNECT_ATTEMPTS = 5;
+let lastSeenNotificationId = null;
 
 const useNotificationStore = create((set, get) => ({
   notifications: [],
@@ -102,6 +101,49 @@ const useNotificationStore = create((set, get) => ({
 
   clearNewNotification: () => set({ newNotification: null }),
 
+  // === Polling fallback (когда WebSocket не работает) ===
+
+  _pollForUpdates: async () => {
+    try {
+      // Обновляем счётчик непрочитанных
+      const countRes = await notificationsAPI.getUnreadCount();
+      set({ unreadCount: countRes.data.count });
+
+      // Проверяем новые уведомления
+      const response = await notificationsAPI.getAll({ page: 1, per_page: 5 });
+      const { notifications: items } = response.data;
+
+      if (items.length > 0) {
+        const latestId = items[0].id;
+
+        if (lastSeenNotificationId !== null && latestId !== lastSeenNotificationId) {
+          // Появились новые уведомления — добавляем в стор
+          const currentIds = new Set(get().notifications.map((n) => n.id));
+          const newItems = items.filter((n) => !currentIds.has(n.id));
+
+          if (newItems.length > 0) {
+            set((state) => ({
+              notifications: [...newItems, ...state.notifications],
+              newNotification: newItems[0],
+            }));
+
+            // Auto-clear toast after 5 seconds
+            setTimeout(() => {
+              const current = get().newNotification;
+              if (current?.id === newItems[0].id) {
+                set({ newNotification: null });
+              }
+            }, 5000);
+          }
+        }
+
+        lastSeenNotificationId = latestId;
+      }
+    } catch (err) {
+      console.error('Error polling for updates:', err);
+    }
+  },
+
   // === Fridge update callbacks ===
 
   registerFridgeUpdate: (id, callback) => {
@@ -123,7 +165,8 @@ const useNotificationStore = create((set, get) => ({
   // === WebSocket ===
 
   connectWebSocket: () => {
-    if (ws?.readyState === WebSocket.OPEN) return;
+    // Не создаём новый WS если уже открыт или подключается
+    if (ws && (ws.readyState === WebSocket.OPEN || ws.readyState === WebSocket.CONNECTING)) return;
 
     const token = localStorage.getItem('access_token');
     if (!token) return;
@@ -131,16 +174,16 @@ const useNotificationStore = create((set, get) => ({
     try {
       const wsUrl = `${getWsUrl()}?token=${encodeURIComponent(token)}`;
       ws = new WebSocket(wsUrl);
-      let pingInterval = null;
+      let localPingInterval = null;
 
       ws.onopen = () => {
         console.log('WebSocket connected');
         set({ connected: true });
         reconnectAttempts = 0;
-        
+
         // Send ping every 20 seconds to keep connection alive
-        pingInterval = setInterval(() => {
-          if (ws.readyState === WebSocket.OPEN) {
+        localPingInterval = setInterval(() => {
+          if (ws?.readyState === WebSocket.OPEN) {
             ws.send(JSON.stringify({ type: 'ping' }));
           }
         }, 20000);
@@ -152,6 +195,8 @@ const useNotificationStore = create((set, get) => ({
 
           if (data.type === 'notification') {
             const notification = data.payload;
+            // Обновляем lastSeenNotificationId чтобы polling не дублировал
+            lastSeenNotificationId = notification.id;
             set((state) => ({
               notifications: [notification, ...state.notifications],
               unreadCount: state.unreadCount + 1,
@@ -170,7 +215,7 @@ const useNotificationStore = create((set, get) => ({
           } else if (data.type === 'fridge_update') {
             // Trigger fridge update callback if registered
             const callbacks = get().fridgeUpdateCallbacks || {};
-            Object.values(callbacks).forEach(callback => callback(data));
+            Object.values(callbacks).forEach((callback) => callback(data));
           }
         } catch (err) {
           console.error('Error parsing WebSocket message:', err);
@@ -185,23 +230,21 @@ const useNotificationStore = create((set, get) => ({
         console.log('WebSocket closed:', event.code, event.reason);
         set({ connected: false });
         ws = null;
-        
+
         // Clear ping interval
-        if (pingInterval) {
-          clearInterval(pingInterval);
-          pingInterval = null;
+        if (localPingInterval) {
+          clearInterval(localPingInterval);
+          localPingInterval = null;
         }
 
-        // Reconnect with exponential backoff
-        if (reconnectAttempts < MAX_RECONNECT_ATTEMPTS) {
-          const delay = Math.min(1000 * Math.pow(2, reconnectAttempts), 30000);
-          reconnectAttempts += 1;
+        // Reconnect with exponential backoff (без лимита — polling тоже пытается)
+        const delay = Math.min(1000 * Math.pow(2, reconnectAttempts), 30000);
+        reconnectAttempts += 1;
 
-          reconnectTimeout = setTimeout(() => {
-            console.log(`Attempting to reconnect (attempt ${reconnectAttempts})...`);
-            get().connectWebSocket();
-          }, delay);
-        }
+        reconnectTimeout = setTimeout(() => {
+          console.log(`Attempting to reconnect (attempt ${reconnectAttempts})...`);
+          get().connectWebSocket();
+        }, delay);
       };
     } catch (err) {
       console.error('Error creating WebSocket:', err);
@@ -213,10 +256,6 @@ const useNotificationStore = create((set, get) => ({
       clearTimeout(reconnectTimeout);
       reconnectTimeout = null;
     }
-    if (pingInterval) {
-      clearInterval(pingInterval);
-      pingInterval = null;
-    }
     if (ws) {
       ws.close(1000, 'User logout');
       ws = null;
@@ -227,22 +266,38 @@ const useNotificationStore = create((set, get) => ({
 
   // Вызывается из App.js при смене auth state
   connect: () => {
-    const { fetchUnreadCount, connectWebSocket } = get();
+    const { fetchUnreadCount, connectWebSocket, _pollForUpdates } = get();
 
     fetchUnreadCount();
     connectWebSocket();
 
-    // Fallback polling каждые 30 секунд
-    pollInterval = setInterval(() => {
-      if (!get().connected) {
-        get().fetchUnreadCount();
-      }
-    }, 30000);
+    // Инициализируем lastSeenNotificationId
+    notificationsAPI
+      .getAll({ page: 1, per_page: 1 })
+      .then((res) => {
+        const items = res.data?.notifications || [];
+        if (items.length > 0 && lastSeenNotificationId === null) {
+          lastSeenNotificationId = items[0].id;
+        }
+      })
+      .catch(() => {});
 
-    // Переподключение при фокусе окна
-    focusHandler = () => {
-      get().fetchUnreadCount();
+    // Polling каждые 15 секунд — ловит уведомления если WS не работает
+    pollInterval = setInterval(() => {
+      _pollForUpdates();
+
+      // Пробуем переподключить WS если отвалился
       if (!get().connected) {
+        reconnectAttempts = 0;
+        get().connectWebSocket();
+      }
+    }, 15000);
+
+    // Переподключение и проверка при фокусе окна
+    focusHandler = () => {
+      _pollForUpdates();
+      if (!get().connected) {
+        reconnectAttempts = 0;
         get().connectWebSocket();
       }
     };
@@ -261,6 +316,7 @@ const useNotificationStore = create((set, get) => ({
       focusHandler = null;
     }
 
+    lastSeenNotificationId = null;
     set({ notifications: [], unreadCount: 0, newNotification: null });
   },
 }));
