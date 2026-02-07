@@ -1,6 +1,6 @@
 <div align="center">
 
-<img src="/FoodTrack/foodtrack/public/imgs/logo.png" alt="FoodTrack Logo" width="120" />
+<img src="logo.png" alt="FoodTrack Logo" width="120" />
 
 # FoodTrack
 
