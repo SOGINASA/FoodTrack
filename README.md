@@ -10,6 +10,8 @@
 
 Сфотографируй еду — получи полный расклад по калориям и нутриентам
 
+Ссылка на развёрнутое решение: https://food-track-beta.vercel.app
+
 [![React](https://img.shields.io/badge/React-19-61DAFB?style=for-the-badge&logo=react&logoColor=white)](https://react.dev)
 [![Flask](https://img.shields.io/badge/Flask-3.1-000?style=for-the-badge&logo=flask&logoColor=white)](https://flask.palletsprojects.com)
 [![FastAPI](https://img.shields.io/badge/FastAPI-0.100+-009688?style=for-the-badge&logo=fastapi&logoColor=white)](https://fastapi.tiangolo.com)
@@ -250,6 +252,6 @@ FastAPI • YOLOv8 (Ultralytics) • PyTorch • OpenCV • FatSecret API
 
 **FoodTrack** — Snap it. Track it.
 
-*2025*
+*2026*
 
 </div>
