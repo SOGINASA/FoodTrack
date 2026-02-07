@@ -1,6 +1,6 @@
 <div align="center">
 
-<img src="[logo.png](https://images-ext-1.discordapp.net/external/oF9_kYZ7iO_TlQ3SBe5OSgrBEDtFkAyIY-uJT1Tzumg/https/food-track-beta.vercel.app/imgs/logo.png?format=webp&quality=lossless&width=1694&height=1694)" alt="FoodTrack Logo" width="120" />
+<img src="https://food-track-beta.vercel.app/imgs/logo.png" alt="FoodTrack Logo" width="120" />
 
 # FoodTrack
 
