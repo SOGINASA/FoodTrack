@@ -178,6 +178,10 @@ def create_app():
                 'water': '/api/water - трекинг потребления воды',
             }
         })
+    
+    @app.route('/logo')
+    def logo():
+        return app.send_static_file('white-bg-logo.png')
 
     return app
 
