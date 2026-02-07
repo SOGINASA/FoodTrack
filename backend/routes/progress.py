@@ -2,6 +2,7 @@ from flask import Blueprint, request, jsonify
 from flask_jwt_extended import jwt_required, get_jwt_identity
 from models import db, Measurement, ProgressPhoto
 from datetime import datetime, timezone
+from utils.validators import parse_date
 
 progress_bp = Blueprint('progress', __name__)
 
@@ -39,9 +40,12 @@ def add_measurement():
         if not data:
             return jsonify({'error': 'Данные не предоставлены'}), 400
 
-        entry_date = data.get('date', datetime.now(timezone.utc).date().isoformat())
-        if isinstance(entry_date, str):
-            entry_date = datetime.strptime(entry_date, '%Y-%m-%d').date()
+        entry_date_str = data.get('date', datetime.now(timezone.utc).date().isoformat())
+        entry_date, date_error = parse_date(entry_date_str, allow_future=False, max_days_past=365)
+        if date_error:
+            return jsonify({'error': f'Некорректная дата: {date_error}'}), 400
+        if entry_date is None:
+            entry_date = datetime.now(timezone.utc).date()
 
         # Проверяем, есть ли уже запись на эту дату
         existing = Measurement.query.filter_by(
@@ -149,9 +153,12 @@ def add_photo():
         if not data or not data.get('image_url'):
             return jsonify({'error': 'URL изображения обязателен'}), 400
 
-        entry_date = data.get('date', datetime.now(timezone.utc).date().isoformat())
-        if isinstance(entry_date, str):
-            entry_date = datetime.strptime(entry_date, '%Y-%m-%d').date()
+        entry_date_str = data.get('date', datetime.now(timezone.utc).date().isoformat())
+        entry_date, date_error = parse_date(entry_date_str, allow_future=False, max_days_past=365)
+        if date_error:
+            return jsonify({'error': f'Некорректная дата: {date_error}'}), 400
+        if entry_date is None:
+            entry_date = datetime.now(timezone.utc).date()
 
         photo = ProgressPhoto(
             user_id=user_id,

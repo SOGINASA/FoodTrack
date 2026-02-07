@@ -27,9 +27,24 @@ const ProgressPhotos = ({ photos, onAddPhoto, onDeletePhoto }) => {
 
   const handleUpload = () => {
     if (previewUrl) {
+      // Валидация даты
+      const selectedDate = new Date(uploadDate);
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+
+      if (isNaN(selectedDate.getTime())) {
+        alert('Некорректная дата');
+        return;
+      }
+
+      if (selectedDate > today) {
+        alert('Дата не может быть в будущем');
+        return;
+      }
+
       onAddPhoto({
         id: Date.now(),
-        date: new Date(uploadDate),
+        date: selectedDate,
         imageUrl: previewUrl,
       });
       setShowUploadModal(false);

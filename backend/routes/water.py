@@ -3,6 +3,7 @@ from flask_jwt_extended import jwt_required, get_jwt_identity
 from models import db, WaterEntry, UserGoals
 from datetime import datetime, timedelta, timezone
 from sqlalchemy import func
+from utils.validators import parse_date
 
 water_bp = Blueprint('water', __name__)
 
@@ -14,7 +15,11 @@ def get_water():
     try:
         user_id = int(get_jwt_identity())
         date_str = request.args.get('date', datetime.now(timezone.utc).date().isoformat())
-        target_date = datetime.strptime(date_str, '%Y-%m-%d').date()
+        target_date, date_error = parse_date(date_str, max_days_past=365)
+        if date_error:
+            return jsonify({'error': f'Некорректная дата: {date_error}'}), 400
+        if target_date is None:
+            target_date = datetime.now(timezone.utc).date()
 
         entries = WaterEntry.query.filter_by(
             user_id=user_id,
@@ -51,7 +56,11 @@ def add_water():
             return jsonify({'error': 'Укажите количество воды в мл'}), 400
 
         date_str = data.get('date', datetime.now(timezone.utc).date().isoformat())
-        target_date = datetime.strptime(date_str, '%Y-%m-%d').date()
+        target_date, date_error = parse_date(date_str, allow_future=False, max_days_past=365)
+        if date_error:
+            return jsonify({'error': f'Некорректная дата: {date_error}'}), 400
+        if target_date is None:
+            target_date = datetime.now(timezone.utc).date()
 
         entry = WaterEntry(
             user_id=user_id,

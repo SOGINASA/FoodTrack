@@ -110,3 +110,132 @@ export function validateDisclaimerAccepted(accepted) {
   if (!accepted) return { ok: false, error: 'Нужно принять отказ от претензий' };
   return { ok: true };
 }
+
+// --- Date validations ---
+
+const DATE_REGEX = /^\d{4}-\d{2}-\d{2}$/;
+
+/**
+ * Парсит строку даты в объект Date
+ * @param {string} dateStr - Дата в формате YYYY-MM-DD
+ * @returns {Date|null} - Date объект или null если невалидно
+ */
+export function parseDate(dateStr) {
+  if (!dateStr || typeof dateStr !== 'string') return null;
+  if (!DATE_REGEX.test(dateStr)) return null;
+
+  const [year, month, day] = dateStr.split('-').map(Number);
+
+  // Проверяем что числа адекватные
+  if (year < 1900 || year > 2100) return null;
+  if (month < 1 || month > 12) return null;
+  if (day < 1 || day > 31) return null;
+
+  // Создаём дату и проверяем что она валидна
+  const date = new Date(year, month - 1, day);
+
+  // Проверяем что дата не "перетекла" (например 31 февраля -> 3 марта)
+  if (
+    date.getFullYear() !== year ||
+    date.getMonth() !== month - 1 ||
+    date.getDate() !== day
+  ) {
+    return null;
+  }
+
+  return date;
+}
+
+/**
+ * Валидация даты с опциями
+ * @param {string} dateStr - Дата в формате YYYY-MM-DD
+ * @param {Object} options - Опции валидации
+ * @param {boolean} options.required - Обязательное поле
+ * @param {boolean} options.allowFuture - Разрешить будущие даты
+ * @param {boolean} options.allowPast - Разрешить прошлые даты
+ * @param {Date|string} options.minDate - Минимальная дата
+ * @param {Date|string} options.maxDate - Максимальная дата
+ * @returns {{ ok: boolean, error?: string, date?: Date }}
+ */
+export function validateDate(dateStr, options = {}) {
+  const {
+    required = false,
+    allowFuture = true,
+    allowPast = true,
+    minDate = null,
+    maxDate = null,
+  } = options;
+
+  // Пустая дата
+  if (!dateStr || dateStr.trim() === '') {
+    if (required) {
+      return { ok: false, error: 'Укажите дату' };
+    }
+    return { ok: true, date: null };
+  }
+
+  // Проверка формата
+  if (!DATE_REGEX.test(dateStr)) {
+    return { ok: false, error: 'Неверный формат даты (ожидается ГГГГ-ММ-ДД)' };
+  }
+
+  // Парсим дату
+  const date = parseDate(dateStr);
+  if (!date) {
+    return { ok: false, error: 'Некорректная дата' };
+  }
+
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+
+  // Проверка на будущее
+  if (!allowFuture && date > today) {
+    return { ok: false, error: 'Дата не может быть в будущем' };
+  }
+
+  // Проверка на прошлое
+  if (!allowPast && date < today) {
+    return { ok: false, error: 'Дата не может быть в прошлом' };
+  }
+
+  // Проверка минимальной даты
+  if (minDate) {
+    const min = typeof minDate === 'string' ? parseDate(minDate) : minDate;
+    if (min && date < min) {
+      return { ok: false, error: 'Дата слишком ранняя' };
+    }
+  }
+
+  // Проверка максимальной даты
+  if (maxDate) {
+    const max = typeof maxDate === 'string' ? parseDate(maxDate) : maxDate;
+    if (max && date > max) {
+      return { ok: false, error: 'Дата слишком поздняя' };
+    }
+  }
+
+  return { ok: true, date };
+}
+
+/**
+ * Форматирует Date в строку YYYY-MM-DD
+ * @param {Date} date
+ * @returns {string}
+ */
+export function formatDateISO(date) {
+  if (!date || !(date instanceof Date) || isNaN(date.getTime())) {
+    return '';
+  }
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, '0');
+  const day = String(date.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
+}
+
+/**
+ * Получить сегодняшнюю дату в формате YYYY-MM-DD
+ * @returns {string}
+ */
+export function getTodayISO() {
+  return formatDateISO(new Date());
+}

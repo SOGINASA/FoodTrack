@@ -3,6 +3,7 @@ from flask_jwt_extended import jwt_required, get_jwt_identity
 from models import db, Meal, UserGoals
 from datetime import datetime, date, timedelta, timezone
 from sqlalchemy import func
+from utils.validators import parse_date, parse_year_month
 
 analytics_bp = Blueprint('analytics', __name__)
 
@@ -15,7 +16,11 @@ def get_daily_stats():
         user_id = int(get_jwt_identity())
 
         date_str = request.args.get('date', datetime.now(timezone.utc).date().isoformat())
-        target_date = datetime.strptime(date_str, '%Y-%m-%d').date()
+        target_date, date_error = parse_date(date_str, max_days_past=365)
+        if date_error:
+            return jsonify({'error': f'Некорректная дата: {date_error}'}), 400
+        if target_date is None:
+            target_date = datetime.now(timezone.utc).date()
 
         meals = Meal.query.filter_by(
             user_id=user_id,
@@ -143,8 +148,15 @@ def get_monthly_stats():
         user_id = int(get_jwt_identity())
 
         # Можно указать месяц и год
-        year = request.args.get('year', datetime.now(timezone.utc).date().year, type=int)
-        month = request.args.get('month', datetime.now(timezone.utc).date().month, type=int)
+        year_param = request.args.get('year', datetime.now(timezone.utc).date().year)
+        month_param = request.args.get('month', datetime.now(timezone.utc).date().month)
+
+        year, month, ym_error = parse_year_month(year_param, month_param)
+        if ym_error:
+            return jsonify({'error': ym_error}), 400
+        if year is None or month is None:
+            year = datetime.now(timezone.utc).date().year
+            month = datetime.now(timezone.utc).date().month
 
         start_date = date(year, month, 1)
         if month == 12:

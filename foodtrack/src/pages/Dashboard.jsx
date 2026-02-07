@@ -115,7 +115,21 @@ const Dashboard = () => {
   };
 
   const handleDateChange = (e) => {
-    const newDate = new Date(e.target.value + 'T00:00:00');
+    const value = e.target.value;
+    // Валидация: не позволяем выбрать дату в будущем
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const newDate = new Date(value + 'T00:00:00');
+
+    if (isNaN(newDate.getTime())) {
+      return; // Игнорируем некорректные даты
+    }
+
+    if (newDate > today) {
+      setSelectedDate(today);
+      return;
+    }
+
     setSelectedDate(newDate);
   };
 
@@ -239,6 +253,7 @@ const Dashboard = () => {
           ref={dateInputRef}
           type="date"
           value={selectedDate.toISOString().split('T')[0]}
+          max={new Date().toISOString().split('T')[0]}
           onChange={handleDateChange}
           className="hidden"
         />
