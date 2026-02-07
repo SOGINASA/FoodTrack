@@ -1,6 +1,6 @@
 <div align="center">
 
-<img src="https://food-track-beta.vercel.app/imgs/logo.png" alt="FoodTrack Logo" width="120" />
+<img src="https://korolevst.supertest.beast-inside.kz/foodtrack_api/logo" alt="FoodTrack Logo" width="120" />
 
 # FoodTrack
 
