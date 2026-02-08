@@ -87,6 +87,17 @@ def delete_notification(notification_id):
     return jsonify({'message': 'Уведомление удалено'})
 
 
+@notifications_bp.route('/delete-all', methods=['DELETE'])
+@jwt_required()
+def delete_all_notifications():
+    """Удалить все уведомления пользователя"""
+    user_id = int(get_jwt_identity())
+    count = Notification.query.filter_by(user_id=user_id).delete()
+    db.session.commit()
+
+    return jsonify({'message': f'Удалено {count} уведомлений', 'deleted': count})
+
+
 @notifications_bp.route('/preferences', methods=['GET'])
 @jwt_required()
 def get_preferences():

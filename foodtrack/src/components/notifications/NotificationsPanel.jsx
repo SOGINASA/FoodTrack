@@ -1,5 +1,5 @@
 import React, { useEffect, useCallback } from 'react';
-import { X, CheckCheck, Bell, BellOff } from 'lucide-react';
+import { X, CheckCheck, Bell, BellOff, Trash2 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import useNotificationStore from '../../stores/notificationStore';
 import { usePushNotifications } from '../../hooks/usePushNotifications';
@@ -15,6 +15,7 @@ const NotificationsPanel = ({ isOpen, onClose }) => {
     fetchNotifications,
     markAsRead,
     markAllAsRead,
+    deleteAllNotifications,
     loadMore,
   } = useNotificationStore();
 
@@ -115,6 +116,15 @@ const NotificationsPanel = ({ isOpen, onClose }) => {
                 title="Прочитать все"
               >
                 <CheckCheck className="w-5 h-5 text-gray-500" />
+              </button>
+            )}
+            {notifications.length > 0 && (
+              <button
+                onClick={deleteAllNotifications}
+                className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
+                title="Удалить все"
+              >
+                <Trash2 className="w-5 h-5 text-gray-500" />
               </button>
             )}
             <button

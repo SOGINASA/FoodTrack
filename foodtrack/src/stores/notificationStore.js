@@ -92,6 +92,15 @@ const useNotificationStore = create((set, get) => ({
     }
   },
 
+  deleteAllNotifications: async () => {
+    try {
+      await notificationsAPI.deleteAll();
+      set({ notifications: [], unreadCount: 0 });
+    } catch (err) {
+      console.error('Error deleting all notifications:', err);
+    }
+  },
+
   loadMore: () => {
     const { hasMore, loading, page, fetchNotifications } = get();
     if (hasMore && !loading) {

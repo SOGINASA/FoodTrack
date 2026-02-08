@@ -301,6 +301,7 @@ export const notificationsAPI = {
   markAsRead: (id) => api.post(`/notifications/read/${id}`),
   markAllAsRead: () => api.post('/notifications/read-all'),
   deleteNotification: (id) => api.delete(`/notifications/${id}`),
+  deleteAll: () => api.delete('/notifications/delete-all'),
   getPreferences: () => api.get('/notifications/preferences'),
   savePreferences: (data) => api.put('/notifications/preferences', data),
   subscribe: (data) => api.post('/notifications/subscribe', data),
